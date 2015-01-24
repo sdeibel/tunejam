@@ -14,6 +14,7 @@ def error(txt):
     
 class CTune:
     def __init__(self, name):
+        self.type = None
         self.name = name
         self.title = None
         self.key = None
@@ -25,8 +26,22 @@ class CTune:
     def ReadDatabase(self):
         """Read one file from the tunes database.  Returns CTune named tuple"""
         
-        fn = os.path.join(kDatabaseDir, self.name+'.spec')
-        f = open(fn)
+        fn = self.name + '.spec'
+        
+        fullpath = None
+        type_dirs = os.listdir(kDatabaseDir)
+        for td in type_dirs:
+            if td.startswith('.'):
+                continue
+            fullpath = os.path.join(kDatabaseDir, td, fn)
+            if os.path.isfile(fullpath):
+                self.type = td
+                break
+
+        if fullpath is None:
+            error("Could not find spec for %s" % self.name)
+            
+        f = open(fullpath)
         lines = f.readlines()
         f.close()
     
@@ -58,7 +73,7 @@ class CTune:
                         found = True
                         break
                 if not found:
-                    error("Invalid line: %s: %s" % (fn, line))
+                    error("Invalid line: %s: %s" % (fullpath, line))
     
             elif part == 1:
                 spec = '"%s part"' % kPartMap[notes_part]
@@ -74,7 +89,7 @@ class CTune:
                 self.key = line[2:].strip()
     
         if part != 2:
-            error("Missing one or more parts: %s" % fn)
+            error("Missing one or more parts: %s" % fullpath)
         
     def AsDict(self):
         d = {}
@@ -86,6 +101,9 @@ class CTune:
                 
         return d
                 
+    def Type(self):
+        return self.type.capitalize()
+    
     def MakeNotesLarge(self):
         """Generate large form of notes"""
 
@@ -173,14 +191,15 @@ M:%(meter)s
         
 class CTuneSet:
     
-    def __init__(self, type, names=[]):
+    def __init__(self, names=[]):
 
-        self.type = type
+        self.type = None
         self.tunes = []
         
         for name in names:
             obj = CTune(name)
             obj.ReadDatabase()
+            self.type = obj.Type()
             self.tunes.append(obj)
             
     def MakeNotesLarge(self):
@@ -238,9 +257,9 @@ class CTuneSet:
             
         return ''.join(parts)
 
-def GenerateLargeSheets(type, tunes):
+def GenerateLargeSheets(tunes):
 
-    set = CTuneSet(type, tunes)
+    set = CTuneSet(tunes)
 
     abc = set.MakeNotesLarge()
     notes = __ABCToPostscript(abc)
@@ -250,9 +269,9 @@ def GenerateLargeSheets(type, tunes):
     
     return notes, chords
 
-def GenerateSmallSheet(type, tunes):
+def GenerateSmallSheet(tunes):
     
-    set = CTuneSet(type, tunes)
+    set = CTuneSet(tunes)
     abc = set.MakeCardSmall()
     
     return __ABCToPostscript(abc)
@@ -278,19 +297,12 @@ def __ABCToPostscript(abc):
 if __name__ == '__main__':
     args = sys.argv[1:]
 
-    type = ''
-    for arg in args:
-        if arg.startswith('--type='):
-            type = arg[len('--type='):]
-            args.remove(arg)
-            break
-        
     if '--large' in args:
         args.remove('--large')
-        notes, chords = GenerateLargeSheets(type, args)
+        notes, chords = GenerateLargeSheets(args)
         cmd = 'open %s %s' % (notes, chords)
         os.system(cmd)
     else:
-        sheet = GenerateSmallSheet(type, args)
+        sheet = GenerateSmallSheet(args)
         cmd = 'open %s' % sheet
         os.system(cmd)
