@@ -197,10 +197,12 @@ M:%(meter)s
         
 class CTuneSet:
     
-    def __init__(self, names=[]):
+    def __init__(self, names=[], header='', footer=''):
 
         self.type = None
         self.tunes = []
+        self.header = header
+        self.footer = footer
         
         types = []
         for name in names:
@@ -254,13 +256,17 @@ class CTuneSet:
         
         kStart = """%%%%textfont Monaco
 %%%%textfont Times-Roman
+%%%%headerfont Times-Roman 12
+%%%%header "%s"
+%%%%footerfont Times-Roman 12
+%%%%footer "%s"
 
 %%%%scale 1.4
 %%%%begintext
 %s
 %%%%endtext
 
-""" % self.type.capitalize()
+""" % (self.header, self.footer, self.type.capitalize())
 
         parts = [kStart]
         for i, tune in enumerate(self.tunes):
@@ -274,10 +280,10 @@ def GenerateLargeSheets(tunes):
     set = CTuneSet(tunes)
 
     abc = set.MakeNotesLarge()
-    notes = __ABCToPostscript(abc)
+    notes = _ABCToPostscript(abc)
     
     abc = set.MakeChordsLarge()
-    chords = __ABCToPostscript(abc)
+    chords = _ABCToPostscript(abc)
     
     return notes, chords
 
@@ -286,9 +292,9 @@ def GenerateSmallSheet(tunes):
     set = CTuneSet(tunes)
     abc = set.MakeCardSmall()
     
-    return __ABCToPostscript(abc)
+    return _ABCToPostscript(abc)
 
-def __ABCToPostscript(abc):
+def _ABCToPostscript(abc):
     
     f, fn = tempfile.mkstemp(suffix='.abc')
     f = os.fdopen(f, 'w')
@@ -331,13 +337,20 @@ class CBook:
             if not line.strip():
                 continue
             tunes = line.split()
-            tuneset = CTuneSet(tunes)
-            self.pages.append(tunes)
+            title = [self.title, self.subtitle, self.date, 'Page %i' % (len(
+    self.pages) + 1)]
+            title = [t.strip() for t in title]
+            title = '%s - %s\\n%s - %s' % tuple(title)
+            tuneset = CTuneSet(tunes, title, self.contact)
+            self.pages.append(tuneset)
             
     def GenerateLarge(self):
         pages = []
         for page in self.pages:
-            notes, chords = GenerateLargeSheets(page)
+            abc = page.MakeNotesLarge()
+            notes = _ABCToPostscript(abc)
+            abc = page.MakeChordsLarge()
+            chords = _ABCToPostscript(abc)
             pages.extend([notes, chords])
             
         return pages
@@ -345,8 +358,8 @@ class CBook:
     def GenerateSmall(self):
         pages = []
         for page in self.pages:
-            ps = GenerateSmallSheet(page)
-            pages.append(ps)
+            abc = page.MakeCardSmall()
+            pages.append(_ABCToPostscript(abc))
             
         return pages
         

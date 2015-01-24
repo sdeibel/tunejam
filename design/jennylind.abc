@@ -1,5 +1,9 @@
 %%textfont Monaco
 %%textfont Times-Roman
+%%headerfont Times-Roman 18
+%%header "             Test - Page $P"
+%%footerfont Times-Roman 18
+%%footer "            Contact us"
 
 %%scale 1.4
 %%begintext
