@@ -1,10 +1,10 @@
 T:Saint Anne's Reel
 K:D
-L:1/8
+L:1/4
 M:4/4
 --
-|: Ad | f2fg fedB | A2FG AFAd |
-|:ag fdfafdfa | aggf g2gf |
+d/e/|ff/g/f/e/d/B/|AFD/F/A|
+|a/g/|f/d/f/a/f/d/f/a/|a/g/g/f/gf|
 --
 |: D | D     | G  | A  |
    D | D     | GA | D :|

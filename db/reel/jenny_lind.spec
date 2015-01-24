@@ -3,8 +3,8 @@ K:G
 L:1/4
 M:4/4
 --
-d/c/|:Bdce|dbb/^a/b|
-gee/g/f/e/|dBB/^A/B|
+AG|:FAGB|Af/f/e/f/|gee/d/e|
+e/f/|gg/f/e/g/f/e/|dBB/A/B|
 --
 |: DG | D | A | D :|
 |: C  | G | D | G :|

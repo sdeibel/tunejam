@@ -3,8 +3,8 @@ K:G
 L:1/4
 M:4/4
 --
-D2| G2GA BABc| d2dc B2G2|
-d2| g2gf efge| d2dc B2G2|
+G/A/|BB/c/B/A/G/|ddB/c/B|
+e/f/|gg/f/e/g/f/e/|dBB/A/B/B/|
 --
 |: G | G | D | G  |
    G | G | D | G :|

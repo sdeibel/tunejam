@@ -1,10 +1,10 @@
 T:Gaspe Reel
 K:D
-L:1/8
+L:1/4
 M:4/4
 --
-|: f2ef e2dB | AFAF B2A2 |
-|:e2f2 g2fe |f2g2 a4 |
+|fe/f/ed|D/F/A/c/BA|
+|e2f/g/f/e/|fga2|
 --
 |: D | D | G  | A    |
    D | D | D  | AD  :|
