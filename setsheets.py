@@ -204,7 +204,7 @@ class CTuneSet:
             self.tunes.append(obj)
             
         if len(types) > 1:
-            self.type = "Mixed"
+            self.type = "Mixed (%s)" % ', '.join(types)
         else:
             self.type = types.pop()
             
