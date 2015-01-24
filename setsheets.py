@@ -158,11 +158,12 @@ K:%(key)s
 L:%(unit)s
 M:%(meter)s
 %%%%multicol start
-%%%%rightmargin 11.5cm
+%%%%leftmargin 0.25in
+%%%%rightmargin 5.0in
 %(notes)s
 %%%%multicol new
 %%%%textfont Monaco
-%%%%leftmargin 11.5cm
+%%%%leftmargin 3.75in
 %%%%scale 1.2
 %%%%begintext
 
