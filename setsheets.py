@@ -102,7 +102,10 @@ class CTune:
         return d
                 
     def Type(self):
-        return self.type.capitalize()
+        if self.type == 'waltz':
+            return 'Waltzes'
+        else:
+            return self.type.capitalize() + 's'
     
     def MakeNotesLarge(self):
         """Generate large form of notes"""
@@ -196,17 +199,17 @@ class CTuneSet:
         self.type = None
         self.tunes = []
         
-        types = set()
+        types = []
         for name in names:
             obj = CTune(name)
             obj.ReadDatabase()
-            types.add(obj.Type())
+            types.append(obj.type)
             self.tunes.append(obj)
             
-        if len(types) > 1:
+        if len(set(types)) > 1:
             self.type = "Mixed (%s)" % ', '.join(types)
         else:
-            self.type = types.pop()
+            self.type = self.tunes[0].Type()
             
     def MakeNotesLarge(self):
         
