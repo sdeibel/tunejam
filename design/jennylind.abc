@@ -1,0 +1,57 @@
+%%textfont Monaco
+%%textfont Times-Roman
+
+%%scale 1.4
+%%begintext
+Reels
+%%endtext
+
+X:1
+%%textfont Times-Roman
+%%scale 5.0
+T: Jenny Lind Polka - G Major
+%%scale 1.0
+K:G
+L:1/4
+M:4/4
+%%multicol start
+%%rightmargin 11.5cm
+"A part"d/c/|:Bdce|dbb/^a/b|
+M:4/4
+"B part"gee/g/f/e/|dBB/^A/B|
+%%multicol new
+%%textfont Monaco
+%%leftmargin 11.5cm
+%%scale 1.3
+%%begintext
+
+|: DG | D | A | D :|
+|: C  | G | D | G :|
+%%endtext
+%%multicol end
+
+X: 2
+%%textfont Times-Roman
+%%scale 5.0
+T: Joys Of Quebec - A Major
+%%scale 1.0
+K:A
+M:4/4
+L:1/4
+%%multicol start
+%%rightmargin 11.5cm
+"A part"e|e/2c/2c/2c/2 ce|e/2c/2c/2c/2 ce|
+M:4/4
+"B part"c/2d/2|:ezfz|e3/2f/2 eA/2B/2|
+%%multicol new
+%%textfont Monaco
+%%leftmargin 11.5cm
+%%scale 1.3
+%%begintext
+
+|: A  | A | A  | E  | 
+   E  | E | E  | A :|
+|: AD | A | AE | A  | 
+   E  | E | E  | A :|
+%%endtext
+%%multicol end

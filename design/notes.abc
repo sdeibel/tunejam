@@ -1,0 +1,30 @@
+%%scale 2.0
+%%begintext
+Reels
+%%endtext
+
+X:1
+%%scale 2.2
+%%begintext
+Jenny Lind Polka - G Major
+%%endtext
+%%scale 1.0
+K:G
+L:1/4
+M:4/4
+"A part"d/c/|:Bdce|dbb/^a/b|
+M:4/4
+"B part"gee/g/f/e/|dBB/^A/B|
+
+X: 2
+%%scale 2.2
+%%begintext
+Joys Of Quebec - A Major
+%%endtext
+%%scale 1.0
+K:A
+M:4/4
+L:1/4
+"A part"e|e/2c/2c/2c/2 ce|e/2c/2c/2c/2 ce|
+M:4/4
+"B part"c/2d/2|:ezfz|e3/2f/2 eA/2B/2|
