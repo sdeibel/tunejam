@@ -137,7 +137,7 @@ M:%(meter)s
 %(prepend_title)s%(title)s - %(fullkey)s - %(meter)s
 %%%%endtext
 %%%%textfont Monaco
-%%%%scale 2.2
+%%%%scale 1.4
 %%%%begintext
 %(chords)s
 %%%%endtext
@@ -197,12 +197,13 @@ M:%(meter)s
         
 class CTuneSet:
     
-    def __init__(self, names=[], header='', footer=''):
+    def __init__(self, names=[], header='', footer='', setnum=''):
 
         self.type = None
         self.tunes = []
         self.header = header
         self.footer = footer
+        self.setnum = setnum
         
         types = []
         for name in names:
@@ -218,12 +219,17 @@ class CTuneSet:
             
     def MakeNotesLarge(self):
         
-        kStart = """%%%%scale 2.0
+        kStart = """textfont Times-Roman
+%%%%headerfont Times-Roman 12
+%%%%header "%s"
+%%%%footerfont Times-Roman 12
+%%%%footer "%s"
+%%%%scale 2.0
 %%%%begintext
 %s
 %%%%endtext
 
-""" % self.type
+""" % (self.header, self.footer, self.__SetType())
         
         parts = [kStart]
         for i, tune in enumerate(self.tunes):
@@ -232,14 +238,25 @@ class CTuneSet:
     
         return ''.join(parts)
 
+    def __SetType(self):
+        stype = self.type
+        if self.setnum:
+            stype += ' - ' + self.setnum
+        return stype
+
     def MakeChordsLarge(self):
 
-        kStart = """%%%%scale 2.0
+        kStart = """%%%%textfont Times-Roman
+%%%%headerfont Times-Roman 12
+%%%%header "%s"
+%%%%footerfont Times-Roman 12
+%%%%footer "%s"
+%%%%scale 2.0
 %%%%begintext
 %s
 %%%%endtext
 
-""" % self.type
+""" % (self.header, self.footer, self.__SetType())
 
         parts = [kStart]
         for i, tune in enumerate(self.tunes):
@@ -266,7 +283,7 @@ class CTuneSet:
 %s
 %%%%endtext
 
-""" % (self.header, self.footer, self.type.capitalize())
+""" % (self.header, self.footer, self.__SetType())
 
         parts = [kStart]
         for i, tune in enumerate(self.tunes):
@@ -313,7 +330,7 @@ def _ABCToPostscript(abc):
 
 class CBook:
     
-    def __init__(self, name):
+    def __init__(self, name, large=False):
         self.title = ''
         self.subtitle = ''
         self.date = ''
@@ -337,11 +354,11 @@ class CBook:
             if not line.strip():
                 continue
             tunes = line.split()
-            title = [self.title, self.subtitle, self.date, 'Page %i' % (len(
-    self.pages) + 1)]
+            setnum = 'Set %i' % (len(self.pages) + 1)
+            title = [self.title, self.subtitle, self.date]
             title = [t.strip() for t in title]
-            title = '%s - %s\\n%s - %s' % tuple(title)
-            tuneset = CTuneSet(tunes, title, self.contact)
+            title = '%s - %s\\n%s' % tuple(title)
+            tuneset = CTuneSet(tunes, title, self.contact, setnum)
             self.pages.append(tuneset)
             
     def GenerateLarge(self):
@@ -373,7 +390,7 @@ if __name__ == '__main__':
         if '--large' in args:
             args.remove('--large')
             name = args[0]
-            book = CBook(name)
+            book = CBook(name, large=True)
             pages = book.GenerateLarge()
         else:
             name = args[0]
