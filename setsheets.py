@@ -196,11 +196,17 @@ class CTuneSet:
         self.type = None
         self.tunes = []
         
+        types = set()
         for name in names:
             obj = CTune(name)
             obj.ReadDatabase()
-            self.type = obj.Type()
+            types.add(obj.Type())
             self.tunes.append(obj)
+            
+        if len(types) > 1:
+            self.type = "Mixed"
+        else:
+            self.type = types.pop()
             
     def MakeNotesLarge(self):
         
