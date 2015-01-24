@@ -5,9 +5,8 @@
 import os, sys
 import tempfile
 
-kBaseDir = os.path.dirname(__file__)
-kExecutable = os.path.join(kBaseDir, 'bin/abcm2ps')
-kDatabaseDir = os.path.join(kBaseDir, 'db')
+kExecutable = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'bin/abcm2ps')
+kDatabaseDir = os.path.join(os.path.dirname(__file__), 'db')
 
 def error(txt):
     print(error)
