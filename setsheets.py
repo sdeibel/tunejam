@@ -93,7 +93,7 @@ class CTune:
 %%%%begintext
 %(title)s - %(fullkey)s
 %%%%endtext
-%%%%scale 1.0
+%%%%scale 0.9
 K:%(key)s
 L:%(unit)s
 M:%(meter)s
@@ -130,7 +130,7 @@ M:%(meter)s
         kFormat = """%%%%textfont Times-Roman
 %%%%scale 5.0
 T:%(title)s - %(fullkey)s
-%%%%scale 1.0
+%%%%scale 0.9
 K:%(key)s
 L:%(unit)s
 M:%(meter)s
@@ -140,7 +140,7 @@ M:%(meter)s
 %%%%multicol new
 %%%%textfont Monaco
 %%%%leftmargin 11.5cm
-%%%%scale 1.3
+%%%%scale 1.2
 %%%%begintext
 
 %(chords)s
