@@ -9,7 +9,7 @@ kExecutable = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'bin/abcm
 kDatabaseDir = os.path.join(os.path.dirname(__file__), 'db')
 
 def error(txt):
-    print(error)
+    print(txt)
     sys.exit(1)
     
 class CTune:
@@ -37,6 +37,8 @@ class CTune:
             if os.path.isfile(fullpath):
                 self.type = td
                 break
+            else:
+                fullpath = None
 
         if fullpath is None:
             error("Could not find spec for %s" % self.name)
@@ -302,15 +304,79 @@ def __ABCToPostscript(abc):
 
     return ps_fn
 
+class CBook:
     
+    def __init__(self, name):
+        self.title = ''
+        self.subtitle = ''
+        self.date = ''
+        self.contact = ''
+        
+        fn = os.path.join(kDatabaseDir, name+'.book')
+        if not os.path.isfile(fn):
+            error("Could not find book %s" % name)
+        f = open(fn)
+        lines = f.readlines()
+        f.close()
+
+        if len(lines) < 6:
+            error("Malformed or empty book %s" % fn)
+        self.title, self.subtitle, self.date, self.contact = lines[:4]
+        if not lines[4].strip() == '--':
+            error("Malformed book %s: Missing -- after header" % fn)
+            
+        self.pages = []
+        for i, line in enumerate(lines[5:]):
+            if not line.strip():
+                continue
+            tunes = line.split()
+            tuneset = CTuneSet(tunes)
+            self.pages.append(tunes)
+            
+    def GenerateLarge(self):
+        pages = []
+        for page in self.pages:
+            notes, chords = GenerateLargeSheets(page)
+            pages.extend([notes, chords])
+            
+        return pages
+    
+    def GenerateSmall(self):
+        pages = []
+        for page in self.pages:
+            ps = GenerateSmallSheet(page)
+            pages.append(ps)
+            
+        return pages
+        
+        
 if __name__ == '__main__':
     args = sys.argv[1:]
 
-    if '--large' in args:
+    # Generating a book
+    if '--book' in args:
+        args.remove('--book')
+        if '--large' in args:
+            args.remove('--large')
+            name = args[0]
+            book = CBook(name)
+            pages = book.GenerateLarge()
+        else:
+            name = args[0]
+            book = CBook(name)
+            pages = book.GenerateSmall()
+
+        cmd = 'open %s' % ' '.join(pages)
+        os.system(cmd)
+
+    # Generating a single pair of large-format pages
+    elif '--large' in args:
         args.remove('--large')
         notes, chords = GenerateLargeSheets(args)
         cmd = 'open %s %s' % (notes, chords)
         os.system(cmd)
+        
+    # Generating a single small format page
     else:
         sheet = GenerateSmallSheet(args)
         cmd = 'open %s' % sheet
