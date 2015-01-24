@@ -163,9 +163,9 @@ M:%(meter)s
 %(notes)s
 %%%%multicol new
 %%%%textfont Monaco
-%%%%leftmargin 3.75in
+%%%%rightmargin 0.5in
 %%%%scale 1.2
-%%%%begintext
+%%%%begintext right
 
 %(chords)s
 %%%%endtext

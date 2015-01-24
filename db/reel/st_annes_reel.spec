@@ -8,5 +8,5 @@ M:4/4
 --
 |: D | D     | G  | A  |
    D | D     | GA | D :|
-|: D | G(Em) | A  | D
+|: D | G(Em) | A  | D   
    D | G(Em) | A  | D :|
