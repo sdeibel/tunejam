@@ -79,6 +79,10 @@ class CTune:
     
             elif part == 1:
                 spec = '"%s part"' % kPartMap[notes_part]
+                if self.key.find('/') > 0:
+                    keys = self.key.split('/')
+                    curr_key = keys[notes_part]
+                    self.notes += 'K:%s\n' % curr_key
                 self.notes += spec + line
                 notes_part += 1
     
@@ -192,8 +196,14 @@ M:%(meter)s
         notes = self.notes.splitlines()
         notes = [n + '\n' for n in notes]
         meter = 'M:%s\n' % self.meter
-        notes = meter.join(notes)
-        return notes
+        new_notes = []
+        for note in notes:
+            if len(note) > 1 and note[1] == ':':
+                new_notes.append(note)
+            else:
+                new_notes.append(meter)
+                new_notes.append(note)
+        return ''.join(new_notes)
         
 class CTuneSet:
     
