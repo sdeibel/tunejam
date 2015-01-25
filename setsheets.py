@@ -87,7 +87,7 @@ class CTune:
                 notes_part += 1
     
             elif part == 2:
-                self.chords += line
+                self.chords += line.rstrip() + '\n'
     
             if line.startswith('T:'):
                 self.title = line[2:].strip()
