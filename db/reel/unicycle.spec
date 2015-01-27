@@ -1,10 +1,10 @@
 T:Unicycle (by Caz Lewis)
 K:G
 L:1/4
-M:4/4
+M:2/4
 --
-|z/G/ge/d/e//d/B//G/|d//B//e//d/B//G|
-|E/F/G/A/Be|d/e//d/B//G/d//B//e//d/B//A/|
+G/|g e/d/|e//d/B//G/|
+|E/F/G/A/|Be|
 --
 |: G   | GC | G  | G  |
    G   | G  | C  | D  |

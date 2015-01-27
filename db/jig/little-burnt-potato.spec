@@ -3,8 +3,8 @@ K:A
 L:1/8
 M:6/8
 --
-a^ga bag|afd A2d|
-f2A f2A|f3 f2e|
+fg|a^ga bag|afd A2d|
+ag|f2A f2A|f3 f2e|
 --
 |: D  | D | D | Em    | 
    A  | A | A | D    :|

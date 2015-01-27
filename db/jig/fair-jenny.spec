@@ -4,7 +4,7 @@ L:1/8
 M:6/8
 --
 f3 fgf|ecA ecA
-B2 BB=cB|G2BB=cB|ADD dDD|
+B2 BB=cB|G2BB=cB|
 --
 |: D | A | GA | GA  |
    D | A | GA | AD :|

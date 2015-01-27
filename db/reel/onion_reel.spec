@@ -1,7 +1,7 @@
 T:Onion Reel
 K:G
 L:1/8
-M:6/8
+M:4/4
 --
 gage d2Bd| c2 A2 A4|
 (3ABc d2 g2 gf/g/| a6 (3ABc|

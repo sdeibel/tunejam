@@ -9,4 +9,4 @@ B3 Bcd| B3 Bcd|
 |: D   | F#m | G  | A   | 
    D   | F#m | G  | A  :|
 |: Bm  | G   | DA | BmF | 
-   Bm | G   | DG | AD  :|
+   Bm  | G   | DG | AD :|

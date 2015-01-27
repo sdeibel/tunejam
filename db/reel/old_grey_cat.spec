@@ -1,6 +1,6 @@
 T:Old Grey Cat
 K:Em
-L:1/4
+L:1/8
 M:4/4
 --
 |e2 e2 E3 F|GFGA BABc|

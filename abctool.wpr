@@ -12,6 +12,6 @@ proj.directory-list = [{'dirloc': loc('.'),
                         'watch_for_changes': True}]
 proj.file-type = 'shared'
 proj.launch-config = {loc('setsheets.py'): ('project',
-        (u'--type=Reels glise_a_sherbrook jenny_lind joys_of_quebec',
+        (u'--large --book tunejam',
          ''))}
 proj.main-file = loc('setsheets.py')
