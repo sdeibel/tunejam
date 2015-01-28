@@ -107,3 +107,49 @@ def abc_paste():
     start, end = ed.GetSelection()
     doc.DeleteChars(start, end)
     doc.InsertChars(start, txt)
+
+def abc_fix():
+    
+    ed = wingapi.gApplication.GetActiveEditor()
+    doc = ed.GetDocument()
+    
+    start, end = ed.GetSelection()
+    txt = doc.GetCharRange(start, end)
+    doc.DeleteChars(start, end)
+
+    output = []
+    curr_lineno = 0
+    for part, lineno in _split_with_lineno(txt):
+        if lineno > curr_lineno:
+            output.append('\n')
+            curr_lineno = lineno
+        if len(part) < 4:
+            output.append(part)
+        else:
+            notes = 0
+            first = ''
+            second = ''
+            for c in part:
+                if notes < 2:
+                    first += c
+                else:
+                    second += c
+                if c in 'ABCDEFG':
+                    notes += 1
+            if len(first)==2 and first[0] == first[1]:
+                first = first[0]
+            elif len(first)==4 and first[:2] == first[2:]:
+                first = first[:2]
+            if len(second)==2 and second[0] == second[1]:
+                second = second[0]
+            elif len(second)==4 and second[:2] == second[2:]:
+                second = second[:2]
+                
+            output.extend([first, second])
+    
+    txt = ' '.join(output) + '\n\n'
+    
+    clip = wingapi.gApplication.SetClipboard(txt)
+    abc_paste()
+    
+                
