@@ -360,16 +360,19 @@ class CBook:
             error("Malformed book %s: Missing -- after header" % fn)
             
         self.pages = []
+        set_num = 1
         for i, line in enumerate(lines[5:]):
             if not line.strip() or line.startswith('#'):
+                set_num = 1
                 continue
             tunes = line.split()
-            setnum = 'Set %i' % (len(self.pages) + 1)
+            setnum = 'Set %i' % set_num
             title = [self.title, self.subtitle, self.date]
             title = [t.strip() for t in title]
             title = '%s - %s\\n%s' % tuple(title)
             tuneset = CTuneSet(tunes, title, self.contact, setnum)
             self.pages.append(tuneset)
+            set_num += 1
             
     def GenerateLarge(self):
         pages = []
