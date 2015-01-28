@@ -361,7 +361,7 @@ class CBook:
             
         self.pages = []
         for i, line in enumerate(lines[5:]):
-            if not line.strip():
+            if not line.strip() or line.startswith('#'):
                 continue
             tunes = line.split()
             setnum = 'Set %i' % (len(self.pages) + 1)
