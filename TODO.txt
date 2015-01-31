@@ -33,7 +33,6 @@
   off_to_california
   canyon_creek
   i_cannae_get_my_mare_a_tamed
-  arkansas_woods
   full_rigged_ship
   new_rigged_ship
   star_above_the_garter
@@ -80,9 +79,21 @@
   smash_the_windows
   the_rags
 No recordings yet
+  midnight_on_the_water
+  old_french
+  onion_reel
+  crocus_pocus
+  shove_that_pigs_foot
+  our_outboard_died
+  sweet_potato_rag
+  old_man_old_woman (not the grumbling/growling one)
+  waiting_for_the_federals
+  maries_wedding
+  moon_and_seven_stars
+  rippling_water
+Neither (not really tunejam tunes)
   bumble_bee_with_new_middle
   stephans_gypsy_tune
-  our_outboard_died
   march_of_the_bullfrogs
   bachelor_duck
   
