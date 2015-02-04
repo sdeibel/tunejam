@@ -14,4 +14,4 @@ proj.file-type = 'shared'
 proj.launch-config = {loc('setsheets.py'): ('project',
         (u'--book tunejam',
          ''))}
-proj.main-file = loc('setsheets.py')
+proj.main-file = loc('flipbook.py')

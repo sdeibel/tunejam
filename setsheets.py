@@ -189,6 +189,51 @@ M:%(meter)s
         
         return kFormat % d
 
+    def MakeFlipBook(self, pos):
+        """Generate form of cheat sheet card used in flip book"""
+
+        if pos > 0:
+            spacer = '\n'
+        else:
+            spacer = ''
+            
+        kFormat = """%%%%textfont Times-Roman
+%%%%scale 5.0
+T:%(tune_type)s: %(title)s - %(fullkey)s
+%%%%scale 0.8
+K:%(key)s
+L:%(unit)s
+M:%(meter)s
+%%%%multicol start
+%%%%leftmargin 1.0in
+%%%%rightmargin 4.5in
+%(notes)s
+%%%%multicol new
+%%%%textfont Monaco
+%%%%rightmargin 0.5in
+%%%%scale 0.8
+%%%%begintext right
+%(spacer)s%(chords)s
+%%%%endtext
+%%%%multicol new
+%%%%textfont Monaco
+%%%%rightmargin 0.25in
+%%%%scale 1.0
+%%%%begintext right
+%(vspacer)s
+%%%%endtext
+%%%%multicol end
+"""
+
+        notes = self.__NotesWithMeterOnEachLine()
+        d = self.AsDict().copy()
+        d['spacer'] = spacer
+        d['notes'] = notes
+        d['vspacer'] = '\n' * 9
+        d['tune_type'] = self.type.capitalize()
+
+        return kFormat % d
+
     def __FullKey(self):
         key = self.key
         if key.lower().find('modal') > 0:
@@ -311,15 +356,39 @@ class CTuneSet:
             
         return ''.join(parts)
 
+    def MakeFlipBook(self):
+
+        kStart = """%%%%textfont Monaco
+%%%%textfont Times-Roman
+%%%%headerfont Times-Roman 12
+%%%%header "%s"
+%%%%footerfont Times-Roman 12
+%%%%footer "%s"
+
+%%%%scale 1.2
+%%%%leftmargin 1.0in
+%%%%begintext
+
+%%%%endtext
+
+""" % (self.header, self.footer)
+
+        parts = [kStart]
+        for i, tune in enumerate(self.tunes):
+            parts.append('\nX:%i\n'%i)
+            parts.append(tune.MakeFlipBook(i))
+
+        return ''.join(parts)
+
 def GenerateLargeSheets(tunes):
 
     set = CTuneSet(tunes)
 
     abc = set.MakeNotesLarge()
-    notes = _ABCToPostscript(abc)
+    notes = ABCToPostscript(abc)
     
     abc = set.MakeChordsLarge()
-    chords = _ABCToPostscript(abc)
+    chords = ABCToPostscript(abc)
     
     return notes, chords
 
@@ -328,9 +397,9 @@ def GenerateSmallSheet(tunes):
     set = CTuneSet(tunes)
     abc = set.MakeCardSmall()
     
-    return _ABCToPostscript(abc)
+    return ABCToPostscript(abc)
 
-def _ABCToPostscript(abc):
+def ABCToPostscript(abc):
     
     f, fn = tempfile.mkstemp(suffix='.abc')
     f = os.fdopen(f, 'w')
@@ -345,6 +414,7 @@ def _ABCToPostscript(abc):
     if not os.path.exists(ps_fn):
         error("Could not create Postscript file %s" % ps_fn)
 
+    os.remove(fn)
     return ps_fn
 
 class CBook:
@@ -387,9 +457,9 @@ class CBook:
         pages = []
         for page in self.pages:
             abc = page.MakeNotesLarge()
-            notes = _ABCToPostscript(abc)
+            notes = ABCToPostscript(abc)
             abc = page.MakeChordsLarge()
-            chords = _ABCToPostscript(abc)
+            chords = ABCToPostscript(abc)
             pages.extend([notes, chords])
             
         return pages
@@ -398,7 +468,7 @@ class CBook:
         pages = []
         for page in self.pages:
             abc = page.MakeCardSmall()
-            pages.append(_ABCToPostscript(abc))
+            pages.append(ABCToPostscript(abc))
             
         return pages
         
