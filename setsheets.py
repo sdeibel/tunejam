@@ -192,14 +192,9 @@ M:%(meter)s
     def MakeFlipBook(self, pos):
         """Generate form of cheat sheet card used in flip book"""
 
-        if pos > 0:
-            spacer = '\n'
-        else:
-            spacer = ''
-            
         kFormat = """%%%%textfont Times-Roman
 %%%%scale 5.0
-T:%(tune_type)s: %(title)s - %(fullkey)s
+T:%(title)s - %(fullkey)s - %(tune_type)s
 %%%%scale 0.8
 K:%(key)s
 L:%(unit)s
@@ -210,10 +205,10 @@ M:%(meter)s
 %(notes)s
 %%%%multicol new
 %%%%textfont Monaco
-%%%%rightmargin 0.5in
-%%%%scale 0.8
+%%%%rightmargin 0.75in
+%%%%scale 0.9
 %%%%begintext right
-%(spacer)s%(chords)s
+%(chords)s
 %%%%endtext
 %%%%multicol new
 %%%%textfont Monaco
@@ -227,7 +222,6 @@ M:%(meter)s
 
         notes = self.__NotesWithMeterOnEachLine()
         d = self.AsDict().copy()
-        d['spacer'] = spacer
         d['notes'] = notes
         d['vspacer'] = '\n' * 9
         d['tune_type'] = self.type.capitalize()
