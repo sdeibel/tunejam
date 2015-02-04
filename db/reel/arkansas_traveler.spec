@@ -11,6 +11,6 @@ f/g/|a/g/f/a/ g/f/e/g/ | f/e/d/f/ eA |
   D | G | A | D |
   D | G | A | D |
 | D | A | D | A |
-  D | A | D | A |
+  D | G | D | A |
   D | A | D | A |
   D | G | A | D |

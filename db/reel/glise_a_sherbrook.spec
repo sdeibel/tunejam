@@ -1,10 +1,10 @@
 T:Glise A Sherbrook
 K:G
 L:1/4
-M:4/4
+M:C
 --
-G/A/|B B/c/ B/A/G/A/|ddB/c/B|
-e/f/|gg/f/ e/g/f/e/|dd B/c/B|
+G/A/|(BB/)c/ B/A/G/A/|dd/d/ B/G/B/d/|
+e/f/|g g/>g/ e/f/g/e/|d d/>d/ B/G/B/d/|
 --
 |: G | G | D | G  |
    G | G | D | G :|

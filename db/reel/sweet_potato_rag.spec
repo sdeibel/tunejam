@@ -3,7 +3,10 @@ K:G
 L:1/8
 M:4/4
 --
-d|d2ede/g3|dd2ede/dB/G|
-e/f/|gg2ede/dB/G|gg2ab2b2|
+dd2e d>eg2|dd2e d>e d/>B/G|
+ef|gg2e d>e d/>B/G|gg2ab2b2|
 --
-TBD
+|: G  | G   | G  | CA7DD7 |
+   G  | G   | G  | CDGG7 :|
+|: CG | CDG | CG | CAD    |
+   CG | CG  | CG | CDG   :|

@@ -1,9 +1,12 @@
-T:Ballydesmond Polka I
+T:Ballydesmond Polka II (aka Gneerequilla Polka)
 K:Am
 L:1/8
 M:2/4
 --
-EA A>B|cd e2|
-a3/2g/ ab|ag ef|
+c2B2|AB/A/ G>A|Bded|
+ea ag/e/|dgg2|
 --
-TBD
+|: AmG | AmG | G  | G   |
+   C   | G   | Em | Am :|
+|: Am  | G   | Am | GC  |
+   Am  | G   | Em | Am :|

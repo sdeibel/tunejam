@@ -1,12 +1,12 @@
 T:June Apple
-K:Amod
+K:Amix
 L:1/8
 M:4/4
 --
 eg|ageg ageg|aged cBA2|
-e|dcBABA3|BcBcde3|
+ed|cBABA3B|cBcde2EF|
 --
-|: A | A | G | G  | 
-   A | A | G | A :|
-|: A | A | G | D  | 
-   A | A | G | A :|
+|: A | A | G   | Em  | 
+   A | A | GEm | A  :|
+|: A | A | G   | GEm | 
+   A | A | GEm | A  :|

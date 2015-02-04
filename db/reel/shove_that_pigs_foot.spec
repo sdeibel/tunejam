@@ -4,7 +4,7 @@ L:1/8
 M:4/4
 --
 BcBA G2G2 | GAGE D2D2 |
-Bd2ddd2|edB2 d4 |
+Bd3ddd2|edB2 d4 |
 --
 |: G | CG | G  | D  | 
    G | CG | GD | G :|

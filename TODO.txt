@@ -22,7 +22,6 @@
   creaky_joints
   galatian_waltz
   road_to_lisdon_varna
-  far_away
   scarce_o_tatties
   ten_penny_bit
   valentines_day

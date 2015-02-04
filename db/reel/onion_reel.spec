@@ -4,9 +4,9 @@ L:1/8
 M:4/4
 --
 gage d2Bd| c2 A2 A4|
-(3ABc d2 g2 gf/g/| a6 (3ABc|
+(3ABc| d2 g2 g2 fg| a6 (3ABc|
 --
-|: D | D | Em | Em  | 
-   D | D | A  | AD :|
-|: D | D | A  | A   | 
-   D | D | A  | AD  |
+|: G | CAm | DC | BmEm | 
+   G | CAm | D  | G   :|
+|: G | C   | D  | G    | 
+   G | C   | D  | G    |

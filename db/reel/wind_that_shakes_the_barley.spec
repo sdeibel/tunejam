@@ -3,10 +3,10 @@ K:D
 L:1/8
 M:4/4
 --
-A2ABAFD2 | B2BABcd2 |
-f2fd g2ge | f2fdecA2 |
+A2AB AFED | B2BA BcdB |
+f2fd g2ge | f2 fd ecBA |
 --
-|: D  | G  | D  | G   | 
-   D  | G  | D  | G  :|
-|: DG | DA | DG | DG  | 
-   DG | DA | D  | DG :|
+|: D  | G  | D  | GA  | 
+   D  | G  | D  | GA :|
+|: DG | DA | DG | A   | 
+   DG | DA | D  | GA :|
