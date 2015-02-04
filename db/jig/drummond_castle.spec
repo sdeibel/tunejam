@@ -4,7 +4,7 @@ L:1/8
 M:6/8
 --
 ABA a2 a|age g3|
-B|c2c cde|d2d ded|
+B|c2c cec|d2d ded|
 --
 |: Am | AmG | C   | G     | 
    Am | AmG | CG  | EmAm :|

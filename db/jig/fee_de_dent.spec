@@ -4,6 +4,9 @@ L:1/8
 M:6/8
 --
 B2D- DGA | Bdc BAG |
-e4 cd | egf edB |
+e3 ecd | egf edB |
 --
-TBD
+|: G  | G  | C   | D   | 
+   G  | Em | CAm | DG :|
+|: C  | C  | Bm  | Bm  | 
+   C  | D  | CAm | DG :|

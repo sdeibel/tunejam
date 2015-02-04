@@ -64,6 +64,8 @@ class CTune:
         part = 0
         notes_part = 0
         for line in lines:
+            if line.startswith('#'):
+                continue
             if line.strip() == '--':
                 part += 1
     

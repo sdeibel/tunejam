@@ -4,6 +4,9 @@ L:1/8
 M:6/8
 --
 E3|ABA ABd|e2e edB|
-G|EGE EGA|B2 BB AG A2|
+G|EGE EGA|B2 B BAG|
 --
-TBD
+|: Am  | Am | G   | Em    | 
+   Am  | C  | AmG | EmAm :|
+|: C   | G  | Am  | Em    | 
+   CG  | Am | AmG | EmAm :|

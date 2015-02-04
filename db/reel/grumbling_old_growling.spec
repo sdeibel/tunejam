@@ -1,9 +1,12 @@
 T:Grumbling Old Man, Growling Old Woman
-K:A/Am
+K:D/Am
 L:1/8
 M:4/4
 --
-cd|efed ^cdef|gfed c A3|
+efed cdef|ged=c B G3|
 CA,EA, CA,EA,|B,G,DG, B,G,DG,|
 --
-TBD
+|: A  | G | A  | EA    |
+   A  | G | Am | EmAm :|
+|: Am | G | Am | GAm   |
+   Am | G | Am | GAm  :|

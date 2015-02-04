@@ -3,8 +3,8 @@ K:D/G
 L:1/8
 M:6/8
 --
-f3 fgf|ecA ecA
-B2 BB=cB|G2BB=cB|
+f3 fgf|ecA ecA|
+B2 B BcB|G2B BcB|
 --
 |: D | A | GA | GA  |
    D | A | GA | AD :|
