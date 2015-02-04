@@ -168,7 +168,7 @@ M:%(meter)s
 %%%%multicol new
 %%%%textfont Monaco
 %%%%rightmargin 0.5in
-%%%%scale 1.2
+%%%%scale 1.0
 %%%%begintext right
 
 %(chords)s
@@ -179,7 +179,12 @@ M:%(meter)s
         notes = self.__NotesWithMeterOnEachLine()
         d = self.AsDict().copy()
         d['notes'] = notes
-    
+        chords = d['chords'].strip().splitlines()
+        if len(chords) < 8:
+            chords += [''] * (8 - len(chords))
+        chords = '\n'.join(chords)
+        d['chords'] = chords
+        
         return kFormat % d
 
     def __FullKey(self):
@@ -188,6 +193,8 @@ M:%(meter)s
             pass
         elif key.endswith('m'):
             key = key[:-1] + ' Minor'
+        elif key.endswith('mix'):
+            key = key[:-3] + ' Modal'
         else:
             key = key + ' Major'
         return key
