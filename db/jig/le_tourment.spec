@@ -4,7 +4,10 @@ L:1/8
 M:6/8
 --
 E2E EFG|DGF GAB|
-B2B cBc|d2c BAG|
+# Combined B and Alternate B:
+[BG/]2F [GB] [cA][BG][cA]|[dB/]2d c BAG|
+# B:
+#B2B cBc|d2c BAG|
 #Alternate B:
 #GFG AGA|Bdc BAG|
 --
