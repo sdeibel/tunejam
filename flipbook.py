@@ -21,7 +21,10 @@ class CFlipBook(CBook):
     
         self.pages = []
         for section, section_name in kSections:
-            files = os.listdir(os.path.join(kDatabaseDir, section))
+            try:
+                files = os.listdir(os.path.join(kDatabaseDir, section))
+            except OSError:
+                continue
             tunes = []
             for fn in files:
                 if fn.endswith('.spec'):
