@@ -8,4 +8,4 @@ g2e g2e edB|f2d d^cd fed|
 --
 |: Em | D | Em    | DBmEm :|
 |  Em | D | Em    | GBmEm  |
-   Em | D | CBmEm | Bm_Em  |
+   Em | D | CBmEm | Bm-Em  |
