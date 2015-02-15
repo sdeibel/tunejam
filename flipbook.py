@@ -7,6 +7,7 @@ kSections = [
     ('jig', 'Jigs'),
     ('waltz', 'Waltz'),
     ('rag', 'Rags'),
+    ('slip', 'Slip Jigs'), 
     ('other', 'Other'),
 ]
 
@@ -34,6 +35,8 @@ class CFlipBook(CBook):
                     title = tune.title
                     if title.lower().startswith('the '):
                         title = title[4:]
+                    elif title.lower().startswith('a '):
+                        title = title[2:]
                     tunes.append((title, name))
             tunes.sort()
             

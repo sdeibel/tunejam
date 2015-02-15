@@ -112,6 +112,8 @@ class CTune:
     def Type(self):
         if self.type == 'waltz':
             return 'Waltzes'
+        elif self.type == 'slip':
+            return 'Slip Jigs'
         else:
             return self.type.capitalize() + 's'
     
@@ -224,7 +226,10 @@ M:%(meter)s
         d = self.AsDict().copy()
         d['notes'] = notes
         d['vspacer'] = '\n' * 9
-        d['tune_type'] = self.type.capitalize()
+        if self.type == 'slip':
+            d['tune_type'] = 'Slip Jig'
+        else:
+            d['tune_type'] = self.type.capitalize()
 
         return kFormat % d
 
