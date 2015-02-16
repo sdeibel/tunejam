@@ -1,10 +1,10 @@
-T:The Wren
-K:Bm
+T:You Married my Daughter but You Didn't
+K:G
 L:1/8
 M:2/4
 --
-Bf fe/f/ | ge e/d/c/d/ |
-B>A B/c/d/c/ | BB c>d |
+G Bd|g2 f/g/a/f/|g2 Bd|
+B/c/d/B/ G B/B/|G/G/B/B/ dB|
 --
 |: Em | Em  | A | A    |
    Em | Em  | A | AEm :|
