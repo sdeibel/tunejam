@@ -5,9 +5,10 @@ from setsheets import *
 kSections = [
     ('reel', 'Reels'),
     ('jig', 'Jigs'),
-    ('waltz', 'Waltz'),
-    ('rag', 'Rags'),
     ('slip', 'Slip Jigs'), 
+    ('rag', 'Rags'),
+    ('march', 'Marches'),
+    ('waltz', 'Waltzes'),
     ('other', 'Other'),
 ]
 

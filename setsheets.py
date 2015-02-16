@@ -112,6 +112,8 @@ class CTune:
     def Type(self):
         if self.type == 'waltz':
             return 'Waltzes'
+        elif self.type == 'march':
+            return 'Marches'
         elif self.type == 'slip':
             return 'Slip Jigs'
         else:
