@@ -1,4 +1,4 @@
-T:Driving the Turkeys to Boston
+T:Driving the Turkeys to Boston (by Caz Lewis)
 K:Am
 L:1/4
 M:4/4
