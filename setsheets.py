@@ -446,7 +446,8 @@ class CBook:
                 set_num = 1
                 continue
             tunes = line.split()
-            setnum = 'Set %i' % set_num
+            #setnum = 'Set %i' % set_num
+            setnum = ''
             title = [self.title, self.subtitle, self.date]
             title = [t.strip() for t in title]
             title = '%s - %s\\n%s' % tuple(title)

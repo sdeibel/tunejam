@@ -1,52 +1,26 @@
 * Corrections and missing chords from Bliss and Robbie
-* Set up final print forms
-  * standard sets
-  * three-part pages (need to rework output to have uniform spacing)
-  * cards?
+* Reimplement website
 * Notebooks/printing options for three-part books
 * More tunes
-  plenty_of_hornpipe
-  flat_foot_henry
-  sweets_of_may
   shetland_tune_title_unknown_1
   shetland_tune_title_unknown_2
   off_to_boston
   a_yow_came_to_weir_door_yarmin
   cluck_old_hen
-  the_snowy_path
   creaky_joints
   ten_penny_bit
   valentines_day
   st_columba
-  bear_dance_1
-  bear_dance_2
   off_to_california
   canyon_creek
   i_cannae_get_my_mare_a_tamed
-  full_rigged_ship
-  new_rigged_ship
-  the_queens_jig
   the_bumble_bee
-  erics_waltz
-  swedish_walking_tune
   minstrel_boy
-  the_cliffs_of_mohr
-  da_fields_of_foula
-  da_brig
-  zemer_attik
-  scotland_the_brave
   queen_of_the_county_fair
-  banish_misfortune
-  teviot_bridge
-  walk_on
-  star_of_munster
   jimmy_allen
-  be_it_so
-  dusty_bobs_jig
   forest_wedding
-  money_in_both_pockets
-  smash_the_windows
   the_rags
+  [flat_foot_henry]
 No recordings yet
   midnight_on_the_water
   old_french
@@ -68,6 +42,7 @@ No recordings yet
   les_fraise_et_les_framboise
   star_of_the_county_down
   flowers_of_the_thorn
+  belle_meres_waltz
 Neither (not really tunejam tunes)
   bumble_bee_with_new_middle
   stephans_gypsy_tune
