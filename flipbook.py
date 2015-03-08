@@ -9,6 +9,7 @@ kSections = [
     ('rag', 'Rags'),
     ('march', 'Marches'),
     ('waltz', 'Waltzes'),
+    ('hornpipe', 'Hornpipes'),
     ('other', 'Other'),
 ]
 

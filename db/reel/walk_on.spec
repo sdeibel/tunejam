@@ -1,6 +1,6 @@
 T:Walk On (by Jody Kruskal)
 K:Em
-L:1/4
+L:1/8
 M:4/4
 --
 B,2D2|EGAB AGAB|AGAB AGED|
