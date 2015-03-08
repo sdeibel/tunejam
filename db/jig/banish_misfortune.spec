@@ -5,7 +5,7 @@ M:6/8
 --
 e|^fed cAG|A2d cAF|
 e|^f2d d^cd|^f2g agf|
-^f2ge2f|d2ec2d|
+^f2ge2f|d2e=c2d|
 --
 |: DC | DC | D  | DC   | 
    DC | Am | DC | AmD :|
