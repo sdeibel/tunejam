@@ -4,8 +4,8 @@ L:1/8
 M:4/4
 --
 e>g|a2a>b ag eg|a2a>b ag eg|
-e>d|cece B2 e>d|cAcA E2 ed|
-AB|cdec BcdB|ABAF GF E2|
+e>d|cece B2 e>d|
+AB|cdec BcdB|
 --
 |: A  | A | G  | D   |
    A  | A | G  | D  :|

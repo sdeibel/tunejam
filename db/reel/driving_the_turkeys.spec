@@ -1,6 +1,6 @@
 T:Driving the Turkeys to Boston (by Caz Lewis)
 K:Am
-L:1/4
+L:1/8
 M:4/4
 --
 E2|zA/A/B/ c/B/A|BBe2|
