@@ -1,6 +1,6 @@
 T:New Rigged Ship
 K:A/Am/A
-L:1/4
+L:1/8
 M:4/4
 --
 e>g|a2a>b ag eg|a2a>b ag eg|
