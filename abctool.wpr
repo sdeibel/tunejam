@@ -4,6 +4,25 @@
 # Wing IDE project file                                          #
 ##################################################################
 [project attributes]
+debug.named-entry-points = (1,
+                            {'Drafts Book': ({},
+        {'auto-show': False,
+         'launch-id': ('project',
+                       (u'--book drafts',
+                        '')),
+         'loc': loc('setsheets.py')}),
+                             'Flip Book': ({},
+        {'auto-show': False,
+         'launch-id': ('project',
+                       (u'',
+                        '')),
+         'loc': loc('flipbook.py')}),
+                             'Sets Book': ({},
+        {'auto-show': False,
+         'launch-id': ('project',
+                       (u'--book tunejam',
+                        '')),
+         'loc': loc('setsheets.py')})})
 proj.directory-list = [{'dirloc': loc('.'),
                         'excludes': (),
                         'filter': u'*',
