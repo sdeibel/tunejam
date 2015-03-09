@@ -17,6 +17,12 @@ debug.named-entry-points = (1,
                        (u'',
                         '')),
          'loc': loc('flipbook.py')}),
+                             'Ring Format': ({},
+        {'auto-show': False,
+         'launch-id': ('project',
+                       (u'--ring --book tunejam',
+                        '')),
+         'loc': loc('setsheets.py')}),
                              'Sets Book': ({},
         {'auto-show': False,
          'launch-id': ('project',
@@ -31,6 +37,6 @@ proj.directory-list = [{'dirloc': loc('.'),
                         'watch_for_changes': True}]
 proj.file-type = 'shared'
 proj.launch-config = {loc('setsheets.py'): ('project',
-        (u'--book drafts',
+        (u'--ring --book drafts',
          ''))}
 proj.main-file = loc('setsheets.py')

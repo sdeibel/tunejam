@@ -193,6 +193,44 @@ M:%(meter)s
         
         return kFormat % d
 
+    def MakeCardRing(self):
+        """Generate ring form of cheat sheet card"""
+        
+        kFormat = """%%%%textfont Times-Roman
+%%%%scale 3.0
+T:
+T:%(title)s - %(fullkey)s
+%%%%scale 0.9
+K:%(key)s
+L:%(unit)s
+M:%(meter)s
+%%%%multicol start
+%%%%leftmargin 2.5in
+%%%%rightmargin 3.5in
+%%%%scale 0.7
+%(notes)s
+%%%%multicol new
+%%%%textfont Monaco
+%%%%rightmargin 0.5in
+%%%%scale 0.8
+%%%%begintext right
+
+%(chords)s
+%%%%endtext
+%%%%multicol end
+"""
+
+        notes = self.__NotesWithMeterOnEachLine()
+        d = self.AsDict().copy()
+        d['notes'] = notes
+        chords = d['chords'].strip().splitlines()
+        if len(chords) < 11:
+            chords += [''] * (11 - len(chords))
+        chords = '\n'.join(chords)
+        d['chords'] = chords
+        
+        return kFormat % d
+
     def MakeFlipBook(self, pos):
         """Generate form of cheat sheet card used in flip book"""
 
@@ -334,6 +372,29 @@ class CTuneSet:
 
         return ''.join(parts)
         
+    def MakeCardRing(self):
+        
+        kStart = """%%%%textfont Monaco
+%%%%textfont Times-Roman
+%%%%headerfont Times-Roman 12
+%%%%header "%s"
+%%%%footerfont Times-Roman 12
+%%%%footer "%s"
+
+%%%%scale 1.4
+%%%%begintext
+%s
+%%%%endtext
+
+""" % ('', '', '')
+
+        parts = [kStart]
+        for i, tune in enumerate(self.tunes):
+            parts.append('\nX:%i\n'%i)
+            parts.append(tune.MakeCardRing())
+            
+        return ''.join(parts)
+
     def MakeCardSmall(self):
         
         kStart = """%%%%textfont Monaco
@@ -466,6 +527,14 @@ class CBook:
             
         return pages
     
+    def GenerateRing(self):
+        pages = []
+        for page in self.pages:
+            abc = page.MakeCardRing()
+            pages.append(ABCToPostscript(abc))
+            
+        return pages
+    
     def GenerateSmall(self):
         pages = []
         for page in self.pages:
@@ -486,6 +555,11 @@ if __name__ == '__main__':
             name = args[0]
             book = CBook(name, large=True)
             pages = book.GenerateLarge()
+        elif '--ring' in args:
+            args.remove('--ring')
+            name = args[0]
+            book = CBook(name, large=True)
+            pages = book.GenerateRing()
         else:
             name = args[0]
             book = CBook(name)
