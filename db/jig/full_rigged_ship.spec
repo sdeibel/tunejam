@@ -1,5 +1,5 @@
 T:Full Rigged Ship
-K:C
+K:Am
 L:1/8
 M:6/8
 --
@@ -11,5 +11,5 @@ G|EGE EGE|EGEc3|
    Am | AmG | Em  | Am :|
 |: Am | AmC | G   | GEm | 
    Am | AmC | Em  | Am  |
-|: Em | EmC | Am  | C   |
-   Em | EmC | Am  | Am :|
+|: C  | C   | C   | CG  |
+   C  | C   | Em  | Am :|

@@ -1,7 +1,7 @@
 * Corrections and missing chords from Bliss and Robbie
 * Reimplement website
 * Notebooks/printing options for three-part books
-* More tunes
+* More tunes for which we have recordings
   shetland_tune_title_unknown_1
   shetland_tune_title_unknown_2
   off_to_boston
@@ -21,7 +21,7 @@
   forest_wedding
   the_rags
   [flat_foot_henry]
-No recordings yet
+No recordings yet (but have database entries)
   midnight_on_the_water
   old_french
   onion_reel
@@ -48,4 +48,4 @@ Neither (not really tunejam tunes)
   stephans_gypsy_tune
   march_of_the_bullfrogs
   bachelor_duck
-  
+  the_tidley_idley

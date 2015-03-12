@@ -9,4 +9,4 @@ A2A2A2FA|B2B2A2FE|
 |: D | D     | GA   | D  |
    D | GD    | BmEm | A :|
 |: D | GD    | BmEm | A  |
-   D | F#mBm | GGm  | D :|
+   D | F#mBm | GA   | D :|

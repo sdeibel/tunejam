@@ -6,11 +6,11 @@ M:3/4
 de|f3ed2|d3ed2|
 de|f3ed2|ed ef a2|
 --
-| D  | D  | GA7   | D     | 
-  G  | A  | D(Bm) | D(Bm) |
-  G  | D  | Bm    | Bm    |
-  G  | A  | D     | D     |
-| D  | A  | G     | D     |
-  A  | Bm | G     | D     |
-  Bm | Bm | G     | D     | 
-  G  | A  | D     | D     |
+| D | D  | GA7   | D     | 
+  G | A  | D(Bm) | D(Bm) |
+  G | D  | Bm    | Bm    |
+  G | A  | D     | D     |
+| D | AD | GA    | D     |
+  A | Bm | G     | DA    |
+  D | Bm | G     | D     | 
+  G | A  | D     | D     |
