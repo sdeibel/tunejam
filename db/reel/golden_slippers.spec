@@ -8,5 +8,7 @@ A3d fedc|B3e gfed|
 --
 |: D | D | D | A  |
    A | A | A | D :|
-|: D | D | G | G  |
-   A | A | D | D :|
+|  D | D | G | E  |
+   A | A | D | D  |
+   D | D | G | E  |
+   A | A | A | D  |

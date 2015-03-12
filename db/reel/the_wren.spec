@@ -6,7 +6,7 @@ M:2/4
 Bf fe/f/ | ge e/d/c/d/ |
 B>A B/c/d/c/ | BB c>d |
 --
-|: Em | Em  | A | A    |
-   Em | Em  | A | AEm :|
-|: Em | EmA | A | AG   |
-   G  | GA  | A | AEm :|
+|: Bm | G  | A | F#m    |
+   Bm | G  | A | F#mBm :|
+|: Bm | G  | A | F#m    |
+   Bm | G  | A | F#mBm :|

@@ -6,7 +6,7 @@ M:4/4
 e2A2ABcd|e2A2A3B|
 c2e2dcB2|c2e2dcB2|
 --
-|: Am | Am | AG  | Em  |
-   Am | Am | AG  | Am :|
+|: Am | Am | AmG | Em  |
+   Am | Am | AmG | Am :|
 |: CG | CG | C   | Bb  |
    Am | Am | GEm | Am :|

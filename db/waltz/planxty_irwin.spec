@@ -10,7 +10,7 @@ A|d2d|d>cd|e2e|
   G | D | A | A  |
   D | G | A | Bm |
   G | D | A | D  |
-| D | G | A | A  |
+| D | D | A | A  |
   D | E | A | A  |
   D | G | A | Bm |
   G | D | A | D  |

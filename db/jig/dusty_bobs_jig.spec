@@ -11,4 +11,4 @@ d3|g2g gag|f2f fgf|
 |  G | B7 | C   | D  | 
    G | B7 | CD  | G  |
    G | B7 | C   | D  |
-   C | C  | D   | G  |
+   G | C  | D   | G  |

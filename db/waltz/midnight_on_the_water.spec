@@ -3,7 +3,7 @@ K:D
 L:1/8
 M:3/4
 --
-CDE|F4F2|F4FE|
+DE|F4F2|F4FE|
 ABc|(d4d)d|dc BA Bc| 
 --
 |: D | (DM7) | (D6) | D   |

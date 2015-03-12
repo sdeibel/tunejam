@@ -6,7 +6,7 @@ M:6/8
 E2B B2A|B2^c d3|
 e2f gfe|d2B B^cd|
 --
-|: Em | Em | G   | Bm  | 
-   Em | Em | DEm | Em :|
+|: Em | Em | D   | Bm  | 
+   Em | Em | DBm | Em :|
 |: Em | D  | A   | Bm  |  
    E  | D  | A   | Em :|

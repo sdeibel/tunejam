@@ -9,6 +9,6 @@ a3b ageg|agab agef|
 |: AmG | AmEm | Am | GEm   |
    AmG | AmEm | Am | EmAm :|
 |  A   | A    | G  | GEm   |
-   Am  | Am   | GF | Em    |
+   A   | A    | GF | Em    |
    A   | A    | G  | GEm   |
-   Am  | Am   | GF | GEm   |
+   A   | A    | GF | Em    |
