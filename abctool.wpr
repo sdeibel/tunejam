@@ -5,7 +5,8 @@
 ##################################################################
 [project attributes]
 debug.named-entry-points = (1,
-                            {'All Book': ({},
+                            {'All Book': ({'key-binding-debug': 'Ctrl-X Ctrl'\
+        '-A'},
         {'auto-show': False,
          'launch-id': ('project',
                        (u'',
