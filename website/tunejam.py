@@ -64,6 +64,8 @@ def tune(section, tune):
   
   parts.append(CH(title + ' - ' + section.capitalize(), 1))
 
+  parts.append(utils.ChordsToHTML(obj.chords))
+  
   return page_wrapper(parts)
   
 @app.route('/css')
@@ -75,6 +77,9 @@ border:10px;
 }
 p {
 padding-left:145px;
+}
+tr.even {
+background:#AAAAAA;
 }
 """
 
