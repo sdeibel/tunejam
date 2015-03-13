@@ -1,19 +1,14 @@
 # Generate a flip book for making tune sets
 
 from setsheets import *
+import utils
+import utils
+import utils
+import utils
+import utils
+import utils
 
-kSections = [
-    ('reel', 'Reels'),
-    ('jig', 'Jigs'),
-    ('slip', 'Slip Jigs'), 
-    ('rag', 'Rags'),
-    ('march', 'Marches'),
-    ('waltz', 'Waltzes'),
-    ('hornpipe', 'Hornpipes'),
-    ('other', 'Other'),
-]
-
-class CFlipBook(CBook):
+class CFlipBook(utils.CBook):
 
     def __init__(self):
         
@@ -23,16 +18,16 @@ class CFlipBook(CBook):
         self.contact = 'http://cambridgeny.net/music'
     
         self.pages = []
-        for section, section_name in kSections:
+        for section, section_name in utils.kSections:
             try:
-                files = os.listdir(os.path.join(kDatabaseDir, section))
+                files = os.listdir(os.path.join(utils.kDatabaseDir, section))
             except OSError:
                 continue
             tunes = []
             for fn in files:
                 if fn.endswith('.spec'):
                     name = fn[:-len('.spec')]
-                    tune = CTune(name)
+                    tune = utils.CTune(name)
                     tune.ReadDatabase()
                     title = tune.title
                     if title.lower().startswith('the '):
@@ -47,14 +42,14 @@ class CFlipBook(CBook):
                 title = [self.title, self.subtitle, self.date]
                 title = [t.strip() for t in title]
                 title = '%s - %s\\n%s' % tuple(title)
-                tuneset = CTuneSet(page_tunes, title, self.contact, '')
+                tuneset = utils.CTuneSet(page_tunes, title, self.contact, '')
                 self.pages.append(tuneset)
 
     def GenerateSmall(self):
         pages = []
         for page in self.pages:
             abc = page.MakeFlipBook()
-            pages.append(ABCToPostscript(abc))
+            pages.append(utils.ABCToPostscript(abc))
 
         return pages
 

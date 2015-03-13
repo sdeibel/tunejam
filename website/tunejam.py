@@ -1,5 +1,9 @@
+import sys, os
 import time
 from html import *
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import utils
 
 from flask import Flask
 app = Flask(__name__)
@@ -12,7 +16,7 @@ def page_wrapper(body):
   head = CHead([CTitle(title),
                 CMeta("text/html; charset=utf-8", http_equiv="Content-Type"),
                 CMeta("Copyright (c) 1999-%s Stephan Deibel" % year, name="Copyright"),
-                '<link rel="stylesheet" type="text/css" href="/css" media="screen"/>'
+                '<link rel="stylesheet" type="text/css" href="/css" media="screen" />'
               ])
 
   body_div = CBody([CDiv(body, id="body")])
@@ -24,11 +28,44 @@ def page_wrapper(body):
   
 @app.route('/')
 def home():
-  return page_wrapper([
-    CParagraph('Hello World!'),
-    CParagraph("Test again")
-  ])
+  parts = []
+  parts.append(CH("Cambridge NY", 1))
+  parts.append(CParagraph("Welcome!"))
+  parts.append(CParagraph([CText("Tune Jam", href='/music'), CBreak()]))
+      
+  return page_wrapper(parts)
 
+  
+@app.route('/music')
+def music():
+  parts = []
+  parts.append(CH("Tune Index", 1))
+  tunes = utils.GetTuneIndex()
+
+  sections = tunes.keys()
+  sections.sort()
+  for section in sections:
+    parts.append(CH(utils.kSectionTitles[section], 2))
+    for title, tune in tunes[section]:
+      parts.extend([CText(title, href="/tune/%s/%s" % (section, tune)), CBreak()])
+      
+  return page_wrapper(parts)
+
+@app.route('/tune/<section>/<tune>')
+def tune(section, tune):
+  parts = []
+  
+  obj = utils.CTune(tune)
+  try:
+    obj.ReadDatabase()
+    title = obj.title
+  except SystemExit:
+    title = "Unknown Tune"
+  
+  parts.append(CH(title + ' - ' + section.capitalize(), 1))
+
+  return page_wrapper(parts)
+  
 @app.route('/css')
 def css():
   return """
