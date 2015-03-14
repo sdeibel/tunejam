@@ -1,13 +1,12 @@
 * Corrections and missing chords from Bliss and Robbie (just waltzes left)
 * Reimplement website
   * Tune page
-    * Embed notes from ABC
     * Link in recordings
+  * Fix printing
   * Set generation:  Select tunes and generate page with set
   * A way to save set to a sets page
   * Book generation -- sets page or selected tunes or all tunes;
     include index and TOC
-  * Add tune key to index page
   * Design / header / footer / menu / improve overall CSS
   * A way to play set recordings in order one after the other?
   * Metronome on sets page?

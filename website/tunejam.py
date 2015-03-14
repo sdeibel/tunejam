@@ -17,6 +17,7 @@ def page_wrapper(body):
                 CMeta("text/html; charset=utf-8", http_equiv="Content-Type"),
                 CMeta("Copyright (c) 1999-%s Stephan Deibel" % year, name="Copyright"),
                 '<link rel="stylesheet" type="text/css" href="/css" media="screen" />', 
+                '<link rel="stylesheet" type="text/css" href="/css" media="print" />', 
 ])
 
   body_div = CBody([CDiv(body, id="body")])
@@ -47,6 +48,9 @@ def music():
   for section in sections:
     parts.append(CH(utils.kSectionTitles[section], 2))
     for title, tune in tunes[section]:
+      obj = utils.CTune(tune)
+      obj.ReadDatabase()
+      title += ' - ' + obj.GetKeyString()
       parts.extend([CText(title, href="/tune/%s/%s" % (section, tune)), CBreak()])
       
   return page_wrapper(parts)
@@ -62,20 +66,11 @@ def tune(section, tune):
   except SystemExit:
     title = "Unknown Tune"
 
-  keys = obj.key
-  keys = keys.split('/')
-  key_str = []
-  for key in keys:
-    if key.endswith('m'):
-      key_str.append(key[:-1] + " Minor")
-    elif key.endswith('mix'):
-      key_str.append(key[:-3] + " Modal")
-    else:
-      key_str.append(key + " Major")
-  key_str = ' / '.join(key_str)
+  key_str = obj.GetKeyString()
   parts.append(CH(title + ' - ' + section.capitalize() + ' - ' + key_str, 1))
 
-  parts.append(ChordsToHTML(obj.chords))
+  parts.append(CDiv(NotesToXHTML(obj), hclass='notes'))
+  parts.append(CDiv(ChordsToHTML(obj.chords), hclass='chords'))
   
   return page_wrapper(parts)
   
@@ -90,12 +85,12 @@ font-family: varela_round, "Trebuchet MS", Arial, Verdana, sans-serif;
 line-height:140%;
 list-style:none;
 }
-table {
-border:0px;  /* For Chrome and Safari */
-border-left:2px solid #000;
-border-right:2px solid #000;
-margin-left:4px;
-margin-top:10px;
+h1 {
+word-wrap:break-word;
+}
+h2 {
+padding-top:10px;
+padding-bottom:5px;
 }
 a {
 outline-style:none;
@@ -106,13 +101,32 @@ margin:20px;
 p {
 padding-left:145px;
 }
+div.notes {
+position:absolute;
+float:left;
+margin-top:-.5in;
+}
+div.chords {
+position:absolute;
+float:right;
+margin-left:4.5in;
+}
+
+/* Chord tables */
+table {
+border:0px;  /* For Chrome and Safari */
+border-left:2px solid #000;
+border-right:2px solid #000;
+margin-left:4px;
+margin-top:20px;
+transform: scale(2, 2) translate(25%,25%);
+}
 tr.even {
 background:#CCCCCC;
 }
 td {
 padding-right:20px;
 padding-left:20px;
-font-size:250%;
 }
 td.last {
 text-align:right;
@@ -120,13 +134,6 @@ padding-right:3px;
 }
 td.first {
 padding-left:3px;
-}
-h1 {
-word-wrap:break-word;
-}
-h2 {
-padding-top:10px;
-padding-bottom:5px;
 }
 """
   return Response(css, mimetype='text/css')
@@ -171,6 +178,25 @@ def ChordsToHTML(chords):
     
     return html
     
+def NotesToXHTML(tune):
+
+  if not isinstance(tune, utils.CTune):
+    tune = utils.CTune(tune)
+    
+  try:
+    tune.ReadDatabase()
+  except:
+    return None
+  
+  abc = tune.MakeNotes()
+  svg = utils.ABCToPostscript(abc, svg=True)
+  
+  f = open(svg)
+  svg = f.read()
+  f.close()
+  
+  return svg
+
 if __name__ == '__main__':
   from os import environ
   if 'WINGDB_ACTIVE' in environ:
