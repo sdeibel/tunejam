@@ -113,20 +113,22 @@ margin-left:4.5in;
 }
 
 /* Chord tables */
-table {
+table.chords {
 border:0px;  /* For Chrome and Safari */
 border-left:2px solid #000;
 border-right:2px solid #000;
 margin-left:4px;
 margin-top:20px;
-transform: scale(2, 2) translate(25%,25%);
+transform: scale(2.2, 2.2) translate(25%,25%);
 }
 tr.even {
-background:#CCCCCC;
+background:#DDDDDD;
 }
 td {
-padding-right:20px;
-padding-left:20px;
+padding-right:1.0em;
+}
+td.last-chord {
+padding-right:0.5em;
 }
 td.last {
 text-align:right;
@@ -134,6 +136,7 @@ padding-right:3px;
 }
 td.first {
 padding-left:3px;
+padding-right:0.5em;
 }
 """
   return Response(css, mimetype='text/css')
@@ -158,9 +161,11 @@ def ChordsToHTML(chords):
                 hclass = None
                 if not row:
                     hclass = 'first'
+                elif len(row) == 4:
+                    hclass = 'last-chord'
                 row.append(CTD(measure, hclass=hclass))
             if len(row) == 5 and (i + 1 >= len(part) or part[i+1] != ':|'):
-                row.append('')
+                row.append(CTD('', hclass='last'))
                 html.append(CTR(row, hclass=part_class))
                 row = []
             elif len(row) == 6:
