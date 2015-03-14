@@ -33,6 +33,9 @@ class CTune:
     def ReadDatabase(self):
         """Read one file from the tunes database.  Returns CTune named tuple"""
         
+        if self.notes:
+            return
+        
         fn = self.name + '.spec'
         
         fullpath = None
@@ -126,6 +129,35 @@ class CTune:
         else:
             return self.type.capitalize() + 's'
     
+    def GetKeyString(self):
+        keys = self.key
+        keys = keys.split('/')
+        key_str = []
+        for key in keys:
+            if key.endswith('m'):
+                key_str.append(key[:-1] + " Minor")
+            elif key.endswith('mix'):
+                key_str.append(key[:-3] + " Modal")
+            else:
+                key_str.append(key + " Major")
+        key_str = ' / '.join(key_str)
+        return key_str
+    
+    def MakeNotes(self):
+        """Generate only the notes for the tune, as ABC"""
+
+        kFormat = """X:0
+K:%(key)s
+L:%(unit)s
+M:%(meter)s
+%(notes)s
+"""
+        notes = self.__NotesWithMeterOnEachLine()
+        d = self.AsDict().copy()
+        d['notes'] = notes
+        
+        return kFormat % d
+        
     def MakeNotesLarge(self):
         """Generate large form of notes"""
 
@@ -558,7 +590,7 @@ def ParseChords(chords):
         
     return parts
 
-def ABCToPostscript(abc):
+def ABCToPostscript(abc, svg=False):
     
     f, fn = tempfile.mkstemp(suffix='.abc')
     f = os.fdopen(f, 'w')
@@ -566,7 +598,11 @@ def ABCToPostscript(abc):
     f.close()
 
     ps_fn = os.path.splitext(fn)[0] + '.ps'
-    cmdline = [kExecutable, fn, '-O', ps_fn]
+    if svg:
+        svg_arg = '-X -m 0 -w 4in'
+    else:
+        svg_arg = ''
+    cmdline = [kExecutable, fn, svg_arg, '-O', ps_fn]
     cmdline = ' '.join(cmdline)
 
     os.system(cmdline)
