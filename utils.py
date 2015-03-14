@@ -3,8 +3,6 @@ import setsheets
 import tempfile
 import sys
 
-from html import *
-
 kExecutable = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'bin/abcm2ps')
 kDatabaseDir = os.path.join(os.path.dirname(__file__), 'db')
 
@@ -551,51 +549,15 @@ def ParseChords(chords):
         for i, measure in enumerate(measures):
             measure = measure.strip()
             if i == 0 and measure in ('|', '|:') and curr_part:
-                if curr_part[-1] != ':|':
-                    curr_part.append('')
                 parts.append(curr_part)
                 curr_part = []
             if measure and measure != '|':
-                if not curr_part and measure != '|:':
-                    curr_part.append('')
                 curr_part.append(measure)
     if curr_part:
         parts.append(curr_part)
         
     return parts
 
-def ChordsToHTML(chords):
-    
-    if not isinstance(chords, list):
-        chords = ParseChords(chords)
-        
-    html = []
-    part_class = 'even'
-    for i, part in enumerate(chords):
-        row = []
-        for i, measure in enumerate(part):
-            if measure != '|:' and not row:
-                row.append('')
-            row.append(measure)
-            if len(row) == 5 and i + 1 < len(part) and part[i+1] != ':|':
-                row.append('')
-                html.append(CTR(row, hclass=part_class))
-                row = []
-            elif len(row) == 6:
-                html.append(CTR(row, hclass=part_class))
-                row = []
-        if row:
-            html.append(CTR(row, hclass=part_class))
-            
-        if part_class == 'even':
-            part_class = 'odd'
-        else:
-            part_class = 'even'
-        
-    html = CTable(html, hclass="chords")
-    
-    return html
-    
 def ABCToPostscript(abc):
     
     f, fn = tempfile.mkstemp(suffix='.abc')
