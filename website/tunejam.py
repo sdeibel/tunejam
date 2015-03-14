@@ -121,6 +121,13 @@ padding-right:3px;
 td.first {
 padding-left:3px;
 }
+h1 {
+word-wrap:break-word;
+}
+h2 {
+padding-top:10px;
+padding-bottom:5px;
+}
 """
   return Response(css, mimetype='text/css')
 
