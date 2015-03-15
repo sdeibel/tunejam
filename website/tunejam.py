@@ -126,6 +126,7 @@ background:#DDDDDD;
 }
 td {
 padding-right:1.0em;
+line-height:120%;
 }
 td.last-chord {
 padding-right:0.5em;
