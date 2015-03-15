@@ -280,7 +280,7 @@ class CH(CTD):
 #-----------------------------------------------------------------------
 class CText(CTag):
   """Used for bits of text with local styling.  Attribs: hclass, id, font, 
-  size, color, href, bold, italic, underline, title_level.  Better to use
+  size, color, href, onclick, bold, italic, underline, title_level.  Better to use
   CDiv()."""
   
   def __init__(self, body, **attribs):
@@ -305,8 +305,13 @@ class CText(CTag):
     if not nospan and (hclass != '' or id != ''):
       start.append('<span%s%s>' % (hclass, id))
     
+    if attribs.has_key('onclick') and attribs['onclick']:
+      onclick = ' onClick="%s"' % attribs['onclick']
+    else:
+      onclick = ''
+
     if attribs.has_key('href') and attribs['href']:
-      start.append('<a href="%s"%s%s>' % (attribs['href'], hclass, id))
+      start.append('<a href="%s"%s%s%s>' % (attribs['href'], hclass, id, onclick))
     if attribs.has_key('hname'):
       start.append('<a name="%s">' % attribs['hname'])
     if attribs.has_key('title_level'):
