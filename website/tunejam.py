@@ -51,12 +51,87 @@ def music():
       obj = utils.CTune(tune)
       obj.ReadDatabase()
       title += ' - ' + obj.GetKeyString()
-      parts.extend([CText(title, href="/tune/%s/%s" % (section, tune)), CBreak()])
+      parts.extend([CText(title, href="/tune/%s" % tune), CBreak()])
       
   return page_wrapper(parts)
 
-@app.route('/tune/<section>/<tune>')
-def tune(section, tune):
+@app.route('/sets')
+@app.route('/sets/<spec>')
+def sets(spec=None):
+  
+  if spec is not None:
+    return tuneset(spec)
+  
+  parts = []
+  parts.append("""<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+ <script>
+$(function() {
+  $( "#alltunes, #selectedtunes" ).sortable({
+    connectWith: ".connectedSortable"
+  }).disableSelection();
+});
+function SubmitTunes() {
+  var tunes = $( "#selectedtunes" ).sortable( "serialize", {key:"tune"});
+  tunes = tunes.replace("+", "_", "g");
+  tunes = tunes.replace("tune=", "", "g");
+  window.location.href= "/sets/" + tunes;
+}
+</script>
+<style>
+#alltunes {
+width=45%;
+border:1px;
+}
+#selectedtunes {
+width=45%;
+height=250px;
+border:1px;
+}
+td {
+vertical-align:top;
+width:45%
+}
+</style>
+""")
+  
+  all_tunes = []
+  tunes = utils.GetTuneIndex()
+  for section in tunes:
+    for title, tune in tunes[section]:
+      obj = utils.CTune(tune)
+      obj.ReadDatabase()
+      title += ' - %s - %s' % (obj.type.capitalize(), obj.GetKeyString())
+      all_tunes.append(CItem(title, id='tune_%s' % tune.replace('_', '+'), hclass='ui-state-default'))
+      if len(all_tunes) > 5:
+        break
+
+  tunes_list = CList(all_tunes, id='alltunes', hclass='connectedSortable')
+  selected_list = CList([CItem('test', hclass='ui-state-highlight')], id='selectedtunes', hclass='connectedSortable')
+  
+  parts.append(CTable(CTR([tunes_list, selected_list])))
+
+  parts.append(CText("Submit", href="#", onclick="SubmitTunes();"))
+  
+  return page_wrapper(parts)
+
+def tuneset(spec):
+  
+  parts = []
+  
+  tunes = spec.split('&')
+  for i, tune in enumerate(tunes):
+    parts.append(CDiv(_tune(tune), hclass='tune-%i' % i))
+  
+  return page_wrapper(parts)
+
+@app.route('/tune/<tune>')
+def tune(tune):
+  parts = _tune(tune)
+  return page_wrapper(parts)
+
+def _tune(tune):
   parts = []
   
   obj = utils.CTune(tune)
@@ -67,12 +142,12 @@ def tune(section, tune):
     title = "Unknown Tune"
 
   key_str = obj.GetKeyString()
-  parts.append(CH(title + ' - ' + section.capitalize() + ' - ' + key_str, 1))
+  parts.append(CH(title + ' - ' + obj.type.capitalize() + ' - ' + key_str, 1))
 
   parts.append(CDiv(NotesToXHTML(obj), hclass='notes'))
   parts.append(CDiv(ChordsToHTML(obj.chords), hclass='chords'))
-  
-  return page_wrapper(parts)
+
+  return parts
   
 @app.route('/css')
 def css():
@@ -110,6 +185,22 @@ div.chords {
 position:absolute;
 float:right;
 margin-left:4.5in;
+}
+div.tune-0 {
+position:absolute;
+top:10px;
+}
+div.tune-1 {
+position:absolute;
+top:3in;
+}
+div.tune-2 {
+position:absolute;
+top:6in;
+}
+div.tune-3 {
+position:absolute;
+top:9in;
 }
 
 /* Chord tables */
