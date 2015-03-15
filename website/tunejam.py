@@ -104,8 +104,6 @@ width:45%
       obj.ReadDatabase()
       title += ' - %s - %s' % (obj.type.capitalize(), obj.GetKeyString())
       all_tunes.append(CItem(title, id='tune_%s' % tune.replace('_', '+'), hclass='ui-state-default'))
-      if len(all_tunes) > 5:
-        break
 
   tunes_list = CList(all_tunes, id='alltunes', hclass='connectedSortable')
   selected_list = CList([CItem('test', hclass='ui-state-highlight')], id='selectedtunes', hclass='connectedSortable')
@@ -142,10 +140,17 @@ def _tune(tune):
     title = "Unknown Tune"
 
   key_str = obj.GetKeyString()
-  parts.append(CH(title + ' - ' + obj.type.capitalize() + ' - ' + key_str, 1))
 
-  parts.append(CDiv(NotesToXHTML(obj), hclass='notes'))
-  parts.append(CDiv(ChordsToHTML(obj.chords), hclass='chords'))
+  chords = ChordsToHTML(obj.chords)
+  
+  parts.append(CDiv([
+    CH(title + ' - ' + obj.type.capitalize() + ' - ' + key_str, 1),
+    CDiv(NotesToXHTML(obj), hclass='notes'),
+    CDiv(chords, hclass='chords'),
+    # Trickery to work around browser bugginess where it sizes
+    # according to unscaled chords table (we scale by 2.2; see css)
+    CDiv([chords, chords, CBreak(2)], hclass='trans'), 
+  ], hclass='tune'))
 
   return parts
   
@@ -176,31 +181,23 @@ margin:20px;
 p {
 padding-left:145px;
 }
+div.tune {
+position:relative;
+}
 div.notes {
 position:absolute;
-float:left;
-margin-top:-.5in;
+left:0in;
+top:0in;
 }
 div.chords {
 position:absolute;
-float:right;
-margin-left:4.5in;
+left:4.5in;
+top:0.5in;
 }
-div.tune-0 {
-position:absolute;
-top:10px;
-}
-div.tune-1 {
-position:absolute;
-top:3in;
-}
-div.tune-2 {
-position:absolute;
-top:6in;
-}
-div.tune-3 {
-position:absolute;
-top:9in;
+div.trans {
+opacity:0;
+display:table;
+transform: scale(2.2, 2.2) translate(25%,25%);
 }
 
 /* Chord tables */
