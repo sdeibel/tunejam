@@ -497,7 +497,7 @@ class CLabel(CTag):
     
 #-----------------------------------------------------------------------
 class CInput(CTag):
-  """Attribs: hclass, id, type, size, maxlength, name, value"""
+  """Attribs: hclass, id, type, size, maxlength, name, value, onclick"""
   def __init__(self, **attribs):
     self.checked = 0
     if attribs.has_key('checked'):
@@ -505,6 +505,9 @@ class CInput(CTag):
       del attribs['checked']
     if not attribs.has_key('hclass') and attribs.has_key('type'):
       attribs['hclass'] = attribs['type']
+    if attribs.has_key('onclick'):
+      attribs['onClick'] = attribs['onclick']
+      del attribs['onclick']
     CTag.__init__(self, 'input', None, '\n', **attribs)
 
   def __str__(self):
