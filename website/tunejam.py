@@ -206,14 +206,15 @@ def _tune(tune):
     CH(title + ' - ' + obj.type.capitalize() + ' - ' + key_str, 1),
     CDiv(NotesToXHTML(obj), hclass='notes'),
     CDiv(chords, hclass='chords'),
-    # Trickery to work around browser bugginess where it sizes
-    # according to unscaled chords table (we scale by 2.2; see css)
-    CDiv([chords, chords], hclass='trans'), 
   ], hclass='tune')
   
   tune_with_break = CDiv([
     CDiv(hclass='tune-break'),
     tune, 
+    # Trickery to work around browser bugginess where it sizes
+    # according to unscaled chords table (we scale by 2.2; see css)
+    CDiv([CDiv(chords, style="width:100%"),
+          CDiv(chords, style="width:100%")], hclass='trans'), 
   ], hclass='tune-with-break')
 
   return [tune_with_break]
@@ -230,7 +231,7 @@ line-height:140%;
 list-style:none;
 }
 h1 {
-word-wrap:break-word;
+white-space:nowrap;
 }
 h2 {
 padding-top:10px;
@@ -241,6 +242,7 @@ outline-style:none;
 }
 #body {
 margin:20px;
+width:8.5in;
 }
 p {
 padding-left:145px;
@@ -258,17 +260,19 @@ div.notes {
 position:absolute;
 left:0in;
 top:0in;
-transform: scale(1.2, 1.2) translate(10%,7%);
+transform: scale(1.2, 1.2) translate(9%,7%);
 }
 div.chords {
 position:absolute;
-left:5.5in;
+right:0.5in;
+width:3.5in;
 top:0.5in;
+transform: scale(2.2, 2.2) translate(25%,15%);
+padding-right:0.25in;
 }
 div.trans {
 opacity:0;
 display:table;
-transform: scale(2.2, 2.2) translate(25%,25%);
 }
 
 /* Chord tables */
@@ -278,7 +282,7 @@ border-left:2px solid #000;
 border-right:2px solid #000;
 margin-left:4px;
 margin-top:20px;
-transform: scale(2.2, 2.2) translate(25%,25%);
+float:right;
 }
 tr.even {
 background:#DDDDDD;
