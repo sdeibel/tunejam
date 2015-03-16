@@ -10,7 +10,7 @@ kSections = [
     ('reel', 'Reels'),
     ('jig', 'Jigs'),
     ('slip', 'Slip Jigs'), 
-    ('rag', 'Rags'),
+    #('rag', 'Rags'),
     ('march', 'Marches'),
     ('waltz', 'Waltzes'),
     ('hornpipe', 'Hornpipes'),

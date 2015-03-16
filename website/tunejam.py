@@ -5,7 +5,7 @@ from html import *
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import utils
 
-from flask import Flask, Response
+from flask import Flask, Response, request
 app = Flask(__name__)
 
 def page_wrapper(body):
@@ -55,12 +55,16 @@ def music():
       
   return page_wrapper(parts)
 
-@app.route('/sets')
+@app.route('/sets', methods=['GET', 'POST'])
 @app.route('/sets/<spec>')
 def sets(spec=None):
   
   if spec is not None:
     return tuneset(spec)
+
+  filter = request.form.get('filter')
+  if filter == 'all':
+    filter = None
   
   parts = []
   parts.append("""<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
@@ -74,8 +78,8 @@ $(function() {
 });
 function SubmitTunes() {
   var tunes = $( "#selectedtunes" ).sortable( "serialize", {key:"tune"});
-  tunes = tunes.replace("+", "_", "g");
-  tunes = tunes.replace("tune=", "", "g");
+  tunes = tunes.replace(/\+/g, "_");
+  tunes = tunes.replace(/tune=/g, "");
   window.location.href= "/sets/" + tunes;
 }
 </script>
@@ -86,31 +90,70 @@ border:1px;
 }
 #selectedtunes {
 width=45%;
-height=250px;
 border:1px;
+width:100%;
+height:300px;
 }
 td {
 vertical-align:top;
 width:45%
 }
+div.scroll {
+height:300px;
+overflow:auto;
+border: 1px solid #666666;
+padding: 8px;
+}
+p {
+padding-left:0px;
+padding-top:0.5em;
+padding-bottom:0.5em;
+}
 </style>
 """)
+  
+  parts.append(CH("Create a Tune Set", 1))
+  parts.append(CParagraph("Drag one or more songs from the list "
+                          "on the left to the list on the right:"))
+  
+  
+  section_options = [
+    ('all', 'All')
+  ]
+
+  keys = utils.kSectionTitles.keys()
+  keys.sort()
+  for key in keys:
+    section_options.append((key, utils.kSectionTitles[key]))
+    
+  parts.append(CForm([
+    CText("Filter:", bold=1),
+    CSelect(section_options, current=filter, name='filter',
+            onchange='this.form.submit()')
+  ], action="/sets", method='POST'))
+  parts.append(CBreak())
   
   all_tunes = []
   tunes = utils.GetTuneIndex()
   for section in tunes:
+    if filter is not None and filter != section:
+      continue
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
       title += ' - %s - %s' % (obj.type.capitalize(), obj.GetKeyString())
       all_tunes.append(CItem(title, id='tune_%s' % tune.replace('_', '+'), hclass='ui-state-default'))
 
-  tunes_list = CList(all_tunes, id='alltunes', hclass='connectedSortable')
-  selected_list = CList([CItem('test', hclass='ui-state-highlight')], id='selectedtunes', hclass='connectedSortable')
+  tunes_list = CDiv(CList(all_tunes, id='alltunes', hclass='connectedSortable'), hclass='scroll')
+  selected_list = CDiv(CList([], id='selectedtunes', hclass='connectedSortable'), hclass='scroll')
   
   parts.append(CTable(CTR([tunes_list, selected_list])))
-
-  parts.append(CText("Submit", href="#", onclick="SubmitTunes();"))
+  parts.append(CBreak())
+  
+  parts.append(CForm([
+    CInput(type='button', value="Submit", onclick="SubmitTunes();"),
+    CInput(type='button', value="Clear", onclick='window.location.reload(false)'), 
+  ]))
   
   return page_wrapper(parts)
 
