@@ -9,5 +9,5 @@ E2|A2E2E4|A2E2E2AB|
 |: Am   | G    | Am  | G   |
    CG   | AmEm | FG  | Am :|
 |: Am   | Am   | AmG | FEm |
-   AmEm | FG   | Am :|     .
-  (B part only has 7 bars!)
+   AmEm | FG   | Am :|
+  (B-part only has 7-bars!)
