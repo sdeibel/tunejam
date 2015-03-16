@@ -246,7 +246,7 @@ div.tune {
 position:relative;
 }
 div.tune-break {
-height:1.5em;
+height:2.5em;
 }
 div.tune-with-break {
 page-break-inside:avoid;
@@ -255,10 +255,11 @@ div.notes {
 position:absolute;
 left:0in;
 top:0in;
+transform: scale(1.2, 1.2) translate(10%,7%);
 }
 div.chords {
 position:absolute;
-left:4.5in;
+left:5.5in;
 top:0.5in;
 }
 div.trans {
