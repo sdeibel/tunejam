@@ -82,6 +82,9 @@ function SubmitTunes() {
   tunes = tunes.replace(/tune=/g, "");
   window.location.href= "/sets/" + tunes;
 }
+function ClearTunes() {
+  $( "#selectedtunes" ).empty();
+}
 </script>
 <style>
 #alltunes {
@@ -160,8 +163,8 @@ padding-bottom:0.5em;
   parts.append(CBreak())
   
   parts.append(CForm([
-    CInput(type='button', value="Submit", onclick="SubmitTunes();"),
-    CInput(type='button', value="Clear", onclick='window.location.reload(false)'), 
+    CInput(type='button', value="Submit", onclick='SubmitTunes();'),
+    CInput(type='button', value="Clear", onclick='ClearTunes();'), 
   ]))
   
   return page_wrapper(parts)
