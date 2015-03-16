@@ -2,8 +2,7 @@
 * Reimplement website
   * Tune page
     * Link in recordings
-  * Fix printing
-  * Set generation:  Select tunes and generate page with set
+  * Change set filter to jquery so it doesn't clear page
   * A way to save set to a sets page
   * Book generation -- sets page or selected tunes or all tunes;
     include index and TOC
