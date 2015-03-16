@@ -16,8 +16,8 @@ def page_wrapper(body):
   head = CHead([CTitle(title),
                 CMeta("text/html; charset=utf-8", http_equiv="Content-Type"),
                 CMeta("Copyright (c) 1999-%s Stephan Deibel" % year, name="Copyright"),
-                '<link rel="stylesheet" type="text/css" href="/css" media="screen" />', 
-                '<link rel="stylesheet" type="text/css" href="/css" media="print" />', 
+                '<link rel="stylesheet" type="text/css" href="/css/screen" media="screen" />', 
+                '<link rel="stylesheet" type="text/css" href="/css/print" media="print" />', 
 ])
 
   body_div = CBody([CDiv(body, id="body")])
@@ -124,7 +124,11 @@ padding-bottom:0.5em;
   keys = utils.kSectionTitles.keys()
   keys.sort()
   for key in keys:
-    section_options.append((key, utils.kSectionTitles[key]))
+    if key == 'reel':
+      title = "Reels, Marches, and Hornpipes"
+    else:
+      title = utils.kSectionTitles[key]
+    section_options.append((key, title))
     
   parts.append(CForm([
     CText("Filter:", bold=1),
@@ -136,14 +140,19 @@ padding-bottom:0.5em;
   all_tunes = []
   tunes = utils.GetTuneIndex()
   for section in tunes:
-    if filter is not None and filter != section:
+    if filter == 'reel' and section in ['reel', 'hornpipe', 'march']:
+      pass
+    elif filter is not None and filter != section:
       continue
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
       title += ' - %s - %s' % (obj.type.capitalize(), obj.GetKeyString())
-      all_tunes.append(CItem(title, id='tune_%s' % tune.replace('_', '+'), hclass='ui-state-default'))
+      all_tunes.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'), hclass='ui-state-default')))
 
+  all_tunes.sort()
+  all_tunes = [i[1] for i in all_tunes]
+  
   tunes_list = CDiv(CList(all_tunes, id='alltunes', hclass='connectedSortable'), hclass='scroll')
   selected_list = CDiv(CList([], id='selectedtunes', hclass='connectedSortable'), hclass='scroll')
   
@@ -161,6 +170,11 @@ def tuneset(spec):
   
   parts = []
   
+  parts.append("""<style>
+#body {
+margin-top:0px;
+}  
+</style>""")
   tunes = spec.split('&')
   for i, tune in enumerate(tunes):
     parts.append(CDiv(_tune(tune), hclass='tune-%i' % i))
@@ -173,7 +187,6 @@ def tune(tune):
   return page_wrapper(parts)
 
 def _tune(tune):
-  parts = []
   
   obj = utils.CTune(tune)
   try:
@@ -186,19 +199,24 @@ def _tune(tune):
 
   chords = ChordsToHTML(obj.chords)
   
-  parts.append(CDiv([
+  tune = CDiv([
     CH(title + ' - ' + obj.type.capitalize() + ' - ' + key_str, 1),
     CDiv(NotesToXHTML(obj), hclass='notes'),
     CDiv(chords, hclass='chords'),
     # Trickery to work around browser bugginess where it sizes
     # according to unscaled chords table (we scale by 2.2; see css)
-    CDiv([chords, chords, CBreak(2)], hclass='trans'), 
-  ], hclass='tune'))
-
-  return parts
+    CDiv([chords, chords], hclass='trans'), 
+  ], hclass='tune')
   
-@app.route('/css')
-def css():
+  tune_with_break = CDiv([
+    CDiv(hclass='tune-break'),
+    tune, 
+  ], hclass='tune-with-break')
+
+  return [tune_with_break]
+  
+@app.route('/css/<media>')
+def css(media):
   css = """
 /* Overall defaults */
 * {
@@ -226,6 +244,12 @@ padding-left:145px;
 }
 div.tune {
 position:relative;
+}
+div.tune-break {
+height:1.5em;
+}
+div.tune-with-break {
+page-break-inside:avoid;
 }
 div.notes {
 position:absolute;
@@ -271,6 +295,17 @@ padding-left:3px;
 padding-right:0.5em;
 }
 """
+  
+  if media == 'print':
+    css += """
+/*Preferable but does not work in Firefox 36.0.1 (the latest)*/
+/*@page {
+margin:0.5in;
+}*/
+#body {
+margin:0.5in;
+}
+    """
   return Response(css, mimetype='text/css')
 
 def ChordsToHTML(chords):
