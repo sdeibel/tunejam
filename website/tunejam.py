@@ -32,7 +32,8 @@ def home():
   parts = []
   parts.append(CH("Cambridge NY", 1))
   parts.append(CParagraph("Welcome!"))
-  parts.append(CParagraph([CText("Tune Jam", href='/music'), CBreak()]))
+  parts.append(CParagraph([CText("Tune Jam - Music Index", href='/music'), CBreak()]))
+  parts.append(CParagraph([CText("Tune Jam - Create Set Sheets", href='/sets'), CBreak()]))
       
   return page_wrapper(parts)
 
