@@ -51,7 +51,16 @@ def music():
       obj = utils.CTune(tune)
       obj.ReadDatabase()
       title += ' - ' + obj.GetKeyString()
-      parts.extend([CText(title, href="/tune/%s" % tune), CBreak()])
+      recording, mimetype, filename = obj.GetRecording()
+      play = []
+      if recording is not None:
+        play = [
+          CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
+                 href='/recording/%s' % tune, width=16, height=16),
+        ]
+      parts.append(CText(title, href="/tune/%s" % tune))
+      parts.extend(play)
+      parts.append(CBreak())
       
   return page_wrapper(parts)
 
