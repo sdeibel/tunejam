@@ -5,7 +5,14 @@
 ##################################################################
 [project attributes]
 debug.named-entry-points = (1,
-                            {'Drafts Book': ({},
+                            {'All Book': ({'key-binding-debug': 'Ctrl-X Ctrl'\
+        '-A'},
+        {'auto-show': False,
+         'launch-id': ('project',
+                       (u'',
+                        '')),
+         'loc': loc('allbook.py')}),
+                             'Drafts Book': ({},
         {'auto-show': False,
          'launch-id': ('project',
                        (u'--book drafts',
@@ -28,25 +35,12 @@ debug.named-entry-points = (1,
          'launch-id': ('project',
                        (u'--book tunejam',
                         '')),
-         'loc': loc('setsheets.py')}),
-                             'Website': ({},
-        {'auto-show': False,
-         'launch-id': ('project',
-                       (u'',
-                        '')),
-         'loc': loc('website/tunejam.py')})})
-proj.debug-sub-processes = True
+         'loc': loc('setsheets.py')})})
 proj.directory-list = [{'dirloc': loc('.'),
-                        'excludes': [],
-                        'filter': '*',
+                        'excludes': (),
+                        'filter': u'*',
                         'include_hidden': False,
                         'recursive': True,
-                        'watch_for_changes': True},
-                       {'dirloc': loc('platform'),
-                        'excludes': [],
-                        'filter': u'*.py',
-                        'include_hidden': False,
-                        'recursive': False,
                         'watch_for_changes': True}]
 proj.file-type = 'shared'
 proj.launch-config = {loc('setsheets.py'): ('project',
