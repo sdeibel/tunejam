@@ -7,6 +7,7 @@ kExecutable = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'bin/abcm
 kDatabaseDir = os.path.join(os.path.dirname(__file__), 'db')
 kImageDir = os.path.join(os.path.dirname(__file__), 'images')
 kRecordingsDir = os.path.join(os.path.dirname(__file__), 'recordings')
+kJSDir = os.path.join(os.path.dirname(__file__), 'website', 'js')
 
 kSections = [
     ('reel', 'Reels'),
