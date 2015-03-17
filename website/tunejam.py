@@ -89,21 +89,19 @@ function ClearTunes() {
 </script>
 <style>
 #alltunes {
-width=45%;
 border:1px;
 }
 #selectedtunes {
-width=45%;
 border:1px;
 width:100%;
-height:300px;
+height:400px;
 }
 td {
 vertical-align:top;
-width:45%
 }
 div.scroll {
-height:300px;
+height:400px;
+width:500px;
 overflow:auto;
 border: 1px solid #666666;
 padding: 8px;
