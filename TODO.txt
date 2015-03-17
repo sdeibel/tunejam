@@ -1,7 +1,6 @@
 * Corrections and missing chords from Bliss and Robbie (just waltzes left)
 * Reimplement website
   * Cut apart other recordings in recordings-to-sort dir
-  * Fix clear to return the cleared items to the main list
   * Fix changing filter to not clear the selected items (do it client side)
   * Add text filter field to sets page
   * A way to save set to a sets page
