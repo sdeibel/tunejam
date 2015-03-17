@@ -5,6 +5,8 @@ import sys
 
 kExecutable = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'bin/abcm2ps')
 kDatabaseDir = os.path.join(os.path.dirname(__file__), 'db')
+kImageDir = os.path.join(os.path.dirname(__file__), 'images')
+kRecordingsDir = os.path.join(os.path.dirname(__file__), 'recordings')
 
 kSections = [
     ('reel', 'Reels'),
@@ -142,6 +144,17 @@ class CTune:
                 key_str.append(key + " Major")
         key_str = ' / '.join(key_str)
         return key_str
+    
+    def GetRecording(self):
+        for enc in ['.mp3', '.m4a']:
+            recording = os.path.join(kRecordingsDir, self.name+enc)
+            if os.path.isfile(recording):
+                if enc == '.mp3':
+                    mtype = 'audio/mpeg'
+                else:
+                    mtype = 'audio/x-m4a'
+                return '/recording/' + self.name + enc, mtype, recording
+        return None, None, None
     
     def MakeNotes(self):
         """Generate only the notes for the tune, as ABC"""

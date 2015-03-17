@@ -5,7 +5,7 @@ from html import *
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import utils
 
-from flask import Flask, Response, request
+from flask import Flask, Response, request, send_file
 app = Flask(__name__)
 
 def page_wrapper(body):
@@ -37,7 +37,6 @@ def home():
       
   return page_wrapper(parts)
 
-  
 @app.route('/music')
 def music():
   parts = []
@@ -185,12 +184,22 @@ margin-top:0px;
 
 @app.route('/tune/<tune>')
 def tune(tune):
-  parts = _tune(tune)
+  parts = []
+  parts.extend(_tune(tune))
   return page_wrapper(parts)
 
-def _tune(tune):
-  
+@app.route('/recording/<tune>')
+def recording(tune):
   obj = utils.CTune(tune)
+  obj.ReadDatabase()
+  recording, mimetype, filename = obj.GetRecording()
+  if recording is None:
+    return Response()
+  return send_file(filename, mimetype=mimetype)
+
+def _tune(name):
+  
+  obj = utils.CTune(name)
   try:
     obj.ReadDatabase()
     title = obj.title
@@ -200,15 +209,32 @@ def _tune(tune):
   key_str = obj.GetKeyString()
 
   chords = ChordsToHTML(obj.chords)
+  recording, mimetype, filename = obj.GetRecording()
   
   tune = CDiv([
-    CH(title + ' - ' + obj.type.capitalize() + ' - ' + key_str, 1),
+    CH([
+      title + ' - ' + obj.type.capitalize() + ' - ' + key_str,
+    ], 1), 
     CDiv(NotesToXHTML(obj), hclass='notes'),
     CDiv(chords, hclass='chords'),
   ], hclass='tune')
   
+  parts = []
+  
+  if recording is not None:
+    play_div = CDiv([
+      CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
+             href='/recording/%s' % name),
+    ])
+
+  else:
+    play_div = CDiv([
+      CImage(src='/image/speaker_louder_32.png'),
+    ], hclass='disabled')
+      
   tune_with_break = CDiv([
     CDiv(hclass='tune-break'),
+    play_div, 
     tune, 
     # Trickery to work around browser bugginess where it sizes
     # according to unscaled chords table (we scale by 2.2; see css)
@@ -216,7 +242,19 @@ def _tune(tune):
           CDiv(chords, style="width:100%")], hclass='trans'), 
   ], hclass='tune-with-break')
 
-  return [tune_with_break]
+  parts.append(tune_with_break)
+  
+  return parts
+  
+@app.route('/image/<image>')
+def image(image):
+  img_file = os.path.join(utils.kImageDir, image)
+  return send_file(img_file, mimetype='image/png')
+  
+@app.route('/js/<filename>')
+def js(filename):
+  js_file = os.path.join(utils.kJSDir, filename)
+  return send_file(js_file, mimetype='text/javascript')
   
 @app.route('/css/<media>')
 def css(media):
@@ -246,8 +284,17 @@ width:8.5in;
 p {
 padding-left:145px;
 }
+div.disabled {
+opacity:0.4;
+display:none
+}
 div.tune {
 position:relative;
+}
+div.tune-with-break img {
+position:absolute;
+right:1.0in;
+z-index:100;
 }
 div.tune-break {
 height:2.5em;
@@ -311,6 +358,9 @@ margin:0.5in;
 }*/
 #body {
 margin:0.5in;
+}
+img.play-tune, img.play-tune-disabled {
+display:none;
 }
     """
   return Response(css, mimetype='text/css')
