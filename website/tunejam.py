@@ -229,8 +229,8 @@ def _tune(name):
 
   else:
     play_div = CDiv([
-      CImage(src='/image/speaker_louder_32.png'),
-    ], hclass='disabled')
+      CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
+    ])
       
   tune_with_break = CDiv([
     CDiv(hclass='tune-break'),
@@ -283,10 +283,6 @@ width:8.5in;
 }
 p {
 padding-left:145px;
-}
-div.disabled {
-opacity:0.4;
-display:none
 }
 div.tune {
 position:relative;
@@ -359,7 +355,7 @@ margin:0.5in;
 #body {
 margin:0.5in;
 }
-img.play-tune, img.play-tune-disabled {
+img.play-tune {
 display:none;
 }
     """
