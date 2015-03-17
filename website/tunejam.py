@@ -91,8 +91,29 @@ function SubmitTunes() {
   tunes = tunes.replace(/tune=/g, "");
   window.location.href= "/sets/" + tunes;
 }
+/* From http://stackoverflow.com/questions/1134976/how-may-i-sort-a-list-alphabetically-using-jquery */
+function sortUnorderedList(ul) {
+  if(typeof ul == "string")
+    ul = document.getElementById(ul);
+
+  // Get the list items and setup an array for sorting
+  var lis = ul.getElementsByTagName("LI");
+  var vals = [];
+
+  // Populate the array
+  for(var i = 0, l = lis.length; i < l; i++)
+    vals.push(lis[i].innerHTML);
+
+  // Sort it
+  vals.sort();
+
+  // Change the list on the page
+  for(var i = 0, l = lis.length; i < l; i++)
+    lis[i].innerHTML = vals[i];
+}
 function ClearTunes() {
-  $( "#selectedtunes" ).empty();
+  $( "#selectedtunes").children().appendTo('#alltunes');
+  sortUnorderedList("alltunes")
 }
 </script>
 <style>
