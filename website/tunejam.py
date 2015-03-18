@@ -139,7 +139,7 @@ padding-bottom:0.5em;
   keys.sort()
   for key in keys:
     if key == 'reel':
-      title = "Reels, Marches, and Hornpipes"
+      title = "Reels, Marches, Hornpipes, and Rags"
     else:
       title = utils.kSectionTitles[key]
     section_options.append((key, title))
@@ -154,7 +154,7 @@ padding-bottom:0.5em;
   all_tunes = []
   tunes = utils.GetTuneIndex()
   for section in tunes:
-    if filter == 'reel' and section in ['reel', 'hornpipe', 'march']:
+    if filter == 'reel' and section in ['reel', 'hornpipe', 'march', 'rag']:
       pass
     elif filter is not None and filter != section:
       continue
