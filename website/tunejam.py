@@ -90,6 +90,9 @@ function SubmitTunes() {
   var tunes = $( "#selectedtunes" ).sortable( "serialize", {key:"tune"});
   tunes = tunes.replace(/\+/g, "_");
   tunes = tunes.replace(/tune=/g, "");
+  if ($("#print-checkbox").prop("checked")) {
+    tunes = tunes + "&print=1"
+  }
   window.location.href= "/sets/" + tunes;
 }
 function ClearTunes() {
@@ -174,9 +177,12 @@ padding-bottom:0.5em;
   parts.append(CBreak())
   
   parts.append(CForm([
+    CInput(type='checkbox', name="print", value="1", checked="", id="print-checkbox"),
+    CText("Size for printing"), 
+    CBreak(2), 
     CInput(type='button', value="Submit", onclick='SubmitTunes();'),
     CInput(type='button', value="Clear", onclick='ClearTunes();'), 
-  ]))
+  ], id='tunesform'))
   
   return page_wrapper(parts)
 
@@ -190,8 +196,17 @@ margin-top:0px;
 }  
 </style>""")
   tunes = spec.split('&')
+  printing = False
+  if tunes[-1] == 'print=1':
+    tunes = tunes[:-1]
+    hclass = 'tune-container-print'
+  else:
+    hclass = 'tune-container'
   for i, tune in enumerate(tunes):
-    parts.append(CDiv(_tune(tune), hclass='tune-%i' % i))
+    if hclass.endswith('-print'):
+      parts.append(CDiv(_tune(tune, printing=True), hclass=hclass+'-%i' % (i % 3)))
+    else:
+      parts.append(CDiv(_tune(tune), hclass=hclass))
   
   return page_wrapper(parts)
 
@@ -210,8 +225,13 @@ def recording(tune):
     return Response()
   return send_file(filename, mimetype=mimetype)
 
-def _tune(name):
+def _tune(name, printing=False):
   
+  if printing:
+    sfx = '-print'
+  else:
+    sfx = ''
+    
   obj = utils.CTune(name)
   try:
     obj.ReadDatabase()
@@ -227,23 +247,25 @@ def _tune(name):
   tune = CDiv([
     CH([
       title + ' - ' + obj.type.capitalize() + ' - ' + key_str,
-    ], 1), 
-    CDiv(NotesToXHTML(obj), hclass='notes'),
-    CDiv(chords, hclass='chords'),
+    ], 1, hclass='tune-title'+sfx), 
+    CDiv(NotesToXHTML(obj), hclass='notes'+sfx),
+    CDiv(chords, hclass='chords'+sfx),
   ], hclass='tune')
   
   parts = []
-  
-  if recording is not None:
-    play_div = CDiv([
-      CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
-             href='/recording/%s' % name),
-    ])
 
+  if not printing:
+    if recording is not None:
+      play_div = CDiv([
+        CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
+               href='/recording/%s' % name),
+      ])
+    else:
+      play_div = CDiv([
+        CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
+      ])
   else:
-    play_div = CDiv([
-      CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
-    ])
+    play_div = ''
       
   tune_with_break = CDiv([
     CDiv(hclass='tune-break'),
@@ -280,8 +302,13 @@ font-family: varela_round, "Trebuchet MS", Arial, Verdana, sans-serif;
 line-height:140%;
 list-style:none;
 }
-h1 {
+h1.tune-title {
 white-space:nowrap;
+}
+h1.tune-title-print {
+white-space:nowrap;
+font-size:19pt;
+margin-left:-0.25in;
 }
 h2 {
 padding-top:10px;
@@ -296,6 +323,40 @@ width:8.5in;
 }
 p {
 padding-left:145px;
+}
+div.tune-container-print-0 {
+position:absolute;
+top:0.0in;
+left:0.5in;
+height:3.5in;
+max-height:3.5in;
+min-height:3.5in;
+width:7.5in;
+max-width:7.5in;
+min-width:7.5in;
+page-break-before:always;
+}
+div.tune-container-print-1 {
+position:absolute;
+top:4.0in;
+left:0.5in;
+height:3.5in;
+max-height:3.5in;
+min-height:3.5in;
+width:7.5in;
+max-width:7.5in;
+min-width:7.5in;
+}
+div.tune-container-print-2 {
+position:absolute;
+top:8.0in;
+left:0.5in;
+height:3.5in;
+max-height:3.5in;
+min-height:3.5in;
+width:7.5in;
+max-width:7.5in;
+min-width:7.5in;
 }
 div.tune {
 position:relative;
@@ -317,12 +378,26 @@ left:0in;
 top:0in;
 transform: scale(1.2, 1.2) translate(9%,7%);
 }
+div.notes-print {
+position:absolute;
+left:0in;
+top:0in;
+margin-left:-0.25in
+}
 div.chords {
 position:absolute;
 right:0.5in;
 width:3.5in;
 top:0.5in;
 transform: scale(2.2, 2.2) translate(25%,15%);
+padding-right:0.25in;
+}
+div.chords-print {
+position:absolute;
+right:0.5in;
+width:3.5in;
+top:0.5in;
+transform: scale(1.8, 1.8) translate(17%,15%);
 padding-right:0.25in;
 }
 div.trans {
