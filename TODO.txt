@@ -20,7 +20,7 @@
 * More tunes for which we have recordings
   shetland_tune_title_unknown_1
   shetland_tune_title_unknown_2
-  off_to_boston
+  road_to_boston (it's not off_to_boston)
   a_yow_came_to_weir_door_yarmin
   cluck_old_hen
   creaky_joints
@@ -60,7 +60,8 @@ No recordings yet (but have database entries)
   star_of_the_county_down
   flowers_of_the_thorn
   belle_meres_waltz
-Neither (not really tunejam tunes)
+Neither
+  metsakukkia
   bumble_bee_with_new_middle
   stephans_gypsy_tune
   march_of_the_bullfrogs

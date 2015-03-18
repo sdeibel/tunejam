@@ -6,11 +6,11 @@ M:3/4
 dc| B4BA| Bc dB AF|
 f2B2f2 | f2B2f2|
 --
-| Bm | Bm  | F#m | F#m |
-  Bm | Bm  | G   | A   |
-  D  | D   | F#m | F#m |
-  Bm | A   | G   | G   |
-| Bm | Bm  | A   | A   |
-  Bm | Bm  | G   | A   |
-  Bm | Bm  | G   | A   |
-  Bm | F#m | G   | A   |
+| Bm | Bm  | A   | F#m  |
+  Bm | G   | D   | A    |
+  D  | D   | F#m | F#m  |
+  Bm | A   | G   | G    |
+| Bm | Bm  | A   | F#m  |
+  Bm | G   | A   | AF#m |
+  Bm | Bm  | G   | A    |
+  Bm | F#m | G   | A    |

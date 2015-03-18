@@ -12,4 +12,4 @@ E2F2|G3 F E2| A2G2A2 |
   Em | C | D | D  |
 | C  | D | G | Am |
   Bm | C | C | D  |
-  Em | C | C | D  |
+  Em | C | D | D  |
