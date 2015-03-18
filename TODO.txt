@@ -10,9 +10,12 @@
   * Book generation -- sets page or selected tunes or all tunes;
     include index and TOC
   * Design / header / footer / menu / improve overall CSS
-  * A way to play the chords at a set tempo?
+  * A way to play the chords at a set tempo and/or metronome?
   * A way to play set recordings in order one after the other and/or w/ repeat?
-  * Metronome on sets page?
+  * A way to play recordings slowed down (record speed in DB so can show
+    approx beats/minute)
+  * A way to share sets pages w/ live update for group playing (define
+    event and have a live update url to sync devices)
 * Notebooks/printing options for three-part books
 * More tunes for which we have recordings
   shetland_tune_title_unknown_1
