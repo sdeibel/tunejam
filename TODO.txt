@@ -1,22 +1,31 @@
-* Corrections and missing chords from Bliss and Robbie (just waltzes left)
-* Reimplement website
+* Website Phase One
+  * Try to reimplement printing with http://www.xhtml2pdf.com/ -- produce the XHTML
+    and then PDF and feed PDF directly to browser to get sizing issues fixed;
+    may need to do one page at a time and concatenate -- or may need to use
+    PDF generation library directly
+  * Book generation -- selected tunes or all tunes; flip book or not
+  * Browser issues
+    * Opera sizing completely wrong -- rework how sizing is done?
+    * Chrome forgets selected tunes when go back to page
   * Cut apart other recordings in recordings-to-sort dir
+  * Design / header / footer / menu / improve overall CSS
+  * Review/improve URL structure
+  * Set up new domain / deploy / redirect from cambridgeny.net/music
+* Website Phase Two+
+  * Print book index and TOC
   * Embedded audio player on same page?
   * Fix changing filter to not clear the selected items (do it client side)
   * Add text filter field to sets page
   * Add key selector to sets page
   * A way to generate random sets matching the filters
   * A way to save set to a sets page
-  * Book generation -- sets page or selected tunes or all tunes;
-    include index and TOC
-  * Design / header / footer / menu / improve overall CSS
   * A way to play the chords at a set tempo and/or metronome?
   * A way to play set recordings in order one after the other and/or w/ repeat?
   * A way to play recordings slowed down (record speed in DB so can show
     approx beats/minute)
   * A way to share sets pages w/ live update for group playing (define
     event and have a live update url to sync devices)
-* Notebooks/printing options for three-part books
+* Notebooks/printing options for flip books
 * More tunes for which we have recordings
   shetland_tune_title_unknown_1
   shetland_tune_title_unknown_2
