@@ -29,7 +29,4 @@ os.system('%s/bin/python setup.py install' % dirname)
 
 os.chdir(os.path.join(dirname, 'bin'))
 os.system('./pip install Flask')
-
-
-
-
+os.system('./pip install reportlab')
