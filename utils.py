@@ -213,6 +213,8 @@ M:%(meter)s
     def MakeCardSmall(self):
         """Generate small form of cheat sheet card"""
         
+        chords_eps = self.MakeChordsEPS()
+        
         kFormat = """%%%%textfont Times-Roman
 %%%%scale 5.0
 T:%(title)s - %(fullkey)s
@@ -225,24 +227,16 @@ M:%(meter)s
 %%%%rightmargin 5.0in
 %(notes)s
 %%%%multicol new
-%%%%textfont Monaco
-%%%%rightmargin 0.5in
-%%%%scale 1.0
-%%%%begintext right
-
+%%%%leftmargin 4.0in
+%%%%scale 0.6
 %(chords)s
-%%%%endtext
 %%%%multicol end
 """
 
         notes = self.__NotesWithMeterOnEachLine()
         d = self.AsDict().copy()
         d['notes'] = notes
-        chords = d['chords'].strip().splitlines()
-        if len(chords) < 8:
-            chords += [''] * (8 - len(chords))
-        chords = '\n'.join(chords)
-        d['chords'] = chords
+        d['chords'] = '%%%%EPS %s' % chords_eps
         
         return kFormat % d
 
@@ -326,6 +320,138 @@ M:%(meter)s
 
         return kFormat % d
 
+    def MakeChordsEPS(self):
+        
+        # Configuration
+        fontsize = 24
+        fontname = 'TrebuchetMS'
+        fontloc = '/Library/Fonts/Trebuchet MS.ttf'
+
+        # Import necessary modules
+        from reportlab.lib import colors
+        from reportlab.lib.units import cm, mm, inch, pica
+        from reportlab.graphics.shapes import Drawing, Rect, Line, String
+        from reportlab.graphics import renderPS
+    
+        # Set up font
+        from reportlab import rl_config
+        rl_config.warnOnMissingFontGlyphs = 0
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        font = TTFont(fontname, fontloc)
+        pdfmetrics.registerFont(font)
+
+        hpadding = font.stringWidth("M", fontsize)
+        
+        # Create parts / chords table
+        chords = ParseChords(self.chords)
+        parts = []
+        row_count = 0
+        col_chars = [''] * 6
+        
+        def row_append(row, s):
+            col = len(row)
+            if font.stringWidth(s, fontsize) > font.stringWidth(col_chars[col], fontsize):
+                col_chars[col] = s
+            row.append(s)
+            
+        for i, part in enumerate(chords):
+            rows = []
+            row = []
+            for i, measure in enumerate(part):
+                if measure != '|:' and not row:
+                    row_append(row, '')
+                if measure == '|:':
+                    row_append(row, ':')
+                elif measure == ':|':
+                    row_append(row, ':')
+                else:
+                    row_append(row, measure)
+                if len(row) == 5 and (i + 1 >= len(part) or part[i+1] != ':|'):
+                    row_append(row, '')
+                    rows.append(row)
+                    row = []
+                elif len(row) == 6:
+                    rows.append(row)
+                    row = []
+            if row:
+                rows.append(row)
+                
+            parts.append(rows)
+            row_count += len(rows)
+            rows = []
+            
+        # Compute column widths
+        col_widths = [0] * 6
+        for i, chars in enumerate(col_chars):
+            chars_width = font.stringWidth(chars, fontsize)
+            if i in (0, 5):
+                col_widths[i] = chars_width + hpadding
+            else:
+                col_widths[i] = chars_width + 2 * hpadding
+        
+        # Determine size of chord chart
+        row_height = fontsize * 1.8
+        width = sum(col_widths)
+        height = row_height * row_count
+
+        # Create drawing
+        drawing = Drawing(width, height)
+        
+        # Draw chord chart
+        v_pos = height
+        for i, part in enumerate(parts):
+            part_height = len(part) * row_height
+            
+            # Shade every other part
+            if i % 2 == 0:
+                r = Rect(0, v_pos-part_height, width, part_height)
+                r.fillColor = colors.lightgrey
+                r.strokeWidth = 0
+                drawing.add(r)
+                
+            # Draw chords
+            for row in part:
+                hpos = 0
+                vtextpos = v_pos - row_height + fontsize / 2
+                for j, chord in enumerate(row):
+                    if chord == ':':
+                        if j == 0:
+                            s = String(hpos+fontsize/2, vtextpos, chord)
+                            s.fontName = fontname
+                            s.fontSize = fontsize
+                            drawing.add(s)
+                        else:
+                            s = String(hpos+fontsize/2, vtextpos, chord)
+                            s.fontName = fontname
+                            s.fontSize = fontsize
+                            drawing.add(s)
+                    else:
+                        s = String(hpos+fontsize/2, vtextpos, chord)
+                        s.fontName = fontname
+                        s.fontSize = fontsize
+                        drawing.add(s)
+                    hpos += col_widths[j]
+                v_pos -= row_height
+
+        # Draw lines on right and left
+        line_width = fontsize / 6
+        line = Line(line_width/2, 0, line_width/2, height)
+        line.strokeWidth = line_width
+        line.strokeColor = colors.black
+        drawing.add(line)
+        line = Line(width - line_width/2, 0, width - line_width/2, height)
+        line.strokeWidth = line_width
+        line.strokeColor = colors.black
+        drawing.add(line)
+                
+        # Render drawing to EPS file
+        f, filename = tempfile.mkstemp(suffix='.eps')
+        renderPS.drawToFile(drawing, filename)
+        #os.system('open %s' % filename)
+        
+        return filename
+        
     def __FullKey(self):
         key = self.key
         if key.lower().find('modal') > 0:
