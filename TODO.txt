@@ -1,6 +1,9 @@
 * Website Phase One
-  * Generate each tune with abc2ps and combine into single file with reportlab
-    so can position/size chords correctly; refine chords and layout/look
+  * Generate each tune with abc2ps -g (one SVG file per tune) and combine 
+    into single file with reportlab so can position/size chords correctly; 
+    refine chords and layout/look
+    Can read SVG with 'drawing = svg2rlg(svgFilePath)' (obtained from 
+    https://pypi.python.org/pypi/svg2rlg/)
   * Book generation -- selected tunes or all tunes; flip book or not
   * Browser issues
     * Opera sizing completely wrong -- rework how sizing is done?

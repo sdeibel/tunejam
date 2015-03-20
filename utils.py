@@ -452,6 +452,27 @@ M:%(meter)s
         
         return filename
         
+    def MakeNotesSVG(self):
+        
+        kFormat = """X:0
+%%%%scale 1.2
+K:%(key)s
+L:%(unit)s
+M:%(meter)s
+%(notes)s
+"""
+    
+        notes = self.__NotesWithMeterOnEachLine()
+        d = self.AsDict().copy()
+        d['notes'] = notes
+
+        abc = kFormat % d
+        
+        svg_filename = ABCToPostscript(abc, svg=True)
+        os.system("open %s" % svg_filename)
+        
+        return svg_filename
+        
     def __FullKey(self):
         key = self.key
         if key.lower().find('modal') > 0:
@@ -737,11 +758,12 @@ def ABCToPostscript(abc, svg=False):
     f.write(abc)
     f.close()
 
-    ps_fn = os.path.splitext(fn)[0] + '.ps'
     if svg:
         svg_arg = '-X -m 0 -w 4in'
+        ps_fn = os.path.splitext(fn)[0] + '.svg'
     else:
         svg_arg = ''
+        ps_fn = os.path.splitext(fn)[0] + '.ps'
     cmdline = [kExecutable, fn, svg_arg, '-O', ps_fn]
     cmdline = ' '.join(cmdline)
 
