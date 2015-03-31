@@ -8,7 +8,7 @@ import utils
 import utils
 import utils
 
-class CFlipBook(utils.CBook):
+class CAllBook(utils.CBook):
 
     def __init__(self):
         
@@ -60,7 +60,7 @@ class CFlipBook(utils.CBook):
 
 if __name__ == '__main__':
     
-    book = CFlipBook()
+    book = CAllBook()
     pages = book.GenerateSmall()
 
     import time

@@ -11,6 +11,8 @@
   * Cut apart other recordings in recordings-to-sort dir
   * Design / header / footer / menu / improve overall CSS
   * Review/improve URL structure
+  * Is ~/src/ide/src really needed on path?
+  * Fix platform setup -- installs into wrong directory
   * Set up new domain / deploy / redirect from cambridgeny.net/music
 * Website Phase Two+
   * Print book index and TOC

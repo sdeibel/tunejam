@@ -44,6 +44,6 @@ proj.directory-list = [{'dirloc': loc('.'),
                         'watch_for_changes': True}]
 proj.file-type = 'shared'
 proj.launch-config = {loc('setsheets.py'): ('project',
-        (u'--book drafts',
+        (u'--ring --book drafts',
          ''))}
-proj.main-file = loc('setsheets.py')
+proj.main-file = 'entry:Sets Book'
