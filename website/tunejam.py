@@ -248,7 +248,7 @@ def _tune(name, printing=False):
     CH([
       title + ' - ' + obj.type.capitalize() + ' - ' + key_str,
     ], 1, hclass='tune-title'+sfx), 
-    CDiv(NotesToXHTML(obj), hclass='notes'+sfx),
+    CDiv(obj.MakeNotesSVG(), hclass='notes'+sfx),
     CDiv(chords, hclass='chords'+sfx),
   ], hclass='tune')
   
@@ -491,25 +491,6 @@ def ChordsToHTML(chords):
     
     return html
     
-def NotesToXHTML(tune):
-
-  if not isinstance(tune, utils.CTune):
-    tune = utils.CTune(tune)
-    
-  try:
-    tune.ReadDatabase()
-  except:
-    return None
-  
-  abc = tune.MakeNotes()
-  svg = utils.ABCToPostscript(abc, svg=True)
-  
-  f = open(svg)
-  svg = f.read()
-  f.close()
-  
-  return svg
-
 if __name__ == '__main__':
   from os import environ
   if 'WINGDB_ACTIVE' in environ:

@@ -3,11 +3,30 @@ import setsheets
 import tempfile
 import sys
 
-kExecutable = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'bin/abcm2ps')
+# Configuration
+kFontSize = 24
+kFontName = 'TrebuchetMS'
+kFontLoc = '/Library/Fonts/Trebuchet MS.ttf'
+kBoldFontName = 'TrebuchetMSBold'
+kBoldFontLoc = '/Library/Fonts/Trebuchet MS Bold.ttf'
+
+# Set up reportlab fonts
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+kFont = TTFont(kFontName, kFontLoc)
+kBoldFont = TTFont(kBoldFontName, kBoldFontLoc)
+pdfmetrics.registerFont(kFont)
+pdfmetrics.registerFont(kBoldFont)
+
+kBaseDir = os.path.dirname(os.path.dirname(__file__))
+kExecutable = os.path.join(kBaseDir, 'bin/abcm2ps')
 kDatabaseDir = os.path.join(os.path.dirname(__file__), 'db')
 kImageDir = os.path.join(os.path.dirname(__file__), 'images')
 kRecordingsDir = os.path.join(os.path.dirname(__file__), 'recordings')
 kJSDir = os.path.join(os.path.dirname(__file__), 'website', 'js')
+
+from reportlab import rl_config
+rl_config.warnOnMissingFontGlyphs = 0
 
 kSections = [
     ('reel', 'Reels'),
@@ -118,7 +137,7 @@ class CTune:
             if not attrib.startswith('_'):
                 d[attrib] = getattr(self, attrib)
                 
-        d['fullkey'] = self.__FullKey()
+        d['fullkey'] = self._FullKey()
                 
         return d
                 
@@ -172,6 +191,22 @@ M:%(meter)s
         
         return kFormat % d
         
+    def MakeNotesSVG(self):
+    
+        try:
+            self.ReadDatabase()
+        except:
+            return None
+        
+        abc = self.MakeNotes()
+        svg = utils.ABCToPostscript(abc, svg=True)
+        
+        f = open(svg)
+        svg = f.read()
+        f.close()
+        
+        return svg
+        
     def MakeNotesLarge(self):
         """Generate large form of notes"""
 
@@ -213,8 +248,6 @@ M:%(meter)s
     def MakeCardSmall(self):
         """Generate small form of cheat sheet card"""
         
-        chords_eps = self.MakeChordsEPS()
-        
         kFormat = """%%%%textfont Times-Roman
 %%%%scale 5.0
 T:%(title)s - %(fullkey)s
@@ -227,16 +260,23 @@ M:%(meter)s
 %%%%rightmargin 5.0in
 %(notes)s
 %%%%multicol new
-%%%%leftmargin 4.0in
-%%%%scale 0.6
+%%%%textfont Monaco
+%%%%rightmargin 0.5in
+%%%%scale 1.0
+%%%%begintext right
 %(chords)s
+%%%%endtext
 %%%%multicol end
 """
 
         notes = self.__NotesWithMeterOnEachLine()
         d = self.AsDict().copy()
         d['notes'] = notes
-        d['chords'] = '%%%%EPS %s' % chords_eps
+        chords = d['chords'].strip().splitlines()
+        if len(chords) < 8:
+            chords += [''] * (8 - len(chords))
+        chords = '\n'.join(chords)
+        d['chords'] = chords
         
         return kFormat % d
 
@@ -320,28 +360,15 @@ M:%(meter)s
 
         return kFormat % d
 
-    def MakeChordsEPS(self):
+    def MakeChordsDrawing(self):
         
-        # Configuration
-        fontsize = 24
-        fontname = 'TrebuchetMS'
-        fontloc = '/Library/Fonts/Trebuchet MS.ttf'
-
         # Import necessary modules
         from reportlab.lib import colors
-        from reportlab.lib.units import cm, mm, inch, pica
         from reportlab.graphics.shapes import Drawing, Rect, Line, String
-        from reportlab.graphics import renderPS
     
         # Set up font
-        from reportlab import rl_config
-        rl_config.warnOnMissingFontGlyphs = 0
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        font = TTFont(fontname, fontloc)
-        pdfmetrics.registerFont(font)
 
-        hpadding = font.stringWidth("M", fontsize)
+        hpadding = kFont.stringWidth("M", kFontSize)
         
         # Create parts / chords table
         chords = ParseChords(self.chords)
@@ -351,7 +378,7 @@ M:%(meter)s
         
         def row_append(row, s):
             col = len(row)
-            if font.stringWidth(s, fontsize) > font.stringWidth(col_chars[col], fontsize):
+            if kFont.stringWidth(s, kFontSize) > kFont.stringWidth(col_chars[col], kFontSize):
                 col_chars[col] = s
             row.append(s)
             
@@ -384,14 +411,14 @@ M:%(meter)s
         # Compute column widths
         col_widths = [0] * 6
         for i, chars in enumerate(col_chars):
-            chars_width = font.stringWidth(chars, fontsize)
+            chars_width = kFont.stringWidth(chars, kFontSize)
             if i in (0, 5):
                 col_widths[i] = chars_width + hpadding
             else:
                 col_widths[i] = chars_width + 2 * hpadding
         
         # Determine size of chord chart
-        row_height = fontsize * 1.8
+        row_height = kFontSize * 1.8
         width = sum(col_widths)
         height = row_height * row_count
 
@@ -413,29 +440,29 @@ M:%(meter)s
             # Draw chords
             for row in part:
                 hpos = 0
-                vtextpos = v_pos - row_height + fontsize / 2
+                vtextpos = v_pos - row_height + kFontSize / 2
                 for j, chord in enumerate(row):
                     if chord == ':':
                         if j == 0:
-                            s = String(hpos+fontsize/2, vtextpos, chord)
-                            s.fontName = fontname
-                            s.fontSize = fontsize
+                            s = String(hpos+kFontSize/2, vtextpos, chord)
+                            s.fontName = kFontName
+                            s.fontSize = kFontSize
                             drawing.add(s)
                         else:
-                            s = String(hpos+fontsize/2, vtextpos, chord)
-                            s.fontName = fontname
-                            s.fontSize = fontsize
+                            s = String(hpos+kFontSize/2, vtextpos, chord)
+                            s.fontName = kFontName
+                            s.fontSize = kFontSize
                             drawing.add(s)
                     else:
-                        s = String(hpos+fontsize/2, vtextpos, chord)
-                        s.fontName = fontname
-                        s.fontSize = fontsize
+                        s = String(hpos+kFontSize/2, vtextpos, chord)
+                        s.fontName = kFontName
+                        s.fontSize = kFontSize
                         drawing.add(s)
                     hpos += col_widths[j]
                 v_pos -= row_height
 
         # Draw lines on right and left
-        line_width = fontsize / 6
+        line_width = kFontSize / 6
         line = Line(line_width/2, 0, line_width/2, height)
         line.strokeWidth = line_width
         line.strokeColor = colors.black
@@ -444,6 +471,12 @@ M:%(meter)s
         line.strokeWidth = line_width
         line.strokeColor = colors.black
         drawing.add(line)
+        
+        return drawing
+        
+    def MakeChordsEPS(self):
+        
+        drawing = self.MakeChordsDrawing()
                 
         # Render drawing to EPS file
         f, filename = tempfile.mkstemp(suffix='.eps')
@@ -452,28 +485,7 @@ M:%(meter)s
         
         return filename
         
-    def MakeNotesSVG(self):
-        
-        kFormat = """X:0
-%%%%scale 1.2
-K:%(key)s
-L:%(unit)s
-M:%(meter)s
-%(notes)s
-"""
-    
-        notes = self.__NotesWithMeterOnEachLine()
-        d = self.AsDict().copy()
-        d['notes'] = notes
-
-        abc = kFormat % d
-        
-        svg_filename = ABCToPostscript(abc, svg=True)
-        os.system("open %s" % svg_filename)
-        
-        return svg_filename
-        
-    def __FullKey(self):
+    def _FullKey(self):
         key = self.key
         if key.lower().find('modal') > 0:
             pass
@@ -618,6 +630,101 @@ class CTuneSet:
             
         return ''.join(parts)
 
+    def MakeCardPDF(self):
+        
+        f, filename = tempfile.mkstemp(suffix='.pdf')
+        
+        # Set up
+        from reportlab.pdfgen.canvas import Canvas
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.units import inch
+        from reportlab.platypus import Paragraph, Frame, Preformatted, Table, Spacer, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    
+        pdf = Canvas(filename, pagesize=letter)
+        spacer = 0.15
+        pdf.setFont('TrebuchetMS', kFontSize)
+        style = getSampleStyleSheet()
+        style.add(ParagraphStyle(
+            name='Bold',
+            parent=style['BodyText'],
+            fontName = 'TrebuchetMSBold',
+            bulletFontName = 'TrebuchetMS',
+            fontSize=kFontSize-1,
+        ))
+        style['BodyText'].fontName = 'TrebuchetMS'
+        style['BodyText'].bulletFontName = 'TrebuchetMS'
+        style['BodyText'].fontSize = kFontSize
+        style['Heading1'].fontName = 'TrebuchetMSBold'
+        style['Heading1'].fontSize = kFontSize + 8
+        style['Heading2'].fontName = 'TrebuchetMS'
+        style['Heading2'].fontSize = kFontSize + 4
+        style['Heading3'].fontName = 'VeraBI'
+        style['Heading3'].fontSize = kFontSize-1
+    
+        story=[]
+
+
+        if doctype == 'receipt':
+            story.append(Paragraph("Sales Receipt", style["Heading1"]))
+        elif doctype == 'invoice':
+            story.append(Paragraph("Invoice", style["Heading1"]))
+        elif doctype == 'late':
+            story.append(Paragraph("Payment Past Due", style["Heading1"]))
+        elif doctype == 'quote':
+            story.append(Paragraph("Sales Quote", style["Heading1"]))
+    
+        # Add address
+        story.append(Preformatted(address, style["Normal"]))
+        story.append(Spacer(0, spacer*inch))
+    
+        # Order number/etc table
+        if doctype != 'quote':
+            rows = []
+            row = []
+            row.append(Paragraph("Order Number", style["Heading3"]))
+            row.append(Paragraph("Customer Number", style["Heading3"]))
+            if po and po.strip():
+                row.append(Paragraph("Purchase Order Number", style["Heading3"]))
+            row.append(Paragraph("Date of Purchase", style["Heading3"]))
+            if doctype in ('invoice', 'late') and payment_method == 'PO':
+                row.append(Paragraph("Terms", style["Heading3"]))
+            rows.append(row)
+            row = []
+            row.append(Paragraph(order_number, style["Normal"]))
+            row.append(Paragraph(customer_number, style["Normal"]))
+            if po and po.strip():
+                row.append(Paragraph(po, style["Normal"]))
+            d = time.strptime(date_ordered, "%Y-%m-%d %H:%M:%S")
+            row.append(Paragraph(time.strftime("%B %d, %Y", d), style["Normal"]))
+            if doctype in ('invoice', 'late') and payment_method == 'PO':
+                row.append(Paragraph("NET30", style["Normal"]))
+            rows.append(row)
+            table = Table(rows)
+            table.setStyle(TableStyle([
+                ('LEFTPADDING', (0,0), (0,-1), 0),
+            ]))
+            story.append(table)
+            story.append(Spacer(0, spacer*inch))
+        
+        for i, tune in enumerate(self.tunes):
+            
+            title = Paragraph(tune.title + ' - ' + tune._FullKey(), style["Heading1"])
+            story.append(title)
+            
+            notes_svg = tune.MakeNotesSVG()
+            chords_eps = tune.MakeChordsEPS()
+
+        # Place body into frame
+        f = Frame(inch, 0.25*inch, 6.5*inch, letter[1]-(0.25+h)*inch, showBoundary=0)
+        f.addFromList(story, pdf)
+    
+        # Close page and save to disk
+        pdf.save()
+        
+        os.system("open %s" % filename)
+        return filename
+        
     def MakeFlipBook(self):
 
         kStart = """%%%%textfont Monaco
@@ -703,6 +810,14 @@ class CBook:
         for page in self.pages:
             abc = page.MakeCardSmall()
             pages.append(ABCToPostscript(abc))
+            
+        return pages
+            
+    def GeneratePDF(self):
+        pages = []
+        for page in self.pages:
+            pdf = page.MakeCardPDF()
+            pages.append(pdf)
             
         return pages
 
