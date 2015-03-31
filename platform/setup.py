@@ -50,5 +50,5 @@ if sys.platform != 'darwin':
   os.system('sudo rpm -Uvh webcore-fonts-3.0-1.noarch.rpm')
 
   os.chdir(os.path.join(kBaseDir, 'src', 'website'))
-  os.system('chmod +x website.wsgi')
+  os.system('chmod +x website.cgi')
   
