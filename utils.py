@@ -6,9 +6,13 @@ import sys
 # Configuration
 kFontSize = 24
 kFontName = 'TrebuchetMS'
-kFontLoc = '/Library/Fonts/Trebuchet MS.ttf'
 kBoldFontName = 'TrebuchetMSBold'
-kBoldFontLoc = '/Library/Fonts/Trebuchet MS Bold.ttf'
+if sys.platform == 'darwin':
+    kFontLoc = '/Library/Fonts/Trebuchet MS.ttf'
+    kBoldFontLoc = '/Library/Fonts/Trebuchet MS Bold.ttf'
+else:
+    kFontLoc = '/usr/share/fonts/webcore/trebuc.ttf'
+    kBoldFontLoc = '/usr/share/fonts/webcore/trebucbd.ttf'
 
 # Set up reportlab fonts
 from reportlab.pdfbase import pdfmetrics
