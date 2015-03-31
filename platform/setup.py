@@ -10,7 +10,12 @@ kDownloads = [
   "https://pypi.python.org/packages/source/p/pip/pip-6.0.8.tar.gz", 
 ]
 
-kBaseDir = '/Users/sdeibel/abc'
+curdir = os.getcwd()
+if not curdir.endswith('/platform'):
+  print("Run this from the platform directory with 'python setup.py'")
+  sys.exit(1)
+
+kBaseDir = os.path.dirname(os.path.dirname(curdir))
 
 for download in kDownloads:
   cmd = 'curl -O %s' % download
@@ -34,10 +39,11 @@ os.system('./pip install Flask')
 os.system('./pip install reportlab')
 
 os.chdir(os.path.join(kBaseDir, 'src', 'platform'))
-os.system('unzip -o abcm2ps-8.5.1-osx.zip')
-fn1 = os.path.join(kBaseDir, 'src', 'platform', 'abcm2ps-8.5.1', 'abcm2ps')
-fn2 = os.path.join(kBaseDir, 'bin', 'abcm2ps')
-os.system('chmod +x %s' % fn2)
+os.system('tar xzf abcm2ps-8.7.2.tar.gz')
+os.chdir(os.path.join(kBaseDir, 'src', 'platform', 'abcm2ps-8.7.2'))
+os.system('./configure --prefix=%s' % kBaseDir)
+os.system('make')
+os.system('make install')
 
 shutil.copyfile(fn1, fn2)
 

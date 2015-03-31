@@ -199,7 +199,7 @@ M:%(meter)s
             return None
         
         abc = self.MakeNotes()
-        svg = utils.ABCToPostscript(abc, svg=True)
+        svg = ABCToPostscript(abc, svg=True)
         
         f = open(svg)
         svg = f.read()

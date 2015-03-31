@@ -46,4 +46,4 @@ proj.file-type = 'shared'
 proj.launch-config = {loc('setsheets.py'): ('project',
         (u'--ring --book drafts',
          ''))}
-proj.main-file = 'entry:Sets Book'
+proj.main-file = loc('website/tunejam.py')
