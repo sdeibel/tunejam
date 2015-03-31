@@ -35,8 +35,8 @@ os.chdir(os.path.join(kBaseDir, 'src', 'platform', 'pip-6.0.8'))
 os.system('%s/bin/python setup.py install' % kBaseDir)
 
 os.chdir(os.path.join(kBaseDir, 'bin'))
-os.system('./pip install Flask')
-os.system('./pip install reportlab')
+os.system('./pip --trusted-host pypi.python.org install Flask')
+os.system('./pip --trusted-host pypi.python.org install reportlab')
 
 os.chdir(os.path.join(kBaseDir, 'src', 'platform'))
 os.system('tar xzf abcm2ps-8.7.2.tar.gz')
@@ -44,6 +44,4 @@ os.chdir(os.path.join(kBaseDir, 'src', 'platform', 'abcm2ps-8.7.2'))
 os.system('./configure --prefix=%s' % kBaseDir)
 os.system('make')
 os.system('make install')
-
-shutil.copyfile(fn1, fn2)
 
