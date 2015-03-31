@@ -45,3 +45,10 @@ os.system('./configure --prefix=%s' % kBaseDir)
 os.system('make')
 os.system('make install')
 
+if sys.platform != 'darwin':
+  os.chdir(os.path.join(kBaseDir, 'src', 'platform'))
+  os.system('sudo rpm -Uvh webcore-fonts-3.0-1.noarch.rpm')
+
+  os.chdir(os.path.join(kBaseDir, 'src', 'website'))
+  os.system('chmod +x website.wsgi')
+  
