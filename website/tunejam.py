@@ -2,6 +2,7 @@
 import sys, os
 import time
 from html import *
+import tempfile
 
 if sys.platform == 'darwin':
   sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -497,6 +498,28 @@ def ChordsToHTML(chords):
     return html
     
 if __name__ == '__main__':
+
+  # Kill any old processes
+  fn = tempfile.mktemp()
+  os.system('ps aux | grep tunejam.py > %s' % fn)
+  f = open(fn)
+  lines = f.readlines()
+  f.close()
+  found_process = False
+  for line in lines:
+    pid = line.split()[1]
+    try:
+      pid = int(pid)
+      if pid != os.getpid() and not 'grep' in line:
+        print("killing pid %i" % pid)
+        os.system('kill -TERM %i' % pid)
+        found_process = True
+    except:
+      pass
+  if found_process:
+    time.sleep(1.0)
+
+  # Start new server
   from os import environ
   if 'WINGDB_ACTIVE' in environ:
     app.debug = False
