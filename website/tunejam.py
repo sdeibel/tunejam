@@ -36,8 +36,9 @@ def page_wrapper(body):
 @app.route('/')
 def home():
   parts = []
-  parts.append(CH("Cambridge NY", 1))
+  parts.append(CH("Hubbard Hall Tune Jam", 1))
   parts.append(CParagraph("Welcome!"))
+  parts.append(CParagraph("This is under development.  Here are the existing pages you can try:"))
   parts.append(CParagraph([CText("Tune Jam - Music Index", href='/music'), CBreak()]))
   parts.append(CParagraph([CText("Tune Jam - Create Set Sheets", href='/sets'), CBreak()]))
       
@@ -47,6 +48,10 @@ def home():
 def music():
   parts = []
   parts.append(CH("Tune Index", 1))
+  parts.append(CParagraph("This lists all the tunes in the database so far.  If there is a recording, "
+                          "you can click on the speaker icon to hear it.  Not all existing recordings "
+                          "have been moved into the database.",
+                          style="padding-left:0px"))
   tunes = utils.GetTuneIndex()
 
   sections = tunes.keys()
@@ -137,7 +142,9 @@ padding-bottom:0.5em;
   
   parts.append(CH("Create a Tune Set", 1))
   parts.append(CParagraph("Drag one or more songs from the list "
-                          "on the left to the list on the right:"))
+                          "on the left to the list on the right then "
+                          "press Submit to generate the set.  Use "
+                          "Clear to create a new set:"))
   
   
   section_options = [
@@ -190,6 +197,7 @@ padding-bottom:0.5em;
     CInput(type='button', value="Clear", onclick='ClearTunes();'), 
   ], id='tunesform'))
   
+  parts.append(CParagraph("Printing isn't well supported yet.  I'm working on that."))
   return page_wrapper(parts)
 
 def tuneset(spec):
