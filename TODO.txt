@@ -1,4 +1,5 @@
 * Website Phase One
+  * Enter new cards from Bliss
   * Generate each tune with abc2ps -g (one SVG file per tune) and combine 
     into single file with reportlab so can position/size chords correctly; 
     refine chords and layout/look
@@ -11,9 +12,6 @@
   * Cut apart other recordings in recordings-to-sort dir
   * Design / header / footer / menu / improve overall CSS
   * Review/improve URL structure
-  * Is ~/src/ide/src really needed on path?
-  * Fix platform setup -- installs into wrong directory
-  * Set up new domain / deploy / redirect from cambridgeny.net/music
 * Website Phase Two+
   * Print book index and TOC
   * Embedded audio player on same page?
@@ -28,6 +26,8 @@
     approx beats/minute)
   * A way to share sets pages w/ live update for group playing (define
     event and have a live update url to sync devices)
+  * Printable version optionally could have boxes to check for "know",
+    "at dance tempo", "can start", etc
 * Notebooks/printing options for flip books
 * More tunes for which we have recordings
   shetland_tune_title_unknown_1
