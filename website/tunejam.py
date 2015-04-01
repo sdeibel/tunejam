@@ -3,7 +3,11 @@ import sys, os
 import time
 from html import *
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+if sys.platform == 'darwin':
+  sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+else:
+  sys.path.append('/home/maint/music/src')
+  
 import utils
 
 from flask import Flask, Response, request, send_file
@@ -496,5 +500,9 @@ if __name__ == '__main__':
   from os import environ
   if 'WINGDB_ACTIVE' in environ:
     app.debug = False
-  app.run(port=8000, use_reloader=True)
+  if sys.platform == 'darwin':
+    host = None
+  else:
+    host = 'music.cambridgeny.net'
+  app.run(host=host, port=60080, use_reloader=True)
 
