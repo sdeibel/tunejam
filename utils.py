@@ -32,6 +32,11 @@ kJSDir = os.path.join(os.path.dirname(__file__), 'website', 'js')
 from reportlab import rl_config
 rl_config.warnOnMissingFontGlyphs = 0
 
+# Set up PIL to find gs on OS X
+if sys.platform == 'darwin':
+    import PIL.EpsImagePlugin
+    PIL.EpsImagePlugin.gs_windows_binary = os.path.join(kBaseDir, 'tunejam', 'platform', 'bin', 'gs')
+
 kSections = [
     ('reel', 'Reels'),
     ('jig', 'Jigs'),
@@ -195,7 +200,7 @@ M:%(meter)s
         
         return kFormat % d
         
-    def MakeNotesSVG(self):
+    def MakeNotesSVGFile(self):
     
         try:
             self.ReadDatabase()
@@ -203,13 +208,31 @@ M:%(meter)s
             return None
         
         abc = self.MakeNotes()
-        svg = ABCToPostscript(abc, svg=True)
+        svg_file = ABCToPostscript(abc, svg=True)
         
-        f = open(svg)
+        return svg_file
+        
+    def MakeNotesSVG(self):
+
+        svg_file = self.MakeNotesSVGFile()
+        
+        f = open(svg_file)
         svg = f.read()
         f.close()
         
         return svg
+    
+    def MakeNotesEPSFile(self):
+        
+        try:
+            self.ReadDatabase()
+        except:
+            return None
+        
+        abc = self.MakeNotes()
+        eps_file = ABCToPostscript(abc, eps=True)
+        
+        return eps_file
         
     def MakeNotesLarge(self):
         """Generate large form of notes"""
@@ -635,16 +658,16 @@ class CTuneSet:
         return ''.join(parts)
 
     def MakeCardPDF(self):
-        
+                
         f, filename = tempfile.mkstemp(suffix='.pdf')
         
         # Set up
         from reportlab.pdfgen.canvas import Canvas
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.units import inch
-        from reportlab.platypus import Paragraph, Frame, Preformatted, Table, Spacer, TableStyle
+        from reportlab.platypus import Paragraph, Frame, Preformatted, Table, Spacer, TableStyle, Image
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    
+        
         pdf = Canvas(filename, pagesize=letter)
         spacer = 0.15
         pdf.setFont('TrebuchetMS', kFontSize)
@@ -663,64 +686,65 @@ class CTuneSet:
         style['Heading1'].fontSize = kFontSize + 8
         style['Heading2'].fontName = 'TrebuchetMS'
         style['Heading2'].fontSize = kFontSize + 4
-        style['Heading3'].fontName = 'VeraBI'
-        style['Heading3'].fontSize = kFontSize-1
     
         story=[]
 
-
-        if doctype == 'receipt':
-            story.append(Paragraph("Sales Receipt", style["Heading1"]))
-        elif doctype == 'invoice':
-            story.append(Paragraph("Invoice", style["Heading1"]))
-        elif doctype == 'late':
-            story.append(Paragraph("Payment Past Due", style["Heading1"]))
-        elif doctype == 'quote':
-            story.append(Paragraph("Sales Quote", style["Heading1"]))
+        #if doctype == 'receipt':
+            #story.append(Paragraph("Sales Receipt", style["Heading1"]))
+        #elif doctype == 'invoice':
+            #story.append(Paragraph("Invoice", style["Heading1"]))
+        #elif doctype == 'late':
+            #story.append(Paragraph("Payment Past Due", style["Heading1"]))
+        #elif doctype == 'quote':
+            #story.append(Paragraph("Sales Quote", style["Heading1"]))
     
-        # Add address
-        story.append(Preformatted(address, style["Normal"]))
-        story.append(Spacer(0, spacer*inch))
+        ## Add address
+        #story.append(Preformatted(address, style["Normal"]))
+        #story.append(Spacer(0, spacer*inch))
     
-        # Order number/etc table
-        if doctype != 'quote':
-            rows = []
-            row = []
-            row.append(Paragraph("Order Number", style["Heading3"]))
-            row.append(Paragraph("Customer Number", style["Heading3"]))
-            if po and po.strip():
-                row.append(Paragraph("Purchase Order Number", style["Heading3"]))
-            row.append(Paragraph("Date of Purchase", style["Heading3"]))
-            if doctype in ('invoice', 'late') and payment_method == 'PO':
-                row.append(Paragraph("Terms", style["Heading3"]))
-            rows.append(row)
-            row = []
-            row.append(Paragraph(order_number, style["Normal"]))
-            row.append(Paragraph(customer_number, style["Normal"]))
-            if po and po.strip():
-                row.append(Paragraph(po, style["Normal"]))
-            d = time.strptime(date_ordered, "%Y-%m-%d %H:%M:%S")
-            row.append(Paragraph(time.strftime("%B %d, %Y", d), style["Normal"]))
-            if doctype in ('invoice', 'late') and payment_method == 'PO':
-                row.append(Paragraph("NET30", style["Normal"]))
-            rows.append(row)
-            table = Table(rows)
-            table.setStyle(TableStyle([
-                ('LEFTPADDING', (0,0), (0,-1), 0),
-            ]))
-            story.append(table)
-            story.append(Spacer(0, spacer*inch))
+        ## Order number/etc table
+        #if doctype != 'quote':
+            #rows = []
+            #row = []
+            #row.append(Paragraph("Order Number", style["Heading3"]))
+            #row.append(Paragraph("Customer Number", style["Heading3"]))
+            #if po and po.strip():
+                #row.append(Paragraph("Purchase Order Number", style["Heading3"]))
+            #row.append(Paragraph("Date of Purchase", style["Heading3"]))
+            #if doctype in ('invoice', 'late') and payment_method == 'PO':
+                #row.append(Paragraph("Terms", style["Heading3"]))
+            #rows.append(row)
+            #row = []
+            #row.append(Paragraph(order_number, style["Normal"]))
+            #row.append(Paragraph(customer_number, style["Normal"]))
+            #if po and po.strip():
+                #row.append(Paragraph(po, style["Normal"]))
+            #d = time.strptime(date_ordered, "%Y-%m-%d %H:%M:%S")
+            #row.append(Paragraph(time.strftime("%B %d, %Y", d), style["Normal"]))
+            #if doctype in ('invoice', 'late') and payment_method == 'PO':
+                #row.append(Paragraph("NET30", style["Normal"]))
+            #rows.append(row)
+            #table = Table(rows)
+            #table.setStyle(TableStyle([
+                #('LEFTPADDING', (0,0), (0,-1), 0),
+            #]))
+            #story.append(table)
+            #story.append(Spacer(0, spacer*inch))
         
         for i, tune in enumerate(self.tunes):
             
             title = Paragraph(tune.title + ' - ' + tune._FullKey(), style["Heading1"])
             story.append(title)
             
-            notes_svg = tune.MakeNotesSVG()
-            chords_eps = tune.MakeChordsEPS()
+            notes_eps_file = tune.MakeNotesEPSFile()
+            notes_image = Image(notes_eps_file, 5.0*inch, 3.0*inch, hAlign='LEFT')
+            story.append(notes_image)
+            chords_drawing = tune.MakeChordsDrawing()
+            story.append(chords_drawing)
 
         # Place body into frame
-        f = Frame(inch, 0.25*inch, 6.5*inch, letter[1]-(0.25+h)*inch, showBoundary=0)
+        h = 10
+        f = Frame(0.50*inch, 0.50*inch, 7.5*inch, 10.0*inch, showBoundary=0)
         f.addFromList(story, pdf)
     
         # Close page and save to disk
@@ -870,7 +894,7 @@ def ParseChords(chords):
         
     return parts
 
-def ABCToPostscript(abc, svg=False):
+def ABCToPostscript(abc, svg=False, eps=False):
     
     f, fn = tempfile.mkstemp(suffix='.abc')
     f = os.fdopen(f, 'w')
@@ -880,6 +904,9 @@ def ABCToPostscript(abc, svg=False):
     if svg:
         svg_arg = '-X -m 0 -w 4in'
         ps_fn = os.path.splitext(fn)[0] + '.svg'
+    elif eps:
+        svg_arg = '-E -m 0 -w 4in -s 1.5'
+        ps_fn = os.path.splitext(fn)[0] + '.eps'
     else:
         svg_arg = ''
         ps_fn = os.path.splitext(fn)[0] + '.ps'
@@ -887,6 +914,17 @@ def ABCToPostscript(abc, svg=False):
     cmdline = ' '.join(cmdline)
 
     os.system(cmdline)
+    
+    if svg:
+        if not os.path.exists(ps_fn):
+            ps_fn = ps_fn[:-4] + '001.svg'
+    elif eps:
+        if not os.path.exists(ps_fn):
+            ps_fn = ps_fn[:-4] + '001.eps'
+    else:
+        if not os.path.exists(ps_fn):
+            ps_fn = ps_fn[:-3] + '001.ps'
+        
     if not os.path.exists(ps_fn):
         error("Could not create Postscript file %s" % ps_fn)
 
