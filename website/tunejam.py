@@ -14,25 +14,6 @@ import utils
 from flask import Flask, Response, request, send_file
 app = Flask(__name__)
 
-def page_wrapper(body):
-  
-  # Build html head
-  title = "Tune Jam"
-  year = time.strftime("%Y", time.localtime())
-  head = CHead([CTitle(title),
-                CMeta("text/html; charset=utf-8", http_equiv="Content-Type"),
-                CMeta("Copyright (c) 1999-%s Stephan Deibel" % year, name="Copyright"),
-                '<link rel="stylesheet" type="text/css" href="/css/screen" media="screen" />', 
-                '<link rel="stylesheet" type="text/css" href="/css/print" media="print" />', 
-])
-
-  body_div = CBody([CDiv(body, id="body")])
-  
-  html = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">"""
-  html += str(CHTML([head, body_div], xmlns="http://www.w3.org/1999/xhtml"))
-  
-  return html
-  
 @app.route('/')
 def home():
   parts = []
@@ -41,8 +22,9 @@ def home():
   parts.append(CParagraph("This is under development.  Here are the existing pages you can try:"))
   parts.append(CParagraph([CText("Tune Jam - Music Index", href='/music'), CBreak()]))
   parts.append(CParagraph([CText("Tune Jam - Create Set Sheets", href='/sets'), CBreak()]))
+  parts.append(CParagraph([CText("Tune Jam - Printing Tune Books", href='/print'), CBreak()]))
       
-  return page_wrapper(parts)
+  return PageWrapper(parts)
 
 @app.route('/music')
 def music():
@@ -50,8 +32,7 @@ def music():
   parts.append(CH("Tune Index", 1))
   parts.append(CParagraph("This lists all the tunes in the database so far.  If there is a recording, "
                           "you can click on the speaker icon to hear it.  Not all existing recordings "
-                          "have been moved into the database.",
-                          style="padding-left:0px"))
+                          "have been moved into the database."))
   tunes = utils.GetTuneIndex()
 
   sections = tunes.keys()
@@ -73,14 +54,14 @@ def music():
       parts.extend(play)
       parts.append(CBreak())
       
-  return page_wrapper(parts)
+  return PageWrapper(parts)
 
 @app.route('/sets', methods=['GET', 'POST'])
 @app.route('/sets/<spec>')
 def sets(spec=None):
   
   if spec is not None:
-    return tuneset(spec)
+    return CreateTuneSetHTML(spec)
 
   filter = request.form.get('filter')
   if filter == 'all':
@@ -198,37 +179,39 @@ padding-bottom:0.5em;
   ], id='tunesform'))
   
   parts.append(CParagraph("Printing isn't well supported yet.  I'm working on that."))
-  return page_wrapper(parts)
-
-def tuneset(spec):
-  
-  parts = []
-  
-  parts.append("""<style>
-#body {
-margin-top:0px;
-}  
-</style>""")
-  tunes = spec.split('&')
-  printing = False
-  if tunes[-1] == 'print=1':
-    tunes = tunes[:-1]
-    hclass = 'tune-container-print'
-  else:
-    hclass = 'tune-container'
-  for i, tune in enumerate(tunes):
-    if hclass.endswith('-print'):
-      parts.append(CDiv(_tune(tune, printing=True), hclass=hclass+'-%i' % (i % 3)))
-    else:
-      parts.append(CDiv(_tune(tune), hclass=hclass))
-  
-  return page_wrapper(parts)
+  return PageWrapper(parts)
 
 @app.route('/tune/<tune>')
 def tune(tune):
   parts = []
-  parts.extend(_tune(tune))
-  return page_wrapper(parts)
+  parts.extend(CreateTuneHTML(tune))
+  return PageWrapper(parts)
+
+@app.route('/print')
+@app.route('/print/<format>')
+def doprint(format=None):
+  parts = []
+  if format is None:
+    parts.extend([
+      CH('Printable Books', 1), 
+      CParagraph("The following printing options are available:"), 
+      CText("All Tunes in Alphabetical Order", href="/print/all"),
+      CBreak(), 
+      CText("Commonly Played Sets of Tunes", href="/print/sets"),
+      CBreak(), 
+    ])
+    
+  elif format == 'all':
+    import allbook
+    book = allbook.CAllBook()
+    pages = book.GeneratePDF()
+    
+    
+  
+  else:
+    parts.append("Not implemented")
+    
+  return PageWrapper(parts)
 
 @app.route('/recording/<tune>')
 def recording(tune):
@@ -239,62 +222,6 @@ def recording(tune):
     return Response()
   return send_file(filename, mimetype=mimetype)
 
-def _tune(name, printing=False):
-  
-  if printing:
-    sfx = '-print'
-  else:
-    sfx = ''
-    
-  obj = utils.CTune(name)
-  try:
-    obj.ReadDatabase()
-    title = obj.title
-  except SystemExit:
-    title = "Unknown Tune"
-
-  key_str = obj.GetKeyString()
-
-  chords = ChordsToHTML(obj.chords)
-  recording, mimetype, filename = obj.GetRecording()
-  
-  tune = CDiv([
-    CH([
-      title + ' - ' + obj.type.capitalize() + ' - ' + key_str,
-    ], 1, hclass='tune-title'+sfx), 
-    CDiv(obj.MakeNotesSVG(), hclass='notes'+sfx),
-    CDiv(chords, hclass='chords'+sfx),
-  ], hclass='tune')
-  
-  parts = []
-
-  if not printing:
-    if recording is not None:
-      play_div = CDiv([
-        CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
-               href='/recording/%s' % name),
-      ])
-    else:
-      play_div = CDiv([
-        CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
-      ])
-  else:
-    play_div = ''
-      
-  tune_with_break = CDiv([
-    CDiv(hclass='tune-break'),
-    play_div, 
-    tune, 
-    # Trickery to work around browser bugginess where it sizes
-    # according to unscaled chords table (we scale by 2.2; see css)
-    CDiv([CDiv(chords, style="width:100%"),
-          CDiv(chords, style="width:100%")], hclass='trans'), 
-  ], hclass='tune-with-break')
-
-  parts.append(tune_with_break)
-  
-  return parts
-  
 @app.route('/image/<image>')
 def image(image):
   img_file = os.path.join(utils.kImageDir, image)
@@ -334,9 +261,6 @@ outline-style:none;
 #body {
 margin:20px;
 width:8.5in;
-}
-p {
-padding-left:145px;
 }
 div.tune-container-print-0 {
 position:absolute;
@@ -463,6 +387,105 @@ display:none;
     """
   return Response(css, mimetype='text/css')
 
+def PageWrapper(body):
+  
+  # Build html head
+  title = "Tune Jam"
+  year = time.strftime("%Y", time.localtime())
+  head = CHead([CTitle(title),
+                CMeta("text/html; charset=utf-8", http_equiv="Content-Type"),
+                CMeta("Copyright (c) 1999-%s Stephan Deibel" % year, name="Copyright"),
+                '<link rel="stylesheet" type="text/css" href="/css/screen" media="screen" />', 
+                '<link rel="stylesheet" type="text/css" href="/css/print" media="print" />', 
+])
+
+  body_div = CBody([CDiv(body, id="body")])
+  
+  html = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">"""
+  html += str(CHTML([head, body_div], xmlns="http://www.w3.org/1999/xhtml"))
+  
+  return html
+  
+def CreateTuneSetHTML(spec):
+  
+  parts = []
+  
+  parts.append("""<style>
+#body {
+margin-top:0px;
+}  
+</style>""")
+  tunes = spec.split('&')
+  printing = False
+  if tunes[-1] == 'print=1':
+    tunes = tunes[:-1]
+    hclass = 'tune-container-print'
+  else:
+    hclass = 'tune-container'
+  for i, tune in enumerate(tunes):
+    if hclass.endswith('-print'):
+      parts.append(CDiv(CreateTuneHTML(tune, printing=True), hclass=hclass+'-%i' % (i % 3)))
+    else:
+      parts.append(CDiv(CreateTuneHTML(tune), hclass=hclass))
+  
+  return PageWrapper(parts)
+
+def CreateTuneHTML(name, printing=False):
+  
+  if printing:
+    sfx = '-print'
+  else:
+    sfx = ''
+    
+  obj = utils.CTune(name)
+  try:
+    obj.ReadDatabase()
+    title = obj.title
+  except SystemExit:
+    title = "Unknown Tune"
+
+  key_str = obj.GetKeyString()
+
+  chords = ChordsToHTML(obj.chords)
+  recording, mimetype, filename = obj.GetRecording()
+  
+  tune = CDiv([
+    CH([
+      title + ' - ' + obj.type.capitalize() + ' - ' + key_str,
+    ], 1, hclass='tune-title'+sfx), 
+    CDiv(obj.MakeNotesSVG(), hclass='notes'+sfx),
+    CDiv(chords, hclass='chords'+sfx),
+  ], hclass='tune')
+  
+  parts = []
+
+  if not printing:
+    if recording is not None:
+      play_div = CDiv([
+        CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
+               href='/recording/%s' % name),
+      ])
+    else:
+      play_div = CDiv([
+        CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
+      ])
+  else:
+    play_div = ''
+      
+  tune_with_break = CDiv([
+    CDiv(hclass='tune-break'),
+    play_div, 
+    tune, 
+    # Trickery to work around browser bugginess where it sizes
+    # according to unscaled chords table (we scale by 2.2; see css)
+    CDiv([CDiv(chords, style="width:100%"),
+          CDiv(chords, style="width:100%")], hclass='trans'), 
+  ], hclass='tune-with-break')
+
+  parts.append(tune_with_break)
+  
+  return parts
+  
 def ChordsToHTML(chords):
     
     if not isinstance(chords, list):

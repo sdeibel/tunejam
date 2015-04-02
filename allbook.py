@@ -49,15 +49,6 @@ class CAllBook(utils.CBook):
                 tuneset = utils.CTuneSet(page_tunes, title, self.contact, '')
                 self.pages.append(tuneset)
 
-    def GenerateSmall(self):
-        pages = []
-        for page in self.pages:
-            abc = page.MakeCardSmall()
-            pages.append(utils.ABCToPostscript(abc))
-
-        return pages
-
-
 if __name__ == '__main__':
     
     book = CAllBook()
