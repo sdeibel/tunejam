@@ -234,7 +234,7 @@ M:%(meter)s
         eps_file = self.MakeNotesEPSFile()
         png_file = tempfile.mktemp(suffix=".png")
         bin_dir = '%s/bin' % kBaseDir
-        cmd = 'PATH=$PATH:%s %s/convert -density 300 -depth 8 -alpha opaque %s %s' % (bin_dir, bin_dir, eps_file, png_file)
+        cmd = 'PATH=$PATH:%s %s/convert -density 600 -depth 8 -alpha opaque %s %s' % (bin_dir, bin_dir, eps_file, png_file)
         os.system(cmd)
         
         return png_file
@@ -400,7 +400,7 @@ M:%(meter)s
     
         # Set up font
 
-        hpadding = kFont.stringWidth("M", kFontSize)
+        hpadding = kFont.stringWidth("N", kFontSize)
         
         # Create parts / chords table
         chords = ParseChords(self.chords)
@@ -445,7 +445,7 @@ M:%(meter)s
         for i, chars in enumerate(col_chars):
             chars_width = kFont.stringWidth(chars, kFontSize)
             if i in (0, 5):
-                col_widths[i] = chars_width + hpadding
+                col_widths[i] = chars_width
             else:
                 col_widths[i] = chars_width + 2 * hpadding
         
@@ -481,15 +481,15 @@ M:%(meter)s
                 for j, chord in enumerate(row):
                     if chord == ':':
                         if j == 0:
-                            s = String(hpos+kFontSize/2, vtextpos, chord)
-                            s.fontName = kFontName
-                            s.fontSize = kFontSize
-                            drawing.add(s)
+                            cpos = hpos + kFontSize / 3
+                        elif j == 5:
+                            cpos = hpos - kFontSize / 3
                         else:
-                            s = String(hpos+kFontSize/2, vtextpos, chord)
-                            s.fontName = kFontName
-                            s.fontSize = kFontSize
-                            drawing.add(s)
+                            cpos = hpos + kFontSize / 2
+                        s = String(cpos, vtextpos, chord)
+                        s.fontName = kFontName
+                        s.fontSize = kFontSize
+                        drawing.add(s)
                     else:
                         s = String(hpos+kFontSize/2, vtextpos, chord)
                         s.fontName = kFontName
@@ -693,15 +693,22 @@ class CTuneSet:
         style['BodyText'].bulletFontName = 'TrebuchetMS'
         style['BodyText'].fontSize = kFontSize
         style['Heading1'].fontName = 'TrebuchetMSBold'
-        style['Heading1'].fontSize = kFontSize + 4
-        style['Heading2'].fontName = 'TrebuchetMS'
-        style['Heading2'].fontSize = kFontSize + 2
+        style['Heading1'].fontSize = kFontSize
+        style['Heading1'].fontName = 'TrebuchetMSBold'
+        style['Heading1'].fontSize = kFontSize - 1
     
+        notes_width = 3.75*inch
+        chords_width = 3.75*inch
+        
         story=[]
 
         for i, tune in enumerate(self.tunes):
-            
-            title = Paragraph(tune.title + ' - ' + tune._FullKey(), style["Heading1"])
+
+            fulltitle = tune.title + ' - ' + tune._FullKey()
+            if len(fulltitle) < 55:
+                title = Paragraph(fulltitle, style["Heading1"])
+            else:
+                title = Paragraph(fulltitle, style["Heading2"])
             ttable = Table([[title]], colWidths=[7.5*inch], rowHeights=[0.5*inch])
             ttable.setStyle(TableStyle([
                 ('ALIGN',(0, 0),(0, 0),'LEFT'), 
@@ -710,17 +717,32 @@ class CTuneSet:
                 ('RIGHTPADDING', (0, 0), (-1, -1), 0), 
                 ('TOPPADDING', (0, 0), (-1, -1), 0), 
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-                #( 'INNERGRID', (0,0), (-1,-1), 0.25, colors.black),  # temporary
-                #( 'BOX', (0,0), (-1,-1), 0.25, colors.black),        # temporary
+                # For debugging
+                #( 'INNERGRID', (0,0), (-1,-1), 0.25, colors.black),
+                #( 'BOX', (0,0), (-1,-1), 0.25, colors.black),
             ]))
             story.append(ttable)
             
             notes_png_file = tune.MakeNotesPNGFile()
-            notes_image = Image(notes_png_file, 3.75*inch, 2.5*inch, kind='bound', hAlign='LEFT')
+            notes_image = Image(notes_png_file, notes_width, 2.5*inch, kind='bound', hAlign='LEFT')
             chords_drawing = tune.MakeChordsDrawing()
             
+            # Make sure chords fit in alloted space
+            x, y, width, height = chords_drawing.getBounds()
+            factor = None
+            if width > chords_width:
+                factor = (chords_width) / width
+            if height > 2.5 * inch:
+                h_factor = (2.5 * inch) / height
+                if factor is None or h_factor < factor:
+                    factor = h_factor
+            if factor:
+                chords_drawing.scale(factor, factor)
+                x, y, new_width, new_height = chords_drawing.getBounds()
+                chords_drawing.translate((width-new_width)/factor, (height-new_height)/factor)
+            
             rows = [[notes_image, chords_drawing]]
-            table = Table(rows, vAlign='TOP', colWidths=[3.75*inch, 3.75*inch], rowHeights=[2.833*inch])
+            table = Table(rows, vAlign='TOP', colWidths=[notes_width, chords_width], rowHeights=[2.833*inch])
             table.setStyle(TableStyle([
                 ('ALIGN',(0, 0),(0, 0),'LEFT'), 
                 ('ALIGN',(1, 0),(1, 0),'RIGHT'), 
@@ -729,8 +751,9 @@ class CTuneSet:
                 ('RIGHTPADDING', (0, 0), (-1, -1), 0), 
                 ('TOPPADDING', (0, 0), (-1, -1), 0), 
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-                #( 'INNERGRID', (0,0), (-1,-1), 0.25, colors.black),  # temporary
-                #( 'BOX', (0,0), (-1,-1), 0.25, colors.black),        # temporary
+                # For debugging
+                #( 'INNERGRID', (0,0), (-1,-1), 0.25, colors.black),
+                #( 'BOX', (0,0), (-1,-1), 0.25, colors.black),
             ]))
             story.append(table)
 
@@ -840,7 +863,9 @@ class CBook:
             pdf = page.MakeCardPDF()
             pages.append(pdf)
             
-        return pages
+        pdf = ConcatenatePDFFiles(pages)
+        
+        return pdf
 
 def GetTuneIndex():
     idx = {}
@@ -924,6 +949,14 @@ def ABCToPostscript(abc, svg=False, eps=False):
     os.remove(fn)
     return ps_fn
 
+def ConcatenatePDFFiles(files):
+    output = tempfile.mktemp(suffix='.pdf')
+    bindir = '%s/bin' % kBaseDir
+    cmd = "PATH=$PATH:%s gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s " % (bindir, output)
+    cmd += ' '.join(files)
+    os.system(cmd)
+    return output
+    
 def error(txt):
     print(txt)
     sys.exit(1)
