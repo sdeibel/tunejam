@@ -845,6 +845,7 @@ class CBook:
         self.subtitle = ''
         self.date = ''
         self.contact = ''
+        self.name = name
         
         fn = os.path.join(kDatabaseDir, name+'.book')
         if not os.path.isfile(fn):
@@ -921,7 +922,7 @@ class CBook:
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         
-        fn = os.path.join(dirname, self.__class__.__name__ + book_type)
+        fn = os.path.join(dirname, self.name + book_type)
         if not os.path.exists(fn):
             return fn, False
         

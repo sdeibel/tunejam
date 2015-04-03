@@ -16,6 +16,7 @@ class CFlipBook(utils.CBook):
         self.subtitle = 'Set Flip Book'
         self.date = 'DRAFT February 4, 2015 DRAFT'
         self.contact = 'http://cambridgeny.net/music'
+        self.name = 'flip'
     
         self.pages = []
         for section, section_name in utils.kSections:
