@@ -204,9 +204,8 @@ def doprint(format=None):
   elif format == 'all':
     import allbook
     book = allbook.CAllBook()
-    pages = book.GeneratePDF()
-    
-    
+    pdf = book.GeneratePDF()
+    return send_file(pdf, mimetype='application/pdf')
   
   else:
     parts.append("Not implemented")
