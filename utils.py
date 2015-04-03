@@ -704,7 +704,7 @@ class CTuneSet:
 
         for i, tune in enumerate(self.tunes):
 
-            fulltitle = tune.title + ' - ' + tune._FullKey()
+            fulltitle = tune.title + ' - ' + tune.type.capitalize() + ' - ' + tune._FullKey()
             if len(fulltitle) < 55:
                 title = Paragraph(fulltitle, style["Heading1"])
             else:
