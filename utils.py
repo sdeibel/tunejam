@@ -4,7 +4,7 @@ import tempfile
 import sys
 
 # Configuration
-kFontSize = 24
+kFontSize = 18
 kFontName = 'TrebuchetMS'
 kBoldFontName = 'TrebuchetMSBold'
 if sys.platform == 'darwin':
@@ -743,9 +743,14 @@ class CTuneSet:
             
             notes_png_file = tune.MakeNotesPNGFile()
             notes_image = Image(notes_png_file, 4.0*inch, 3.0*inch, kind='bound', hAlign='LEFT')
-            story.append(notes_image)
             chords_drawing = tune.MakeChordsDrawing()
-            story.append(chords_drawing)
+            
+            rows = [[notes_image, chords_drawing]]
+            table = Table(rows)
+            table.setStyle(TableStyle([
+                ('LEFTPADDING', (0, 0), (0, -1), 0), 
+            ]))
+            story.append(table)
 
         # Place body into frame
         h = 10
