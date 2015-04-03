@@ -246,7 +246,7 @@ M:%(meter)s
             return png_file
         
         bin_dir = '%s/bin' % kBaseDir
-        cmd = 'PATH=$PATH:%s %s/convert -density 600 -depth 8 -alpha opaque %s %s' % (bin_dir, bin_dir, eps_file, png_file)
+        cmd = 'PATH=$PATH:%s convert -density 600 -depth 8 -alpha opaque %s %s' % (bin_dir, eps_file, png_file)
         os.system(cmd)
         
         return png_file

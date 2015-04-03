@@ -60,7 +60,9 @@ if sys.platform != 'darwin':
   os.chdir(os.path.join(kBaseDir, 'src', 'platform'))
   os.system('sudo rpm -Uvh webcore-fonts-3.0-1.noarch.rpm')
 
-  # XXX Need to install ghostscript and ImageMagick
+  # Used to generate EPS and PNG files
+  os.system('sudo yum install ghostscript')
+  os.system('sudo yum install ImageMagick')
   
 if sys.platform == 'darwin':
   
