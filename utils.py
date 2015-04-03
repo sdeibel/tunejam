@@ -1,4 +1,5 @@
 import os
+import stat
 import setsheets
 import tempfile
 import sys
@@ -27,6 +28,7 @@ kExecutable = os.path.join(kBaseDir, 'bin/abcm2ps')
 kDatabaseDir = os.path.join(os.path.dirname(__file__), 'db')
 kImageDir = os.path.join(os.path.dirname(__file__), 'images')
 kRecordingsDir = os.path.join(os.path.dirname(__file__), 'recordings')
+kCacheLoc = os.path.join(os.path.dirname(__file__), 'website', 'cache')
 kJSDir = os.path.join(os.path.dirname(__file__), 'website', 'js')
 
 from reportlab import rl_config
@@ -62,20 +64,7 @@ class CTune:
         if self.notes:
             return
         
-        fn = self.name + '.spec'
-        
-        fullpath = None
-        type_dirs = os.listdir(kDatabaseDir)
-        for td in type_dirs:
-            if td.startswith('.'):
-                continue
-            fullpath = os.path.join(kDatabaseDir, td, fn)
-            if os.path.isfile(fullpath):
-                self.type = td
-                break
-            else:
-                fullpath = None
-
+        fullpath = self._GetSpecFile()
         if fullpath is None:
             error("Could not find spec for %s" % self.name)
             
@@ -134,6 +123,22 @@ class CTune:
     
         if part != 2:
             error("Missing one or more parts: %s" % fullpath)
+
+    def _GetSpecFile(self):
+        fn = self.name + '.spec'
+        
+        fullpath = None
+        type_dirs = os.listdir(kDatabaseDir)
+        for td in type_dirs:
+            if td.startswith('.'):
+                continue
+            fullpath = os.path.join(kDatabaseDir, td, fn)
+            if os.path.isfile(fullpath):
+                self.type = td
+                break
+            else:
+                fullpath = None
+        return fullpath
         
     def AsDict(self):
         d = {}
@@ -203,9 +208,11 @@ M:%(meter)s
             return None
         
         abc = self.MakeNotes()
-        svg_file = ABCToPostscript(abc, svg=True)
+        target, up_to_date = self._GetCacheFile('notes.svg')
+        if not up_to_date:
+            ABCToPostscript(abc, svg=True, target=target)
         
-        return svg_file
+        return target
         
     def MakeNotesSVG(self):
 
@@ -225,14 +232,19 @@ M:%(meter)s
             return None
         
         abc = self.MakeNotes()
-        eps_file = ABCToPostscript(abc, eps=True)
+        target, up_to_date = self._GetCacheFile('notes.eps')
+        if not up_to_date:
+            ABCToPostscript(abc, eps=True, target=target)
         
-        return eps_file
+        return target
         
     def MakeNotesPNGFile(self):
         
         eps_file = self.MakeNotesEPSFile()
-        png_file = tempfile.mktemp(suffix=".png")
+        png_file, up_to_date = self._GetCacheFile('notes.png')
+        if up_to_date:
+            return png_file
+        
         bin_dir = '%s/bin' % kBaseDir
         cmd = 'PATH=$PATH:%s %s/convert -density 600 -depth 8 -alpha opaque %s %s' % (bin_dir, bin_dir, eps_file, png_file)
         os.system(cmd)
@@ -516,12 +528,27 @@ M:%(meter)s
         drawing = self.MakeChordsDrawing()
                 
         # Render drawing to EPS file
-        f, filename = tempfile.mkstemp(suffix='.eps')
-        renderPS.drawToFile(drawing, filename)
-        #os.system('open %s' % filename)
+        filename, up_to_date = self._GetCacheFile('chords.eps')
+        if not up_to_date:
+            renderPS.drawToFile(drawing, filename)
         
         return filename
         
+    def _GetCacheFile(self, basename):
+        dirname = os.path.join(kCacheLoc, 'tune', self.type)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        
+        fn = os.path.join(dirname, self.name+'-'+basename)
+        if not os.path.exists(fn):
+            return fn, False
+        
+        spec_file = self._GetSpecFile()
+        if IsFileNewer(spec_file, fn):
+            return fn, False
+        
+        return fn, True
+            
     def _FullKey(self):
         key = self.key
         if key.lower().find('modal') > 0:
@@ -590,6 +617,23 @@ class CTuneSet:
     
         return ''.join(parts)
 
+    def _GetCacheFile(self, resource):
+        dirname = os.path.join(kCacheLoc, 'tuneset')
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        
+        fn = '-'.join([t.name for t in self.tunes]) + resource
+        fn = os.path.join(dirname, fn)
+        if not os.path.exists(fn):
+            return fn, False
+        
+        for tune in self.tunes:
+            spec_file = tune._GetSpecFile()
+            if IsFileNewer(spec_file, fn):
+                return fn, False
+        
+        return fn, True
+            
     def __SetType(self):
         stype = self.type
         if self.setnum:
@@ -669,7 +713,9 @@ class CTuneSet:
 
     def MakeCardPDF(self):
                 
-        f, filename = tempfile.mkstemp(suffix='.pdf')
+        filename, up_to_date = self._GetCacheFile(resource='.pdf')
+        if up_to_date:
+            return filename
         
         # Set up
         from reportlab.pdfgen.canvas import Canvas
@@ -766,7 +812,6 @@ class CTuneSet:
         # Close page and save to disk
         pdf.save()
         
-        os.system("open %s" % filename)
         return filename
         
     def MakeFlipBook(self):
@@ -863,9 +908,31 @@ class CBook:
             pdf = page.MakeCardPDF()
             pages.append(pdf)
             
-        pdf = ConcatenatePDFFiles(pages)
+        target, up_to_date = self._GetCacheFile('.pdf')
+        if up_to_date:
+            return target
         
-        return pdf
+        ConcatenatePDFFiles(pages, target)
+        return target
+    
+    def _GetCacheFile(self, book_type):
+        
+        dirname = os.path.join(kCacheLoc, 'book')
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        
+        fn = os.path.join(dirname, self.__class__.__name__ + book_type)
+        if not os.path.exists(fn):
+            return fn, False
+        
+        for page in self.pages:
+            for tune in page.tunes:
+                spec_file = tune._GetSpecFile()
+                if IsFileNewer(spec_file, fn):
+                    return fn, False
+        
+        return fn, True
+        
 
 def GetTuneIndex():
     idx = {}
@@ -912,8 +979,8 @@ def ParseChords(chords):
         
     return parts
 
-def ABCToPostscript(abc, svg=False, eps=False):
-    
+def ABCToPostscript(abc, svg=False, eps=False, target=None):
+
     f, fn = tempfile.mkstemp(suffix='.abc')
     f = os.fdopen(f, 'w')
     f.write(abc)
@@ -921,41 +988,55 @@ def ABCToPostscript(abc, svg=False, eps=False):
 
     if svg:
         svg_arg = '-X -m 0 -w 4in'
-        ps_fn = os.path.splitext(fn)[0] + '.svg'
+        if target is None:
+            target = os.path.splitext(fn)[0] + '.svg'
     elif eps:
         svg_arg = '-E -m 0 -w 3.75in'
-        ps_fn = os.path.splitext(fn)[0] + '.eps'
+        if target is None:
+            target = os.path.splitext(fn)[0] + '.eps'
     else:
         svg_arg = ''
-        ps_fn = os.path.splitext(fn)[0] + '.ps'
-    cmdline = [kExecutable, fn, svg_arg, '-O', ps_fn]
+        if target is None:
+            target = os.path.splitext(fn)[0] + '.ps'
+    cmdline = [kExecutable, fn, svg_arg, '-O', target]
     cmdline = ' '.join(cmdline)
 
     os.system(cmdline)
     
-    if svg:
-        if not os.path.exists(ps_fn):
-            ps_fn = ps_fn[:-4] + '001.svg'
-    elif eps:
-        if not os.path.exists(ps_fn):
-            ps_fn = ps_fn[:-4] + '001.eps'
-    else:
-        if not os.path.exists(ps_fn):
-            ps_fn = ps_fn[:-3] + '001.ps'
+    if not os.path.exists(target):
+        if svg:
+            wrote_to = target[:-4] + '001.svg'
+        elif eps:
+            wrote_to = target[:-4] + '001.eps'
+        else:
+            wrote_to = target[:-3] + '001.ps'
+        if os.path.exists(wrote_to):
+            os.rename(wrote_to, target)
         
-    if not os.path.exists(ps_fn):
-        error("Could not create Postscript file %s" % ps_fn)
+    if not os.path.exists(target):
+        error("Could not create Postscript file %s" % target)
 
     os.remove(fn)
-    return ps_fn
+    return target
 
-def ConcatenatePDFFiles(files):
-    output = tempfile.mktemp(suffix='.pdf')
+def ConcatenatePDFFiles(files, target):
     bindir = '%s/bin' % kBaseDir
-    cmd = "PATH=$PATH:%s gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s " % (bindir, output)
+    cmd = "PATH=$PATH:%s gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s " % (bindir, target)
     cmd += ' '.join(files)
     os.system(cmd)
-    return output
+
+def IsFileNewer(name1, name2):
+    """ Returns whether file with name1 is newer than file with name2.  Returns
+    0 if name1 doesn't exist and returns 1 if name2 doesn't exist. """
+
+    if not os.path.exists(name1):
+        return 0
+    if not os.path.exists(name2):
+        return 1
+
+    mod_time1 = os.stat(name1)[stat.ST_MTIME]
+    mod_time2 = os.stat(name2)[stat.ST_MTIME]
+    return (mod_time1 > mod_time2)
     
 def error(txt):
     print(txt)
