@@ -195,12 +195,20 @@ def doprint(format=None):
     parts.extend([
       CH('Printable Books', 1), 
       CParagraph("The following printing options are available:"), 
-      CText("All Tunes in Alphabetical Order", href="/print/all"),
+      CText("All Tunes in Alphabetical Order (one long list)", href="/print/all"),
+      CBreak(), 
+      CText("All Tunes in Alphabetical Order (in sections by type)", href="/print/bytype"),
       CBreak(), 
       CText("Commonly Played Sets of Tunes", href="/print/sets"),
       CBreak(), 
     ])
     
+  elif format == 'bytype':
+    import allbook
+    book = allbook.CAllBookBySection()
+    pdf = book.GeneratePDF()
+    return send_file(pdf, mimetype='application/pdf')
+  
   elif format == 'all':
     import allbook
     book = allbook.CAllBook()

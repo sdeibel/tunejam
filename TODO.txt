@@ -1,11 +1,11 @@
 * Website Phase One
   * Enter new cards from Bliss
-  * Generate each tune with abc2ps -g (one SVG file per tune) and combine 
-    into single file with reportlab so can position/size chords correctly; 
-    refine chords and layout/look
-    Can read SVG with 'drawing = svg2rlg(svgFilePath)' (obtained from 
-    https://pypi.python.org/pypi/svg2rlg/)
-  * Book generation -- selected tunes or all tunes; flip book or not
+  * Book generation
+    * Header/footer
+    * Section type in by-section variant
+    * Implement sets books
+    * Adjust margins for binding
+    * Optional matrix for know/at-speed/can-start checks?
   * Browser issues
     * Opera sizing completely wrong -- rework how sizing is done?
     * Chrome forgets selected tunes when go back to page
