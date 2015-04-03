@@ -4,19 +4,23 @@ import os
 import sys
 import shutil
 
-# Python base
-kDownloads = [
-  "https://www.python.org/ftp/python/2.7.9/Python-2.7.9.tgz", 
-  "https://pypi.python.org/packages/source/s/setuptools/setuptools-14.0.tar.gz", 
-  "https://pypi.python.org/packages/source/p/pip/pip-6.0.8.tar.gz", 
-]
-
 curdir = os.getcwd()
 if not curdir.endswith('/platform'):
   print("Run this from the platform directory with 'python setup.py'")
   sys.exit(1)
 
 kBaseDir = os.path.dirname(os.path.dirname(curdir))
+print "kBaseDir=", kBaseDir
+ok = raw_input('OK? (default=yes)')
+if ok.lower().startswith('n'):
+  sys.exit(1)
+
+# Python base
+kDownloads = [
+  "https://www.python.org/ftp/python/2.7.9/Python-2.7.9.tgz", 
+  "https://pypi.python.org/packages/source/s/setuptools/setuptools-14.0.tar.gz", 
+  "https://pypi.python.org/packages/source/p/pip/pip-6.0.8.tar.gz", 
+]
 
 for download in kDownloads:
   cmd = 'curl -O %s' % download
