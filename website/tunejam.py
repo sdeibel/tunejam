@@ -216,7 +216,10 @@ def doprint(format=None):
     return send_file(pdf, mimetype='application/pdf')
   
   else:
-    parts.append("Not implemented")
+    import setsheets
+    book = utils.CBook('tunejam')
+    pdf = book.GeneratePDF()
+    return send_file(pdf, mimetype='application/pdf')
     
   return PageWrapper(parts)
 

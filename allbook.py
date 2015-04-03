@@ -13,6 +13,7 @@ class CAllBookBySection(utils.CBook):
         self.subtitle = 'All Tunes Book'
         self.date = 'DRAFT March 13, 2015 DRAFT'
         self.contact = 'http://cambridgeny.net/music'
+        self.name = 'all-by-section'
     
         self.pages = []
         for section, section_name in utils.kSections:
@@ -54,6 +55,7 @@ class CAllBook(utils.CBook):
         self.subtitle = 'All Tunes Book'
         self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
+        self.name = 'all'
 
         tunes = []
         for section, section_name in utils.kSections:
