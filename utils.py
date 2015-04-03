@@ -32,11 +32,6 @@ kJSDir = os.path.join(os.path.dirname(__file__), 'website', 'js')
 from reportlab import rl_config
 rl_config.warnOnMissingFontGlyphs = 0
 
-# Set up PIL to find gs on OS X
-if sys.platform == 'darwin':
-    import PIL.EpsImagePlugin
-    PIL.EpsImagePlugin.gs_windows_binary = os.path.join(kBaseDir, 'tunejam', 'platform', 'bin', 'gs')
-
 kSections = [
     ('reel', 'Reels'),
     ('jig', 'Jigs'),
@@ -233,6 +228,16 @@ M:%(meter)s
         eps_file = ABCToPostscript(abc, eps=True)
         
         return eps_file
+        
+    def MakeNotesPNGFile(self):
+        
+        eps_file = self.MakeNotesEPSFile()
+        png_file = tempfile.mktemp(suffix=".png")
+        bin_dir = '%s/tunejam/platform/bin' % kBaseDir
+        cmd = 'PATH=$PATH:%s %s/convert -density 300 -depth 8 -alpha opaque %s %s' % (bin_dir, bin_dir, eps_file, png_file)
+        os.system(cmd)
+        
+        return png_file
         
     def MakeNotesLarge(self):
         """Generate large form of notes"""
@@ -736,8 +741,8 @@ class CTuneSet:
             title = Paragraph(tune.title + ' - ' + tune._FullKey(), style["Heading1"])
             story.append(title)
             
-            notes_eps_file = tune.MakeNotesEPSFile()
-            notes_image = Image(notes_eps_file, 5.0*inch, 3.0*inch, hAlign='LEFT')
+            notes_png_file = tune.MakeNotesPNGFile()
+            notes_image = Image(notes_png_file, 4.0*inch, 3.0*inch, kind='bound', hAlign='LEFT')
             story.append(notes_image)
             chords_drawing = tune.MakeChordsDrawing()
             story.append(chords_drawing)
