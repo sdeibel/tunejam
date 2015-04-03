@@ -233,7 +233,7 @@ M:%(meter)s
         
         eps_file = self.MakeNotesEPSFile()
         png_file = tempfile.mktemp(suffix=".png")
-        bin_dir = '%s/tunejam/platform/bin' % kBaseDir
+        bin_dir = '%s/bin' % kBaseDir
         cmd = 'PATH=$PATH:%s %s/convert -density 300 -depth 8 -alpha opaque %s %s' % (bin_dir, bin_dir, eps_file, png_file)
         os.system(cmd)
         
@@ -450,7 +450,12 @@ M:%(meter)s
                 col_widths[i] = chars_width + 2 * hpadding
         
         # Determine size of chord chart
-        row_height = kFontSize * 1.8
+        if row_count > 6:
+            row_height = kFontSize * 1.4
+        elif row_count > 4:
+            row_height = kFontSize * 1.6
+        else:
+            row_height = kFontSize * 1.8
         width = sum(col_widths)
         height = row_height * row_count
 
@@ -672,9 +677,9 @@ class CTuneSet:
         from reportlab.lib.units import inch
         from reportlab.platypus import Paragraph, Frame, Preformatted, Table, Spacer, TableStyle, Image
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
         
         pdf = Canvas(filename, pagesize=letter)
-        spacer = 0.15
         pdf.setFont('TrebuchetMS', kFontSize)
         style = getSampleStyleSheet()
         style.add(ParagraphStyle(
@@ -688,73 +693,51 @@ class CTuneSet:
         style['BodyText'].bulletFontName = 'TrebuchetMS'
         style['BodyText'].fontSize = kFontSize
         style['Heading1'].fontName = 'TrebuchetMSBold'
-        style['Heading1'].fontSize = kFontSize + 8
+        style['Heading1'].fontSize = kFontSize + 4
         style['Heading2'].fontName = 'TrebuchetMS'
-        style['Heading2'].fontSize = kFontSize + 4
+        style['Heading2'].fontSize = kFontSize + 2
     
         story=[]
 
-        #if doctype == 'receipt':
-            #story.append(Paragraph("Sales Receipt", style["Heading1"]))
-        #elif doctype == 'invoice':
-            #story.append(Paragraph("Invoice", style["Heading1"]))
-        #elif doctype == 'late':
-            #story.append(Paragraph("Payment Past Due", style["Heading1"]))
-        #elif doctype == 'quote':
-            #story.append(Paragraph("Sales Quote", style["Heading1"]))
-    
-        ## Add address
-        #story.append(Preformatted(address, style["Normal"]))
-        #story.append(Spacer(0, spacer*inch))
-    
-        ## Order number/etc table
-        #if doctype != 'quote':
-            #rows = []
-            #row = []
-            #row.append(Paragraph("Order Number", style["Heading3"]))
-            #row.append(Paragraph("Customer Number", style["Heading3"]))
-            #if po and po.strip():
-                #row.append(Paragraph("Purchase Order Number", style["Heading3"]))
-            #row.append(Paragraph("Date of Purchase", style["Heading3"]))
-            #if doctype in ('invoice', 'late') and payment_method == 'PO':
-                #row.append(Paragraph("Terms", style["Heading3"]))
-            #rows.append(row)
-            #row = []
-            #row.append(Paragraph(order_number, style["Normal"]))
-            #row.append(Paragraph(customer_number, style["Normal"]))
-            #if po and po.strip():
-                #row.append(Paragraph(po, style["Normal"]))
-            #d = time.strptime(date_ordered, "%Y-%m-%d %H:%M:%S")
-            #row.append(Paragraph(time.strftime("%B %d, %Y", d), style["Normal"]))
-            #if doctype in ('invoice', 'late') and payment_method == 'PO':
-                #row.append(Paragraph("NET30", style["Normal"]))
-            #rows.append(row)
-            #table = Table(rows)
-            #table.setStyle(TableStyle([
-                #('LEFTPADDING', (0,0), (0,-1), 0),
-            #]))
-            #story.append(table)
-            #story.append(Spacer(0, spacer*inch))
-        
         for i, tune in enumerate(self.tunes):
             
             title = Paragraph(tune.title + ' - ' + tune._FullKey(), style["Heading1"])
-            story.append(title)
+            ttable = Table([[title]], colWidths=[7.5*inch], rowHeights=[0.5*inch])
+            ttable.setStyle(TableStyle([
+                ('ALIGN',(0, 0),(0, 0),'LEFT'), 
+                ('VALIGN',(0, 0),(-1,-1),'TOP'), 
+                ('LEFTPADDING', (0, 0), (-1, -1), 0.1*inch), 
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0), 
+                ('TOPPADDING', (0, 0), (-1, -1), 0), 
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                #( 'INNERGRID', (0,0), (-1,-1), 0.25, colors.black),  # temporary
+                #( 'BOX', (0,0), (-1,-1), 0.25, colors.black),        # temporary
+            ]))
+            story.append(ttable)
             
             notes_png_file = tune.MakeNotesPNGFile()
-            notes_image = Image(notes_png_file, 4.0*inch, 3.0*inch, kind='bound', hAlign='LEFT')
+            notes_image = Image(notes_png_file, 3.75*inch, 2.5*inch, kind='bound', hAlign='LEFT')
             chords_drawing = tune.MakeChordsDrawing()
             
             rows = [[notes_image, chords_drawing]]
-            table = Table(rows)
+            table = Table(rows, vAlign='TOP', colWidths=[3.75*inch, 3.75*inch], rowHeights=[2.833*inch])
             table.setStyle(TableStyle([
-                ('LEFTPADDING', (0, 0), (0, -1), 0), 
+                ('ALIGN',(0, 0),(0, 0),'LEFT'), 
+                ('ALIGN',(1, 0),(1, 0),'RIGHT'), 
+                ('VALIGN',(0, 0),(-1,-1),'TOP'), 
+                ('LEFTPADDING', (0, 0), (-1, -1), 0), 
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0), 
+                ('TOPPADDING', (0, 0), (-1, -1), 0), 
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                #( 'INNERGRID', (0,0), (-1,-1), 0.25, colors.black),  # temporary
+                #( 'BOX', (0,0), (-1,-1), 0.25, colors.black),        # temporary
             ]))
             story.append(table)
 
         # Place body into frame
         h = 10
-        f = Frame(0.50*inch, 0.50*inch, 7.5*inch, 10.0*inch, showBoundary=0)
+        f = Frame(0.50*inch, 0.50*inch, 7.5*inch, 10.0*inch, leftPadding=0,
+                  bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
         f.addFromList(story, pdf)
     
         # Close page and save to disk
@@ -915,7 +898,7 @@ def ABCToPostscript(abc, svg=False, eps=False):
         svg_arg = '-X -m 0 -w 4in'
         ps_fn = os.path.splitext(fn)[0] + '.svg'
     elif eps:
-        svg_arg = '-E -m 0 -w 4in -s 1.5'
+        svg_arg = '-E -m 0 -w 3.75in'
         ps_fn = os.path.splitext(fn)[0] + '.eps'
     else:
         svg_arg = ''
