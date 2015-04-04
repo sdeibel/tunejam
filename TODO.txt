@@ -1,11 +1,12 @@
 * Website Phase One
   * Enter new cards from Bliss
+  * Create / save set books -- both accessible in print and html form
   * Book generation
     * Header/footer
-    * Section type in by-section variant
-    * Implement sets books
+    * Section type at top in by-section variant
     * Adjust margins for binding
-    * Optional matrix for know/at-speed/can-start checks?
+    * Flip book variant (three of same tune)
+    * Optional matrix for know/at-speed/can-start/harmonies check rectangle
   * Browser issues
     * Opera sizing completely wrong -- rework how sizing is done?
     * Chrome forgets selected tunes when go back to page
@@ -13,6 +14,7 @@
   * Design / header / footer / menu / improve overall CSS
   * Review/improve URL structure
 * Website Phase Two+
+  * Remove old unused doc generation code
   * Print book index and TOC
   * Embedded audio player on same page?
   * Fix changing filter to not clear the selected items (do it client side)
