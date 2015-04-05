@@ -9,4 +9,4 @@ M:4/4
 |: D | D | Em(G) | EmA |
    D | D | A     | D  :|
 |: D | A | G     | D   |
-|  D | A | GA    | D  :|
+   D | A | GA    | D  :|
