@@ -189,7 +189,8 @@ def tune(tune):
 
 @app.route('/print')
 @app.route('/print/<format>')
-def doprint(format=None):
+@app.route('/print/<format>/<bookname>')
+def doprint(format=None, bookname=None):
   parts = []
   if format is None:
     parts.extend([
@@ -199,8 +200,7 @@ def doprint(format=None):
       CBreak(), 
       CText("All Tunes in Alphabetical Order (in sections by type)", href="/print/bytype"),
       CBreak(), 
-      CText("Commonly Played Sets of Tunes", href="/print/sets"),
-      CBreak(), 
+      CText("Commonly Played Sets of Tunes", href="/print/book/tunejam"),
     ])
     
   elif format == 'bytype':
@@ -215,9 +215,9 @@ def doprint(format=None):
     pdf = book.GeneratePDF()
     return send_file(pdf, mimetype='application/pdf')
   
-  else:
+  elif format == 'book':
     import setsheets
-    book = utils.CBook('tunejam')
+    book = utils.CBook(bookname)
     pdf = book.GeneratePDF()
     return send_file(pdf, mimetype='application/pdf')
     
