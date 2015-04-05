@@ -33,25 +33,18 @@
 * More tunes for which we have recordings
   shetland_tune_title_unknown_1
   shetland_tune_title_unknown_2
-  road_to_boston (it's not off_to_boston)
-  a_yow_came_to_weir_door_yarmin
   cluck_old_hen
-  creaky_joints
   ten_penny_bit
   valentines_day
   st_columba
-  off_to_california
   canyon_creek
-  i_cannae_get_my_mare_a_tamed
-  the_bumble_bee
   minstrel_boy
   queen_of_the_county_fair
   jimmy_allen
-  forest_wedding
-  the_rags (actually opera reel(?))
   x
   [flat_foot_henry]
 No recordings yet (but have database entries)
+  [note: change off_to_boston to road_to_boston]
   midnight_on_the_water
   old_french
   onion_reel
@@ -73,10 +66,13 @@ No recordings yet (but have database entries)
   star_of_the_county_down
   flowers_of_the_thorn
   belle_meres_waltz
-Neither
   metsakukkia
+Neither
   bumble_bee_with_new_middle
   stephans_gypsy_tune
   march_of_the_bullfrogs
   bachelor_duck
   the_tidley_idley
+  (untitled new song - sheep herding title?)
+  the_good_doctor
+  

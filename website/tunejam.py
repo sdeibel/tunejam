@@ -220,6 +220,9 @@ def doprint(format=None, bookname=None):
     book = utils.CBook(bookname)
     pdf = book.GeneratePDF()
     return send_file(pdf, mimetype='application/pdf')
+  
+  else:
+    parts.append(CParagraph('Unknown print directive'))
     
   return PageWrapper(parts)
 
