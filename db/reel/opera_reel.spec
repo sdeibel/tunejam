@@ -4,7 +4,7 @@ L:1/8
 M:4/4
 --
 D2D>D FDFA|D2DF EDB,A,|
-A2|dcec dAEA|Adcd egfe|
+A2|dcec dAFA|Adcd egfe|
 e2|afaf gfge|faec dcBA|
 defd efge|faec dcBA|
 --
