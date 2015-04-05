@@ -1,5 +1,4 @@
 * Website Phase One
-  * Enter new cards from Bliss
   * Create / save set books -- both accessible in print and html form
   * Book generation
     * Header/footer
