@@ -3,7 +3,7 @@ K:G
 L:1/8
 M:4/4
 --
-(3DEF)|G>F G>B A>FE>D|G>Bd>g ee>f
+(3DEF)|G>F G>B A>FE>D|G>Bd>g e2e>f
 g>fe>g f2e>d|e2 e>f e>d B2|
 --
 |: G | D  | G  | C  |
