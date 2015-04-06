@@ -42,15 +42,16 @@
   jimmy_allen
   x
   [flat_foot_henry]
-Re-record to replace bad or corrupted recordings
+No recordings or need to re-record those in corrupted file
   fair_jenny (w/ syncopated last time through)
   drummond_castle
   queen_of_the_county_fair 
   grumbling_old_growling
   banish_misfortune
   teviot_bridge
-No recordings yet (but have database entries)
-  [note: change off_to_boston to road_to_boston]
+  le_tourment
+  dusty_bobs_jig
+  coleraine
   midnight_on_the_water
   old_french
   onion_reel
@@ -62,18 +63,23 @@ No recordings yet (but have database entries)
   waiting_for_the_federals
   maries_wedding
   moon_and_seven_stars
+  snow_storm_is_coming
+  stool_of_repentence
   rippling_water
   rose_tree
-  jamie_allen
   golden_slippers
-  prince_william
   roddy_mccorley
   les_fraise_et_les_framboise
   star_of_the_county_down
   flowers_of_the_thorn
   belle_meres_waltz
+  canna_get_my_mare_tamed
+  driving_the_turkeys
+  new_rigged_ship
+  opera_reel
+  spootiskerry
   metsakukkia
-Neither
+Neither card nor recording
   bumble_bee_with_new_middle
   stephans_gypsy_tune
   march_of_the_bullfrogs
