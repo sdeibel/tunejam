@@ -31,17 +31,17 @@
     "at dance tempo", "can start", etc
 * Notebooks/printing options for flip books
 * More tunes for which we have recordings
-  shetland_tune_title_unknown_1
-  shetland_tune_title_unknown_2
-  cluck_old_hen
+  shetland_tune_1 (title?)
+  shetland_tune_2 (title?)
   ten_penny_bit
   valentines_day
   st_columba
   canyon_creek
   minstrel_boy
-  jimmy_allen
   x
-  [flat_foot_henry]
+  flat_foot_henry
+  cluck_old_hen
+  phillipine_xmas
 No recordings or need to re-record those in corrupted file
   fair_jenny (w/ syncopated last time through)
   drummond_castle
@@ -87,4 +87,5 @@ Neither card nor recording
   the_tidley_idley
   (untitled new song - sheep herding title?)
   the_good_doctor
+  swedish_tune (email to get title?)
   
