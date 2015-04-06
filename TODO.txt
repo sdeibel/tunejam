@@ -39,13 +39,16 @@
   st_columba
   canyon_creek
   minstrel_boy
-  queen_of_the_county_fair
   jimmy_allen
   x
   [flat_foot_henry]
-Re-record to replace bad recordings
+Re-record to replace bad or corrupted recordings
   fair_jenny (w/ syncopated last time through)
   drummond_castle
+  queen_of_the_county_fair 
+  grumbling_old_growling
+  banish_misfortune
+  teviot_bridge
 No recordings yet (but have database entries)
   [note: change off_to_boston to road_to_boston]
   midnight_on_the_water
