@@ -1,5 +1,10 @@
 * Website Phase One
+  * Fix auto-restart when hg pull/update on server (outer process
+    probably being killed)
+  * Automatically re-generate books in background and pull/update and
+    indicate status on the print page if in progress
   * Create / save set books -- both accessible in print and html form
+  * Ability to create live-updating session page to sync devices
   * Book generation
     * Header/footer
     * Section type at top in by-section variant
