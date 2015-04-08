@@ -31,8 +31,7 @@ def music():
   parts = []
   parts.append(CH("Tune Index", 1))
   parts.append(CParagraph("This lists all the tunes in the database so far.  If there is a recording, "
-                          "you can click on the speaker icon to hear it.  Not all existing recordings "
-                          "have been moved into the database."))
+                          "you can click on the speaker icon to hear it."))
   tunes = utils.GetTuneIndex()
 
   sections = tunes.keys()
