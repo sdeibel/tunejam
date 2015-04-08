@@ -927,6 +927,10 @@ class CBook:
         if not os.path.exists(fn):
             return fn, False
         
+        book_file = os.path.join(kDatabaseDir, self.name+'.book')
+        if os.path.isfile(book_file) and IsFileNewer(book_file, fn):
+            return fn, False
+        
         for page in self.pages:
             for tune in page.tunes:
                 spec_file = tune._GetSpecFile()
