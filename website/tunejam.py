@@ -227,8 +227,8 @@ def doprint(format=None, bookname=None):
         continue
       if os.path.exists(os.path.join(utils.kDatabaseDir, book.name+'.lock')):
         url = None
-        title = book.subtitle + ' - temporarily unavailable - '
-        img = CImage(src='/image/rebuilding.png', style="border-top:2px;")
+        title = book.subtitle + ' - temporarily unavailable - rebuilding '
+        img = CImage(src='/image/rebuilding.gif')
         refresh = 5
       else:
         url = '/print/%s' % book.url
