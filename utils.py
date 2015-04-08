@@ -846,6 +846,7 @@ class CBook:
         self.date = ''
         self.contact = ''
         self.name = name
+        self.url = 'book/%s' % name
         
         fn = os.path.join(kDatabaseDir, name+'.book')
         if not os.path.isfile(fn):

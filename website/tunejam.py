@@ -11,7 +11,7 @@ else:
   
 import utils
 
-from flask import Flask, Response, request, send_file
+from flask import Flask, Response, request, send_file, make_response
 app = Flask(__name__)
 
 @app.route('/')
@@ -186,23 +186,61 @@ def tune(tune):
   parts.extend(CreateTuneHTML(tune))
   return PageWrapper(parts)
 
+def _get_all_books():
+  import allbook
+  retval = [
+    allbook.CAllBook(),
+    allbook.CAllBookBySection(),
+    None, 
+  ]
+  custom_books = []
+  files = os.listdir(utils.kDatabaseDir)
+  for fn in files:
+    if not fn.endswith('.book'):
+      continue
+    book = fn[:-len('.book')]
+    custom_books.append(utils.CBook(book))
+    
+  def sort_custom(o1, o2):
+    return cmp(o1.subtitle, o2.subtitle)
+  custom_books.sort(sort_custom)
+  retval.extend(custom_books)
+
+  return retval
+  
 @app.route('/print')
 @app.route('/print/<format>')
 @app.route('/print/<format>/<bookname>')
 def doprint(format=None, bookname=None):
+  refresh = None
   parts = []
   if format is None:
     parts.extend([
       CH('Printable Books', 1), 
-      CParagraph("The following printing options are available:"), 
-      CText("All Tunes in Alphabetical Order (one long list)", href="/print/all"),
+      CParagraph("The following printing options are available:"),
       CBreak(), 
-      CText("All Tunes in Alphabetical Order (in sections by type)", href="/print/bytype"),
-      CBreak(), 
-      CText("Commonly Played Sets of Tunes", href="/print/book/tunejam"),
     ])
     
-  elif format == 'bytype':
+    for book in _get_all_books():
+      if book is None:
+        parts.append(CBreak())
+        continue
+      if os.path.exists(os.path.join(utils.kDatabaseDir, book.name+'.lock')):
+        url = None
+        title = book.subtitle + ' - temporarily unavailable - '
+        img = CImage(src='/image/rebuilding.png', style="border-top:2px;")
+        refresh = 5
+      else:
+        url = '/print/%s' % book.url
+        img = ''
+        title = book.subtitle
+      parts.extend([
+        CText(title, href=url),
+        img, 
+        CBreak(),
+      ])
+    
+  elif format == 'all-by-section':
     import allbook
     book = allbook.CAllBookBySection()
     pdf = book.GeneratePDF()
@@ -222,8 +260,8 @@ def doprint(format=None, bookname=None):
   
   else:
     parts.append(CParagraph('Unknown print directive'))
-    
-  return PageWrapper(parts)
+
+  return PageWrapper(parts, refresh)
 
 @app.route('/recording/<tune>')
 def recording(tune):
@@ -399,17 +437,22 @@ display:none;
     """
   return Response(css, mimetype='text/css')
 
-def PageWrapper(body):
+def PageWrapper(body, refresh=None):
   
   # Build html head
   title = "Tune Jam"
   year = time.strftime("%Y", time.localtime())
-  head = CHead([CTitle(title),
-                CMeta("text/html; charset=utf-8", http_equiv="Content-Type"),
-                CMeta("Copyright (c) 1999-%s Stephan Deibel" % year, name="Copyright"),
-                '<link rel="stylesheet" type="text/css" href="/css/screen" media="screen" />', 
-                '<link rel="stylesheet" type="text/css" href="/css/print" media="print" />', 
-])
+  head = [
+    CTitle(title),
+    CMeta("text/html; charset=utf-8", http_equiv="Content-Type"),
+    CMeta("Copyright (c) 1999-%s Stephan Deibel" % year, name="Copyright"),
+    '<link rel="stylesheet" type="text/css" href="/css/screen" media="screen" />', 
+    '<link rel="stylesheet" type="text/css" href="/css/print" media="print" />', 
+  ]
+  if refresh is not None:
+    head.append(CMeta(str(refresh), http_equiv="refresh"))
+
+  head = CHead(head)
 
   body_div = CBody([CDiv(body, id="body")])
   
@@ -564,6 +607,31 @@ if __name__ == '__main__':
     if found_process:
       time.sleep(1.0)
       
+  # Kick off background task process to regenerate books so they
+  # are cached and load quickly for users
+  def regenerate_books():
+    all_books = _get_all_books()
+    for book in all_books:
+      if book is None:
+        continue
+      f = open(os.path.join(utils.kDatabaseDir, book.name+'.lock'), 'w')
+      f.write('lock-%s' % str(os.getpid()))
+      f.close()
+    for book in all_books:
+      if book is None:
+        continue
+      book.GeneratePDF()
+      try:
+        os.unlink(os.path.join(utils.kDatabaseDir, book.name+'.lock'))
+      except OSError:
+        pass
+    return True
+  def books_done(result):
+    pass
+  import multiprocessing
+  pool = multiprocessing.Pool(1)
+  job = pool.apply_async(regenerate_books, callback=books_done)
+  
   # Start new server
   from os import environ
   if 'WINGDB_ACTIVE' in environ:

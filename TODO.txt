@@ -1,6 +1,4 @@
 * Website Phase One
-  * Automatically re-generate books in background and pull/update and
-    indicate status on the print page if in progress
   * Create / save set books -- both accessible in print and html form
   * Ability to create live-updating session page to sync devices
   * Book generation

@@ -10,10 +10,11 @@ class CAllBookBySection(utils.CBook):
     def __init__(self):
         
         self.title = 'Hubbard Hall Tune Jam'
-        self.subtitle = 'All Tunes Book'
-        self.date = 'DRAFT March 13, 2015 DRAFT'
+        self.subtitle = 'All Tunes - By Type'
+        self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
         self.name = 'all-by-section'
+        self.url = self.name
     
         self.pages = []
         for section, section_name in utils.kSections:
@@ -52,10 +53,11 @@ class CAllBook(utils.CBook):
     def __init__(self):
         
         self.title = 'Hubbard Hall Tune Jam'
-        self.subtitle = 'All Tunes Book'
+        self.subtitle = 'All Tunes - Alphabetical'
         self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
         self.name = 'all'
+        self.url = self.name
 
         tunes = []
         for section, section_name in utils.kSections:
