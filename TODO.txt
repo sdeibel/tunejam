@@ -31,42 +31,13 @@
   * Printable version optionally could have boxes to check for "know",
     "at dance tempo", "can start", etc
 * Notebooks/printing options for flip books
-* More tunes for which we have recordings
+* More tunes for which we have recordings but no card
   shetland_tune_1 (title?)
   shetland_tune_2 (title?)
-  ten_penny_bit
-  valentines_day
-  st_columba
-  canyon_creek
-  minstrel_boy
   x
-  flat_foot_henry
-  cluck_old_hen
-  phillipine_xmas
-No recordings or need to re-record those in corrupted file
-  fair_jenny (w/ syncopated last time through)
-  drummond_castle
-  queen_of_the_county_fair 
-  grumbling_old_growling
-  banish_misfortune
-  teviot_bridge
-  le_tourment
-  dusty_bobs_jig
-  coleraine
-  midnight_on_the_water
-  old_french
-  onion_reel
+* No recordings or need to re-record those in corrupted file
   crocus_pocus
-  shove_that_pigs_foot
   our_outboard_died
-  sweet_potato_rag
-  old_man_old_woman (not the grumbling/growling one)
-  waiting_for_the_federals
-  maries_wedding
-  moon_and_seven_stars
-  snow_storm_is_coming
-  stool_of_repentence
-  rippling_water
   rose_tree
   golden_slippers
   roddy_mccorley
@@ -80,12 +51,24 @@ No recordings or need to re-record those in corrupted file
   opera_reel
   spootiskerry
   metsakukkia
-Neither card nor recording
+* Neither card nor recording
+  the_good_doctor
+  swedish_tune (emailed 4/7 to get title)
+* Stephan's other tunes (probably separate project)
   bumble_bee_with_new_middle
   stephans_gypsy_tune
   march_of_the_bullfrogs
   bachelor_duck
   the_tidley_idley
   away_to_me (tentative title)
-  the_good_doctor
-  swedish_tune (emailed 4/7 to get title)
+* Database entries to drop
+  queen_of_the_county_fair
+* Recordings to drop or ignore (have no database entries)
+  ten_penny_bit
+  valentines_day
+  st_columba
+  canyon_creek
+  minstrel_boy
+  flat_foot_henry
+  cluck_old_hen
+  phillipine_xmas
