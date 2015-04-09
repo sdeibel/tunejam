@@ -632,6 +632,22 @@ if __name__ == '__main__':
   pool = multiprocessing.Pool(1)
   job = pool.apply_async(regenerate_books, callback=books_done)
   
+  # Get a list of all the files to watch to trigger restart (so the
+  # PDF books get rebuilt)
+  watch_files = []
+  files = os.listdir(utils.kDatabaseDir)
+  for fn in files:
+    if fn.endswith('.book'):
+      watch_files.append(os.path.join(utils.kDatabaseDir, fn))
+  for section, section_name in utils.kSections:
+    try:
+      files = os.listdir(os.path.join(utils.kDatabaseDir, section))
+    except OSError:
+      continue
+    for fn in files:
+      if fn.endswith('.spec'):
+        watch_files.append(os.path.join(utils.kDatabaseDir, section, fn))
+  
   # Start new server
   from os import environ
   if 'WINGDB_ACTIVE' in environ:
@@ -640,5 +656,5 @@ if __name__ == '__main__':
     host = None
   else:
     host = 'music.cambridgeny.net'
-  app.run(host=host, port=60080, use_reloader=True)
+  app.run(host=host, port=60080, use_reloader=True, extra_files=watch_files)
 
