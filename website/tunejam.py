@@ -116,6 +116,9 @@ function FilterTunes() {
     }
   });
 }
+function FilterSubmit() {
+  return false;
+}
 function ClearTunes() {
   $( "#selectedtunes").children().appendTo('#alltunes');
   $('li').sortElements(function(a, b){
@@ -175,7 +178,7 @@ padding-bottom:0.5em;
     CSelect(section_options, current=filter, name='filter',
             onchange='FilterTunes()', id='filterselect'),
     CInput(type='TEXT', name='text_filter', onkeyup='FilterTunes()', id='filtertext'), 
-  ], action="/sets", method='POST'))
+  ], onsubmit="return FilterSubmit();"))
   parts.append(CBreak())
   
   all_tunes = []
