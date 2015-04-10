@@ -88,6 +88,7 @@ function SubmitTunes() {
 }
 function FilterTunes() {
   var filter = $("#filterselect").val();
+  var textfilter = $("#filtertext").val();
   var tunes = $("#alltunes").find("li");
   tunes.each(function (idx, li) {
     var item = $(li);
@@ -102,6 +103,11 @@ function FilterTunes() {
                  item.hasClass("rag"));
     } else {
       visible = item.hasClass(filter);
+    }
+    if (textfilter != "") {
+      if (item.text().toLowerCase().search(textfilter.toLowerCase()) == -1) {
+        visible = 0;
+      }
     }
     if (visible) {
       item.css("display", "");
@@ -167,7 +173,8 @@ padding-bottom:0.5em;
   parts.append(CForm([
     CText("Filter:", bold=1),
     CSelect(section_options, current=filter, name='filter',
-            onchange='FilterTunes()', id='filterselect')
+            onchange='FilterTunes()', id='filterselect'),
+    CInput(type='TEXT', name='text_filter', onkeyup='FilterTunes()', id='filtertext'), 
   ], action="/sets", method='POST'))
   parts.append(CBreak())
   

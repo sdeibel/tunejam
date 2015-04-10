@@ -17,7 +17,6 @@
   * Remove old unused doc generation code
   * Print book index and TOC
   * Embedded audio player on same page?
-  * Add text filter field to sets page
   * Add key selector to sets page
   * A way to generate random sets matching the filters
   * A way to save set to a sets page
