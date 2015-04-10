@@ -1,33 +1,29 @@
 * Website Phase One
-  * Create / save set books -- both accessible in print and html form
+  * Fix printing option on /sets page
+  * Ability to save sets to a stored sets lists
   * Ability to create live-updating session page to sync devices
-  * Book generation
-    * Header/footer
+  * A way to generate random sets matching the filters
+  * Book generation improvements
+    * Header with title and date, and footer with url and page number
     * Section type at top in by-section variant
     * Adjust margins for binding
     * Flip book variant (three of same tune)
+    * Index and TOC
     * Optional matrix for know/at-speed/can-start/harmonies check rectangle
   * Browser issues
-    * Opera sizing completely wrong -- rework how sizing is done?
+    * Opera sizing completely wrong -- rework how sizing is done (e.g. use the PNG
+      of the tune instead of SVG)
     * Chrome forgets selected tunes when go back to page
-  * Cut apart other recordings in recordings-to-sort dir
   * Design / header / footer / menu / improve overall CSS
   * Review/improve URL structure
 * Website Phase Two+
   * Remove old unused doc generation code
-  * Print book index and TOC
   * Embedded audio player on same page?
-  * A way to generate random sets matching the filters
-  * A way to save set to a sets page
   * A way to play the chords at a set tempo and/or metronome?
   * A way to play set recordings in order one after the other and/or w/ repeat?
   * A way to play recordings slowed down (record speed in DB so can show
     approx beats/minute)
-  * A way to share sets pages w/ live update for group playing (define
-    event and have a live update url to sync devices)
-  * Printable version optionally could have boxes to check for "know",
-    "at dance tempo", "can start", etc
-* Notebooks/printing options for flip books
+* Find notebooks/bindings/printing options for flip books
 * More tunes for which we have recordings but no card
   shetland_tune_1 (title?)
   shetland_tune_2 (title?)
