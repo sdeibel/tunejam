@@ -86,6 +86,30 @@ function SubmitTunes() {
   }
   window.location.href= "/sets/" + tunes;
 }
+function FilterTunes() {
+  var filter = $("#filterselect").val();
+  var tunes = $("#alltunes").find("li");
+  tunes.each(function (idx, li) {
+    var item = $(li);
+    var visible = 0;
+    if (filter == "all") {
+      visible = 1;
+    }
+    else if (filter == "reel" ) {
+      visible = (item.hasClass("reel") ||
+                 item.hasClass("hornpipe") ||
+                 item.hasClass("march") ||
+                 item.hasClass("rag"));
+    } else {
+      visible = item.hasClass(filter);
+    }
+    if (visible) {
+      item.css("display", "");
+    } else {
+      item.css("display", "none");
+    }
+  });
+}
 function ClearTunes() {
   $( "#selectedtunes").children().appendTo('#alltunes');
   $('li').sortElements(function(a, b){
@@ -143,22 +167,29 @@ padding-bottom:0.5em;
   parts.append(CForm([
     CText("Filter:", bold=1),
     CSelect(section_options, current=filter, name='filter',
-            onchange='this.form.submit()')
+            onchange='FilterTunes()', id='filterselect')
   ], action="/sets", method='POST'))
   parts.append(CBreak())
   
   all_tunes = []
   tunes = utils.GetTuneIndex()
   for section in tunes:
-    if filter == 'reel' and section in ['reel', 'hornpipe', 'march', 'rag']:
-      pass
+    visible = True
+    if filter == 'reel' and section not in ['reel', 'hornpipe', 'march', 'rag']:
+      visible = False
     elif filter is not None and filter != section:
-      continue
+      visible = False
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
       title += ' - %s - %s' % (obj.type.capitalize(), obj.GetKeyString())
-      all_tunes.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'), hclass='ui-state-default')))
+      if visible:
+        all_tunes.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'),
+                                       hclass='ui-state-default %s' % section)))
+      else:
+        all_tunes.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'),
+                                       hclass='ui-state-default %s' % section,
+                                       style="display:none")))
 
   all_tunes.sort()
   all_tunes = [i[1] for i in all_tunes]
