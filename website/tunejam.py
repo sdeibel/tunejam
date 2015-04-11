@@ -60,11 +60,15 @@ def music():
 @app.route('/sets/<spec>')
 def sets(spec=None):
   
+  error = None
+  preload_tunes = []
+
   if spec is not None:
     args = spec.split('&')
     tunes = []
     _print = False
     save = False
+    edit = False
     title = None
     subtitle = ''
     
@@ -73,6 +77,8 @@ def sets(spec=None):
         _print = True
       elif arg == 'save=1':
         save = True
+      elif arg == 'edit=1':
+        edit = True
       elif arg.startswith('title='):
         title = arg[len('title='):].strip()
       elif arg.startswith('subtitle='):
@@ -80,7 +86,6 @@ def sets(spec=None):
       elif arg:
         tunes.append(arg)
     
-    error = None
     if save and not title:
       error = "You need to set a title if you plan to save this set of tunes!  Go back to return to the selected tunes."
       
@@ -114,6 +119,9 @@ def sets(spec=None):
         if not title:
           title = 'Untitled - %s' % name
         return CreateTuneSetPDF(name, title, subtitle, tunes)
+        
+      elif edit:
+        preload_tunes = tunes
         
       else:
         return CreateTuneSetHTML(tunes)
@@ -268,6 +276,7 @@ padding-bottom:0.5em;
   parts.append(CBreak())
   
   all_tunes = []
+  selected_tunes = []
   tunes = utils.GetTuneIndex()
   for section in tunes:
     visible = True
@@ -279,19 +288,25 @@ padding-bottom:0.5em;
       obj = utils.CTune(tune)
       obj.ReadDatabase()
       title += ' - %s - %s' % (obj.type.capitalize(), obj.GetKeyString())
+      if tune in preload_tunes:
+        use_list = selected_tunes
+      else:
+        use_list = all_tunes
       if visible:
-        all_tunes.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'),
+        use_list.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'),
                                        hclass='ui-state-default %s' % section)))
       else:
-        all_tunes.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'),
+        use_list.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'),
                                        hclass='ui-state-default %s' % section,
                                        style="display:none")))
 
   all_tunes.sort()
   all_tunes = [i[1] for i in all_tunes]
   
+  selected_tunes = [i[1] for i in selected_tunes]
+  
   tunes_list = CDiv(CList(all_tunes, id='alltunes', hclass='connectedSortable'), hclass='scroll')
-  selected_list = CDiv(CList([], id='selectedtunes', hclass='connectedSortable'), hclass='scroll')
+  selected_list = CDiv(CList([selected_tunes], id='selectedtunes', hclass='connectedSortable'), hclass='scroll')
   
   parts.append(CTable(CTR([tunes_list, selected_list])))
   parts.append(CBreak())
@@ -316,6 +331,36 @@ padding-bottom:0.5em;
     CInput(type='button', value="Submit", onclick='SubmitTunes();'),
     CInput(type='button', value="Clear", onclick='ClearTunes();'), 
   ], id='tunesform'))
+
+  saved = []
+  for fn in os.listdir(utils.kSaveLoc):
+    if fn.endswith('.book'):
+      book = utils.CBook(os.path.join(utils.kSaveLoc, fn))
+      saved.append((book.title, book))
+  saved.sort()
+  
+  if saved:
+    parts.extend([
+      CBreak(), 
+      CH("Saved Sets", 1)
+    ])
+    for title, book in saved:
+      if book.subtitle:
+        title = '%s - %s - %s' % (book.title, book.subtitle, book.date)
+      else:
+        title = '%s - %s' % (book.title, book.date)
+      parts.extend([
+        CBreak(), 
+        CText(title, href='/saved/view/%s' % book.name),
+        CNBSP(),
+        CText('-'), 
+        CNBSP(),
+        CText('Print', href='/saved/print/%s' % book.name),
+        CNBSP(),
+        CText('Edit', href='/saved/edit/%s' % book.name), 
+        CNBSP(),
+        CText('Delete', href='/saved/delete/%s' % book.name), 
+      ])
   
   return PageWrapper(parts)
 
@@ -401,6 +446,40 @@ def doprint(format=None, bookname=None):
     parts.append(CParagraph('Unknown print directive'))
 
   return PageWrapper(parts, refresh)
+
+@app.route('/saved/<action>/<book>')
+def saved(action=None, book=None):
+  parts = []
+  if action is None or book is None:
+    parts.append("Book list here")
+    return PageWrapper(parts)
+
+  fn = os.path.join(utils.kDatabaseDir, book+'.book')
+  if not os.path.isfile(fn):
+    fn = os.path.join(utils.kSaveLoc, book+'.book')
+  if not os.path.isfile(fn):
+    parts.append(CParagraph("Book %s does not exist" % book))
+    return PageWrapper(parts)
+    
+  book = utils.CBook(fn)
+  
+  if action == 'view':
+    parts.append(CreateTuneSetHTML(book.AllTunes()))
+  elif action == 'print':
+    pdf = book.GeneratePDF()
+    return send_file(pdf, mimetype='application/pdf')
+  elif action == 'edit':
+    tunes = book.AllTunes()
+    tunes = '&'.join(tunes)
+    return sets(tunes+'&edit=1')
+  elif action == 'delete':
+    fn = os.path.join(utils.kSaveLoc, book.name+'.book')
+    os.unlink(fn)
+    return sets()
+  else:
+    parts.append(CParagraph("Invalid action %s" % action))
+  
+  return PageWrapper(parts)
 
 @app.route('/recording/<tune>')
 def recording(tune):
