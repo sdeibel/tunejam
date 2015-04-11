@@ -1,5 +1,4 @@
 * Website Phase One
-  * Fix printing option on /sets page
   * Ability to save sets to a stored sets lists
   * Ability to create live-updating session page to sync devices
   * A way to generate random sets matching the filters

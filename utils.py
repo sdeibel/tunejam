@@ -3,6 +3,7 @@ import stat
 import setsheets
 import tempfile
 import sys
+import time
 
 # Configuration
 kFontSize = 18
@@ -843,8 +844,8 @@ class CBook:
     def __init__(self, name, large=False):
         self.title = ''
         self.subtitle = ''
-        self.date = ''
-        self.contact = ''
+        self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
+        self.contact = 'http://cambridgeny.net/music'
         self.name = name
         self.url = 'book/%s' % name
         
@@ -905,15 +906,16 @@ class CBook:
         return pages
             
     def GeneratePDF(self):
-        pages = []
-        for page in self.pages:
-            pdf = page.MakeCardPDF()
-            pages.append(pdf)
             
         target, up_to_date = self._GetCacheFile('.pdf')
         if up_to_date:
             return target
         
+        pages = []
+        for page in self.pages:
+            pdf = page.MakeCardPDF()
+            pages.append(pdf)
+
         ConcatenatePDFFiles(pages, target)
         return target
     
@@ -939,6 +941,41 @@ class CBook:
         
         return fn, True
         
+class CSetBook(CBook):
+    
+    def __init__(self, name, title, subtitle, tunes):
+        self.title = title
+        self.subtitle = subtitle
+        self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
+        self.contact = 'http://cambridgeny.net/music'
+        self.name = name
+        self.url = 'book/%s' % self.name
+        
+        self.pages = []
+
+        def append_page(page, setnum):
+            if self.subtitle:
+                title = [self.title, self.subtitle, self.date]
+                title = [t.strip() for t in title]
+                title = '%s - %s\\n%s' % tuple(title)
+            else:
+                title = [self.title, self.date]
+                title = [t.strip() for t in title]
+                title = '%s - %s' % tuple(title)
+            tuneset = CTuneSet(page, title, self.contact, setnum)
+            self.pages.append(tuneset)
+            
+        setnum = 1
+        page = []
+        for tune in tunes:
+            page.append(tune)
+            if len(page) == 3:
+                append_page(page, setnum)
+                setnum += 1
+                page = []
+                
+        if page:
+            append_page(page, setnum)
 
 def GetTuneIndex():
     idx = {}

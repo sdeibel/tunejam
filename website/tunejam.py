@@ -56,11 +56,23 @@ def music():
   return PageWrapper(parts)
 
 @app.route('/sets', methods=['GET', 'POST'])
+@app.route('/sets/')
 @app.route('/sets/<spec>')
 def sets(spec=None):
   
   if spec is not None:
-    return CreateTuneSetHTML(spec)
+    tunes = spec.split('&')
+    if tunes[-1] == 'print=1':
+      tunes = [t for t in tunes[:-1] if t]
+      if tunes:
+        import hashlib
+        md5sum = hashlib.md5()
+        for tune in tunes:
+          md5sum.update(tune)
+        name = 'C-' + md5sum.hexdigest()
+        return CreateTuneSetPDF(name, 'Custom Tune Set', '', tunes)
+    else:
+      return CreateTuneSetHTML(tunes)
 
   filter = request.form.get('filter')
   if filter == 'all':
@@ -212,13 +224,12 @@ padding-bottom:0.5em;
   
   parts.append(CForm([
     CInput(type='checkbox', name="print", value="1", checked="", id="print-checkbox"),
-    CText("Size for printing"), 
+    CText("Generate printable pages (PDF)"), 
     CBreak(2), 
     CInput(type='button', value="Submit", onclick='SubmitTunes();'),
     CInput(type='button', value="Clear", onclick='ClearTunes();'), 
   ], id='tunesform'))
   
-  parts.append(CParagraph("Printing isn't well supported yet.  I'm working on that."))
   return PageWrapper(parts)
 
 @app.route('/tune/<tune>')
@@ -502,7 +513,7 @@ def PageWrapper(body, refresh=None):
   
   return html
   
-def CreateTuneSetHTML(spec):
+def CreateTuneSetHTML(tunes):
   
   parts = []
   
@@ -511,13 +522,8 @@ def CreateTuneSetHTML(spec):
 margin-top:0px;
 }  
 </style>""")
-  tunes = spec.split('&')
   printing = False
-  if tunes[-1] == 'print=1':
-    tunes = tunes[:-1]
-    hclass = 'tune-container-print'
-  else:
-    hclass = 'tune-container'
+  hclass = 'tune-container'
   for i, tune in enumerate(tunes):
     if hclass.endswith('-print'):
       parts.append(CDiv(CreateTuneHTML(tune, printing=True), hclass=hclass+'-%i' % (i % 3)))
@@ -526,6 +532,11 @@ margin-top:0px;
   
   return PageWrapper(parts)
 
+def CreateTuneSetPDF(name, title, subtitle, tunes):
+  book = utils.CSetBook(name, title, subtitle, tunes)
+  pdf = book.GeneratePDF()
+  return send_file(pdf, mimetype='application/pdf')
+  
 def CreateTuneHTML(name, printing=False):
   
   if printing:
