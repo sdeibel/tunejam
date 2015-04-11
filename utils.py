@@ -30,6 +30,7 @@ kDatabaseDir = os.path.join(os.path.dirname(__file__), 'db')
 kImageDir = os.path.join(os.path.dirname(__file__), 'images')
 kRecordingsDir = os.path.join(os.path.dirname(__file__), 'recordings')
 kCacheLoc = os.path.join(os.path.dirname(__file__), 'website', 'cache')
+kSaveLoc = os.path.join(os.path.dirname(__file__), 'website', 'saved-sets')
 kJSDir = os.path.join(os.path.dirname(__file__), 'website', 'js')
 
 from reportlab import rl_config

@@ -61,18 +61,62 @@ def music():
 def sets(spec=None):
   
   if spec is not None:
-    tunes = spec.split('&')
-    if tunes[-1] == 'print=1':
-      tunes = [t for t in tunes[:-1] if t]
-      if tunes:
-        import hashlib
-        md5sum = hashlib.md5()
+    args = spec.split('&')
+    tunes = []
+    _print = False
+    save = False
+    title = None
+    subtitle = ''
+    
+    for arg in args:
+      if arg == 'print=1':
+        _print = True
+      elif arg == 'save=1':
+        save = True
+      elif arg.startswith('title='):
+        title = arg[len('title='):].strip()
+      elif arg.startswith('subtitle='):
+        subtitle = arg[len('subtitle='):].strip()
+      elif arg:
+        tunes.append(arg)
+    
+    error = None
+    if save and not title:
+      error = "You need to set a title if you plan to save this set of tunes!  Go back to return to the selected tunes."
+      
+    elif tunes:
+      
+      import hashlib
+      md5sum = hashlib.md5()
+      for tune in tunes:
+        md5sum.update(tune)
+      name = 'C-' + md5sum.hexdigest()
+      
+      if save and title:
+        date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
+        book = '%s\n%s\n%s\nhttp://cambridgeny.net/music\n--\n' % (
+          title, subtitle, date
+        )
+        page = []
         for tune in tunes:
-          md5sum.update(tune)
-        name = 'C-' + md5sum.hexdigest()
-        return CreateTuneSetPDF(name, 'Custom Tune Set', '', tunes)
-    else:
-      return CreateTuneSetHTML(tunes)
+          page.append(tune)
+          if len(page) == 3:
+            book += ' '.join(page) + '\n'
+            page = []
+        if page:
+          book += ' '.join(page) + '\n'
+          page = []
+        f = open(os.path.join(utils.kSaveLoc, '%s.book' % name), 'w')
+        f.write(book)
+        f.close()
+      
+      if _print:
+        if not title:
+          title = 'Untitled - %s' % name
+        return CreateTuneSetPDF(name, title, subtitle, tunes)
+        
+      else:
+        return CreateTuneSetHTML(tunes)
 
   filter = request.form.get('filter')
   if filter == 'all':
@@ -95,6 +139,11 @@ function SubmitTunes() {
   tunes = tunes.replace(/tune=/g, "");
   if ($("#print-checkbox").prop("checked")) {
     tunes = tunes + "&print=1"
+  }
+  if ($("#save-checkbox").prop("checked")) {
+    tunes = tunes + "&save=1"
+    tunes = tunes + "&title=" + $("#title").val()
+    tunes = tunes + "&subtitle=" + $("#subtitle").val()
   }
   window.location.href= "/sets/" + tunes;
 }
@@ -137,6 +186,29 @@ function ClearTunes() {
       return a.innerHTML > b.innerHTML ? 1 : -1;
   });
 }
+$(document).ready(function() {
+    if($("#save-checkbox").is(":checked") || $("#print-checkbox").is(":checked")) {
+        $('#saveitems').css("display", "");
+    } else {
+        $('#saveitems').css("display", "none");
+    }
+
+    $('#save-checkbox').change(function() {
+        if($("#save-checkbox").is(":checked") || $("#print-checkbox").is(":checked")) {
+            $('#saveitems').css("display", "");
+        } else {
+            $('#saveitems').css("display", "none");
+        }
+    });
+    $('#print-checkbox').change(function() {
+        if($("#save-checkbox").is(":checked") || $("#print-checkbox").is(":checked")) {
+            $('#saveitems').css("display", "");
+        } else {
+            $('#saveitems').css("display", "none");
+        }
+    });
+});
+
 </script>
 <style>
 #alltunes {
@@ -166,6 +238,8 @@ padding-bottom:0.5em;
 """)
   
   parts.append(CH("Create a Tune Set", 1))
+  if error:
+    parts.append(CParagraph([CText("Error: ", bold=1), error], style="background-color:#FFFF00; padding-left:5px;"))
   parts.append(CParagraph("Drag one or more songs from the list "
                           "on the left to the list on the right then "
                           "press Submit to generate the set.  Use "
@@ -225,6 +299,19 @@ padding-bottom:0.5em;
   parts.append(CForm([
     CInput(type='checkbox', name="print", value="1", checked="", id="print-checkbox"),
     CText("Generate printable pages (PDF)"), 
+    CBreak(), 
+    CInput(type='checkbox', name="save", value="1", checked="", id="save-checkbox"),
+    CText("Save this set"),
+    CTable([
+      [
+        CTD(CText("Title:", bold=1), style="width:8em; padding-top:5px;"), 
+        CInput(type='TEXT', name='title', id='title', maxlength="65", style="width:40em"),
+      ],
+      [
+        CTD(CText("Subtitle:", bold=1), style="width:8em;"), 
+        CInput(type='TEXT', name='subtitle', id='subtitle', maxlength="65", style="width:40em"),
+      ], 
+    ], id='saveitems'), 
     CBreak(2), 
     CInput(type='button', value="Submit", onclick='SubmitTunes();'),
     CInput(type='button', value="Clear", onclick='ClearTunes();'), 
