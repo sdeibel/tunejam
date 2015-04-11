@@ -843,6 +843,13 @@ class CTuneSet:
 class CBook:
     
     def __init__(self, name, large=False):
+        
+        if name.endswith('.book'):
+            fn = name
+            name = os.path.basename(name)[:-len('.book')]
+        else:
+            fn = os.path.join(kDatabaseDir, name+'.book')
+
         self.title = ''
         self.subtitle = ''
         self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
@@ -850,7 +857,6 @@ class CBook:
         self.name = name
         self.url = 'book/%s' % name
         
-        fn = os.path.join(kDatabaseDir, name+'.book')
         if not os.path.isfile(fn):
             error("Could not find book %s" % name)
         f = open(fn)
@@ -879,6 +885,12 @@ class CBook:
             self.pages.append(tuneset)
             set_num += 1
             
+    def AllTunes(self):
+        pages = []
+        for page in self.pages:
+            pages.extend([t.name for t in page.tunes])
+        return pages
+    
     def GenerateLarge(self):
         pages = []
         for page in self.pages:
