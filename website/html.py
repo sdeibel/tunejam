@@ -371,13 +371,17 @@ class CBreak(CTag):
   """Manually inserted body break.  Attribs: skip, rule_size.  Better
   to use CHR an CSS styles."""
   
-  def __init__(self, skip=1, rule_size=0):
-    
+  def __init__(self, skip=1, rule_size=0, hclass=''):
+
+    if hclass:
+      hclass = ' class="%s"' % hclass
+    else:
+      hclass = ''
     if rule_size > 0:
-      rule = '<hr noshade size="%s">' % str(rule_size)
+      rule = '<hr noshade size="%s"%s>' % (str(rule_size), hclass)
     else:
       rule = ''
-    self.body = '%s\n%s\n' % ('<br />' * skip, rule)
+    self.body = '%s\n%s\n' % (('<br %s/>' % hclass) * skip, rule)
 
   def __str__(self):
     return self.body

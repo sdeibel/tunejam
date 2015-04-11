@@ -1,5 +1,5 @@
 * Website Phase One
-  * Ability to save sets to a stored sets lists
+  * Add a saved sets directory page
   * Ability to create live-updating session page to sync devices
   * A way to generate random sets matching the filters
   * Book generation improvements
