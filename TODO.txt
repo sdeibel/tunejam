@@ -1,7 +1,12 @@
 * Website Phase One
-  * Add a saved sets directory page
   * Ability to create live-updating session page to sync devices
   * A way to generate random sets matching the filters
+  * Improve saved sets
+    * Clean up URLs for sets and operating on sets
+    * Fix editing sets by only changing order (doesn't record changes for some reason)
+    * Fix editing to preload title/subtitle and so same set is updated rather than
+      creating a new one -- use file names based on title instead
+    * Captcha or access control to prevent bots from creating sets
   * Book generation improvements
     * Header with title and date, and footer with url and page number
     * Section type at top in by-section variant
