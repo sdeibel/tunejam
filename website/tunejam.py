@@ -193,6 +193,7 @@ function ClearTunes() {
   $('li').sortElements(function(a, b){
       return a.innerHTML > b.innerHTML ? 1 : -1;
   });
+  FilterTunes();
 }
 $(document).ready(function() {
     if($("#save-checkbox").is(":checked") || $("#print-checkbox").is(":checked")) {
@@ -215,6 +216,7 @@ $(document).ready(function() {
             $('#saveitems').css("display", "none");
         }
     });
+    FilterTunes();
 });
 
 </script>
@@ -272,7 +274,8 @@ padding-bottom:0.5em;
     CSelect(section_options, current=filter, name='filter',
             onchange='FilterTunes()', id='filterselect'),
     CInput(type='TEXT', name='text_filter', onkeyup='FilterTunes()', id='filtertext'), 
-  ], onsubmit="return FilterSubmit();"))
+    CInput(type='RESET', value='X', id='filter-reset', onclick='setTimeout(function() { FilterTunes(); })', style="border:0px; font-weight:bold;"), 
+  ], onsubmit="return FilterSubmit();", id="filter-form"))
   parts.append(CBreak())
   
   all_tunes = []
