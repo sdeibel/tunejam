@@ -317,19 +317,19 @@ padding-bottom:0.5em;
   parts.append(CForm([
     CInput(type='checkbox', name="print", value="1", checked="", id="print-checkbox"),
     CText("Generate printable pages (PDF)"), 
-    CBreak(), 
-    CInput(type='checkbox', name="save", value="1", checked="", id="save-checkbox"),
-    CText("Save this set"),
-    CTable([
-      [
-        CTD(CText("Title:", bold=1), style="width:8em; padding-top:5px;"), 
-        CInput(type='TEXT', name='title', id='title', maxlength="65", style="width:40em"),
-      ],
-      [
-        CTD(CText("Subtitle:", bold=1), style="width:8em;"), 
-        CInput(type='TEXT', name='subtitle', id='subtitle', maxlength="65", style="width:40em"),
-      ], 
-    ], id='saveitems'), 
+    #CBreak(), 
+    #CInput(type='checkbox', name="save", value="1", checked="", id="save-checkbox"),
+    #CText("Save this set"),
+    #CTable([
+      #[
+        #CTD(CText("Title:", bold=1), style="width:8em; padding-top:5px;"), 
+        #CInput(type='TEXT', name='title', id='title', maxlength="65", style="width:40em"),
+      #],
+      #[
+        #CTD(CText("Subtitle:", bold=1), style="width:8em;"), 
+        #CInput(type='TEXT', name='subtitle', id='subtitle', maxlength="65", style="width:40em"),
+      #], 
+    #], id='saveitems'), 
     CBreak(2), 
     CInput(type='button', value="Submit", onclick='SubmitTunes();'),
     CInput(type='button', value="Clear", onclick='ClearTunes();'), 
