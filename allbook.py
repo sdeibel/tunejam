@@ -44,9 +44,23 @@ class CAllBookBySection(utils.CBook):
                     page_tunes.append(tunes[i+2][1])
                 title = [self.title, self.subtitle, self.date]
                 title = [t.strip() for t in title]
-                title = '%s - %s\\n%s' % tuple(title)
+                title = '%s - %s - %s' % tuple(title)
                 tuneset = utils.CTuneSet(page_tunes, title, self.contact, '')
                 self.pages.append(tuneset)
+                
+    def GeneratePDF(self):
+
+        target, up_to_date = self._GetCacheFile('.pdf')
+        if up_to_date:
+            return target
+
+        pages = []
+        for i, page in enumerate(self.pages):
+            pdf = page.MakeCardPDF(i+1, show_type=True)
+            pages.append(pdf)
+
+        utils.ConcatenatePDFFiles(pages, target)
+        return target
 
 class CAllBook(utils.CBook):
 
@@ -87,7 +101,7 @@ class CAllBook(utils.CBook):
                 page_tunes.append(tunes[i+2][1])
             title = [self.title, self.subtitle, self.date]
             title = [t.strip() for t in title]
-            title = '%s - %s\\n%s' % tuple(title)
+            title = '%s - %s - %s' % tuple(title)
             tuneset = utils.CTuneSet(page_tunes, title, self.contact, '')
             self.pages.append(tuneset)
 

@@ -15,7 +15,7 @@ if sys.platform == 'darwin':
 else:
     kFontLoc = '/usr/share/fonts/webcore/trebuc.ttf'
     kBoldFontLoc = '/usr/share/fonts/webcore/trebucbd.ttf'
-kUseCache = True
+kUseCache = False
 
 # Set up reportlab fonts
 from reportlab.pdfbase import pdfmetrics
@@ -721,7 +721,7 @@ class CTuneSet:
             
         return ''.join(parts)
 
-    def MakeCardPDF(self):
+    def MakeCardPDF(self, page_num=None, show_type=False):
                 
         filename, up_to_date = self._GetCacheFile(resource='.pdf')
         if up_to_date:
@@ -752,12 +752,23 @@ class CTuneSet:
         style['Heading1'].fontSize = kFontSize
         style['Heading1'].fontName = 'TrebuchetMSBold'
         style['Heading1'].fontSize = kFontSize - 1
+        
+        header_footer_font_size = 8
+        
+        style.add(ParagraphStyle(
+            name='HeaderFooter',
+            parent=style['Normal'],
+            fontName='TrebuchetMS',
+            fontSize=header_footer_font_size,
+            firstLineIndent=0,
+            leftIndent=0,
+        ))
     
         notes_width = 3.25*inch
         chords_width = 3.75*inch
         
         story=[]
-
+        
         for i, tune in enumerate(self.tunes):
 
             fulltitle = tune.title + ' - ' + tune.type.capitalize() + ' - ' + tune._FullKey()
@@ -800,9 +811,9 @@ class CTuneSet:
             rows = [[notes_image, chords_drawing]]
             table = Table(rows, vAlign='TOP', colWidths=[notes_width, chords_width], rowHeights=[2.833*inch])
             table.setStyle(TableStyle([
-                ('ALIGN',(0, 0),(0, 0),'LEFT'), 
-                ('ALIGN',(1, 0),(1, 0),'RIGHT'), 
-                ('VALIGN',(0, 0),(-1,-1),'TOP'), 
+                ('ALIGN', (0, 0),(0, 0),'LEFT'), 
+                ('ALIGN', (1, 0),(1, 0),'RIGHT'), 
+                ('VALIGN', (0, 0),(-1,-1),'TOP'), 
                 ('LEFTPADDING', (0, 0), (-1, -1), 0), 
                 ('RIGHTPADDING', (0, 0), (-1, -1), 0), 
                 ('TOPPADDING', (0, 0), (-1, -1), 0), 
@@ -814,10 +825,47 @@ class CTuneSet:
             story.append(table)
 
         # Place body into frame
-        h = 10
-        f = Frame(1.0*inch, 0.50*inch, 7.0*inch, 10.0*inch, leftPadding=0,
+        f = Frame(1.0*inch, 0.5*inch, 7.0*inch, 10.0*inch, leftPadding=0,
                   bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
         f.addFromList(story, pdf)
+        
+        # Add page number
+        if page_num is not None:
+            if show_type:
+                ttype = self.tunes[0].Type()
+                pageno = '%s - Page %i' % (ttype, page_num)
+            else:
+                pageno = 'Page %i' % page_num
+            pageno_width = kFont.stringWidth(pageno, header_footer_font_size)
+            pageno = Paragraph(pageno, style['HeaderFooter'])
+            ptable = Table([[pageno]], colWidths=[pageno_width], rowHeights=[0.25*inch])
+            ptable.setStyle(TableStyle([
+                ('ALIGN', (0, 0),(0, 0),'RIGHT'), 
+                ('VALIGN', (0, 0),(-1,-1),'TOP'), 
+                ('LEFTPADDING', (0, 0), (-1, -1), 0), 
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0), 
+                ('TOPPADDING', (0, 0), (-1, -1), 0), 
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                # For debugging
+                #( 'INNERGRID', (0,0), (-1,-1), 0.25, colors.black),
+                #( 'BOX', (0,0), (-1,-1), 0.25, colors.black),
+            ]))
+            f = Frame(8.0*inch-pageno_width, 10.5*inch, pageno_width, 0.25*inch, leftPadding=0,
+                      bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
+            f.add(ptable, pdf)
+            
+        # Add header/footer
+        if self.header:
+            header = Paragraph(self.header, style['HeaderFooter'])
+            f = Frame(1.0*inch, 10.5*inch, 7.0*inch, 0.25*inch, leftPadding=0.1*inch,
+                      bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
+            f.add(header, pdf)
+
+        if self.footer:
+            footer = Paragraph(self.footer, style['HeaderFooter'])
+            f = Frame(1.0*inch, 0.25*inch, 7.0*inch, 0.25*inch, leftPadding=0.1*inch,
+                      bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
+            f.add(footer, pdf)
     
         # Close page and save to disk
         pdf.save()
@@ -850,7 +898,7 @@ class CTuneSet:
 
 class CBook:
     
-    def __init__(self, name, large=False):
+    def __init__(self, name, title='', subtitle='', large=False):
         
         if name.endswith('.book'):
             fn = name
@@ -858,8 +906,8 @@ class CBook:
         else:
             fn = os.path.join(kDatabaseDir, name+'.book')
 
-        self.title = ''
-        self.subtitle = ''
+        self.title = title
+        self.subtitle = subtitle
         self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
         self.name = name
@@ -887,8 +935,8 @@ class CBook:
             #setnum = 'Set %i' % set_num
             setnum = ''
             title = [self.title, self.subtitle, self.date]
-            title = [t.strip() for t in title]
-            title = '%s - %s\\n%s' % tuple(title)
+            title = [t.strip() for t in title if t.strip()]
+            title = ' - '.join(tuple(title))
             tuneset = CTuneSet(tunes, title, self.contact, setnum)
             self.pages.append(tuneset)
             set_num += 1
@@ -933,8 +981,8 @@ class CBook:
             return target
         
         pages = []
-        for page in self.pages:
-            pdf = page.MakeCardPDF()
+        for i, page in enumerate(self.pages):
+            pdf = page.MakeCardPDF(i+1)
             pages.append(pdf)
 
         ConcatenatePDFFiles(pages, target)
@@ -977,14 +1025,9 @@ class CSetBook(CBook):
         self.pages = []
 
         def append_page(page, setnum):
-            if self.subtitle:
-                title = [self.title, self.subtitle, self.date]
-                title = [t.strip() for t in title]
-                title = '%s - %s\\n%s' % tuple(title)
-            else:
-                title = [self.title, self.date]
-                title = [t.strip() for t in title]
-                title = '%s - %s' % tuple(title)
+            title = [self.title, self.subtitle, self.date]
+            title = [t.strip() for t in title if t.strip()]
+            title = ' - '.join(tuple(title))
             tuneset = CTuneSet(page, title, self.contact, setnum)
             self.pages.append(tuneset)
             

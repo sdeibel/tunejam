@@ -8,10 +8,8 @@
       creating a new one -- use file names based on title instead
     * Captcha or access control to prevent bots from creating sets
   * Book generation improvements
-    * Header with title and date, and footer with url and page number
-    * Section type at top in by-section variant
-    * Flip book variant (three of same tune)
     * Index and TOC
+    * Flip book variant (three of same tune)
     * Optional matrix for know/at-speed/can-start/harmonies check rectangle
   * Browser issues
     * Opera sizing completely wrong -- rework how sizing is done (e.g. use the PNG
