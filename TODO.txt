@@ -10,7 +10,6 @@
   * Book generation improvements
     * Header with title and date, and footer with url and page number
     * Section type at top in by-section variant
-    * Adjust margins for binding
     * Flip book variant (three of same tune)
     * Index and TOC
     * Optional matrix for know/at-speed/can-start/harmonies check rectangle
@@ -29,6 +28,7 @@
     approx beats/minute)
 * Find notebooks/bindings/printing options for flip books
 * More tunes for which we have recordings but no card
+  opera_reel
   shetland_tune_1 (title?)
   shetland_tune_2 (title?)
   x
@@ -45,7 +45,6 @@
   canna_get_my_mare_tamed
   driving_the_turkeys
   new_rigged_ship
-  opera_reel
   spootiskerry
   metsakukkia
 * Neither card nor recording

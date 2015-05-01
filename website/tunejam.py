@@ -830,28 +830,29 @@ if __name__ == '__main__':
       
   # Kick off background task process to regenerate books so they
   # are cached and load quickly for users
-  def regenerate_books():
-    all_books = _get_all_books()
-    for book in all_books:
-      if book is None:
-        continue
-      f = open(os.path.join(utils.kDatabaseDir, book.name+'.lock'), 'w')
-      f.write('lock-%s' % str(os.getpid()))
-      f.close()
-    for book in all_books:
-      if book is None:
-        continue
-      book.GeneratePDF()
-      try:
-        os.unlink(os.path.join(utils.kDatabaseDir, book.name+'.lock'))
-      except OSError:
-        pass
-    return True
-  def books_done(result):
-    pass
-  import multiprocessing
-  pool = multiprocessing.Pool(1)
-  job = pool.apply_async(regenerate_books, callback=books_done)
+  if utils.kUseCache:
+    def regenerate_books():
+      all_books = _get_all_books()
+      for book in all_books:
+        if book is None:
+          continue
+        f = open(os.path.join(utils.kDatabaseDir, book.name+'.lock'), 'w')
+        f.write('lock-%s' % str(os.getpid()))
+        f.close()
+      for book in all_books:
+        if book is None:
+          continue
+        book.GeneratePDF()
+        try:
+          os.unlink(os.path.join(utils.kDatabaseDir, book.name+'.lock'))
+        except OSError:
+          pass
+      return True
+    def books_done(result):
+      pass
+    import multiprocessing
+    pool = multiprocessing.Pool(1)
+    job = pool.apply_async(regenerate_books, callback=books_done)
   
   # Get a list of all the files to watch to trigger restart (so the
   # PDF books get rebuilt)
