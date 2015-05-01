@@ -15,7 +15,7 @@ if sys.platform == 'darwin':
 else:
     kFontLoc = '/usr/share/fonts/webcore/trebuc.ttf'
     kBoldFontLoc = '/usr/share/fonts/webcore/trebucbd.ttf'
-kUseCache = False
+kUseCache = True
 
 # Set up reportlab fonts
 from reportlab.pdfbase import pdfmetrics
