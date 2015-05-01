@@ -15,6 +15,7 @@ if sys.platform == 'darwin':
 else:
     kFontLoc = '/usr/share/fonts/webcore/trebuc.ttf'
     kBoldFontLoc = '/usr/share/fonts/webcore/trebucbd.ttf'
+kUseCache = True
 
 # Set up reportlab fonts
 from reportlab.pdfbase import pdfmetrics
@@ -537,12 +538,16 @@ M:%(meter)s
         return filename
         
     def _GetCacheFile(self, basename):
+        
         dirname = os.path.join(kCacheLoc, 'tune', self.type)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         
         fn = os.path.join(dirname, self.name+'-'+basename)
         if not os.path.exists(fn):
+            return fn, False
+        
+        if not kUseCache:
             return fn, False
         
         spec_file = self._GetSpecFile()
@@ -620,6 +625,7 @@ class CTuneSet:
         return ''.join(parts)
 
     def _GetCacheFile(self, resource):
+        
         dirname = os.path.join(kCacheLoc, 'tuneset')
         if not os.path.exists(dirname):
             os.makedirs(dirname)
@@ -627,6 +633,8 @@ class CTuneSet:
         fn = '-'.join([t.name for t in self.tunes]) + resource
         fn = os.path.join(dirname, fn)
         if not os.path.exists(fn):
+            return fn, False
+        if not kUseCache:
             return fn, False
         
         for tune in self.tunes:
@@ -745,7 +753,7 @@ class CTuneSet:
         style['Heading1'].fontName = 'TrebuchetMSBold'
         style['Heading1'].fontSize = kFontSize - 1
     
-        notes_width = 3.75*inch
+        notes_width = 3.25*inch
         chords_width = 3.75*inch
         
         story=[]
@@ -757,7 +765,7 @@ class CTuneSet:
                 title = Paragraph(fulltitle, style["Heading1"])
             else:
                 title = Paragraph(fulltitle, style["Heading2"])
-            ttable = Table([[title]], colWidths=[7.5*inch], rowHeights=[0.5*inch])
+            ttable = Table([[title]], colWidths=[7.0*inch], rowHeights=[0.5*inch])
             ttable.setStyle(TableStyle([
                 ('ALIGN',(0, 0),(0, 0),'LEFT'), 
                 ('VALIGN',(0, 0),(-1,-1),'TOP'), 
@@ -807,7 +815,7 @@ class CTuneSet:
 
         # Place body into frame
         h = 10
-        f = Frame(0.50*inch, 0.50*inch, 7.5*inch, 10.0*inch, leftPadding=0,
+        f = Frame(1.0*inch, 0.50*inch, 7.0*inch, 10.0*inch, leftPadding=0,
                   bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
         f.addFromList(story, pdf)
     
@@ -941,7 +949,9 @@ class CBook:
         fn = os.path.join(dirname, self.name + book_type)
         if not os.path.exists(fn):
             return fn, False
-        
+        if not kUseCache:
+            return fn, False
+                        
         book_file = os.path.join(kDatabaseDir, self.name+'.book')
         if os.path.isfile(book_file) and IsFileNewer(book_file, fn):
             return fn, False
