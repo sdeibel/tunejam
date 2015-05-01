@@ -69,7 +69,7 @@ def sets(spec=None):
     _print = False
     save = False
     edit = False
-    title = None
+    title = ''
     subtitle = ''
     
     for arg in args:
@@ -116,8 +116,6 @@ def sets(spec=None):
         f.close()
       
       if _print:
-        if not title:
-          title = 'Untitled - %s' % name
         return CreateTuneSetPDF(name, title, subtitle, tunes)
         
       elif edit:
@@ -146,12 +144,18 @@ function SubmitTunes() {
   tunes = tunes.replace(/\+/g, "_");
   tunes = tunes.replace(/tune=/g, "");
   if ($("#print-checkbox").prop("checked")) {
-    tunes = tunes + "&print=1"
+    tunes = tunes + "&print=1";
   }
   if ($("#save-checkbox").prop("checked")) {
-    tunes = tunes + "&save=1"
-    tunes = tunes + "&title=" + $("#title").val()
-    tunes = tunes + "&subtitle=" + $("#subtitle").val()
+    tunes = tunes + "&save=1";
+  }
+  if ($("#print-checkbox").prop("checked") || $("#save-checkbox").prop("checked")) {
+    if ($("#title").val()) {
+      tunes = tunes + "&title=" + $("#title").val();
+    }
+    if ($("#subtitle").val()) {
+      tunes = tunes + "&subtitle=" + $("#subtitle").val();
+    }
   }
   window.location.href= "/sets/" + tunes;
 }
@@ -320,16 +324,16 @@ padding-bottom:0.5em;
     #CBreak(), 
     #CInput(type='checkbox', name="save", value="1", checked="", id="save-checkbox"),
     #CText("Save this set"),
-    #CTable([
-      #[
-        #CTD(CText("Title:", bold=1), style="width:8em; padding-top:5px;"), 
-        #CInput(type='TEXT', name='title', id='title', maxlength="65", style="width:40em"),
-      #],
-      #[
-        #CTD(CText("Subtitle:", bold=1), style="width:8em;"), 
-        #CInput(type='TEXT', name='subtitle', id='subtitle', maxlength="65", style="width:40em"),
-      #], 
-    #], id='saveitems'), 
+    CTable([
+      [
+        CTD(CText("Title:", bold=1), style="width:8em; padding-top:5px;"), 
+        CInput(type='TEXT', name='title', id='title', maxlength="65", style="width:40em"),
+      ],
+      [
+        CTD(CText("Subtitle:", bold=1), style="width:8em;"), 
+        CInput(type='TEXT', name='subtitle', id='subtitle', maxlength="65", style="width:40em"),
+      ], 
+    ], id='saveitems'), 
     CBreak(2), 
     CInput(type='button', value="Submit", onclick='SubmitTunes();'),
     CInput(type='button', value="Clear", onclick='ClearTunes();'), 
