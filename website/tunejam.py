@@ -446,7 +446,7 @@ def doprint(format=None, bookname=None):
   elif format == 'book':
     import setsheets
     book = utils.CBook(bookname)
-    pdf = book.GeneratePDF()
+    pdf = book.GeneratePDF(include_index=not bookname.startswith('draft'))
     return send_file(pdf, mimetype='application/pdf')
   
   else:
@@ -707,7 +707,7 @@ margin-top:0px;
 
 def CreateTuneSetPDF(name, title, subtitle, tunes):
   book = utils.CSetBook(name, title, subtitle, tunes)
-  pdf = book.GeneratePDF()
+  pdf = book.GeneratePDF(include_index=False)
   return send_file(pdf, mimetype='application/pdf')
   
 def CreateTuneHTML(name, printing=False):

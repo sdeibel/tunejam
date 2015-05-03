@@ -16,6 +16,7 @@ else:
     kFontLoc = '/usr/share/fonts/webcore/trebuc.ttf'
     kBoldFontLoc = '/usr/share/fonts/webcore/trebucbd.ttf'
 kUseCache = True
+kDebugBookGeneration = False
 
 # Set up reportlab fonts
 from reportlab.pdfbase import pdfmetrics
@@ -567,7 +568,15 @@ M:%(meter)s
         else:
             key = key + ' Major'
         return key
-
+    
+    def GetSortTitle(self):
+        title = self.title
+        if title.lower().startswith('the '):
+            title = title[4:]
+        elif title.lower().startswith('a '):
+            title = title[2:]
+        return title
+    
     def __NotesWithMeterOnEachLine(self):
         notes = self.notes.splitlines()
         notes = [n + '\n' for n in notes]
@@ -642,7 +651,7 @@ class CTuneSet:
             if IsFileNewer(spec_file, fn):
                 return fn, False
         
-        return fn, True
+        return fn, not kDebugBookGeneration
             
     def __SetType(self):
         stype = self.type
@@ -898,7 +907,7 @@ class CTuneSet:
 
 class CBook:
     
-    def __init__(self, name, title='', subtitle='', large=False):
+    def __init__(self, name, title='', subtitle='', type_in_header=False, large=False):
         
         if name.endswith('.book'):
             fn = name
@@ -908,6 +917,7 @@ class CBook:
 
         self.title = title
         self.subtitle = subtitle
+        self.type_in_header = type_in_header
         self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
         self.name = name
@@ -974,20 +984,157 @@ class CBook:
             
         return pages
             
-    def GeneratePDF(self):
+    def GeneratePDF(self, type_in_header=False, include_index=True):
             
         target, up_to_date = self._GetCacheFile('.pdf')
         if up_to_date:
             return target
-        
+
         pages = []
         for i, page in enumerate(self.pages):
-            pdf = page.MakeCardPDF(i+1)
+            pdf = page.MakeCardPDF(i+1, show_type=type_in_header)
             pages.append(pdf)
 
+        if include_index:
+            pages.extend(self.GeneratePDFIndex())
+        
         ConcatenatePDFFiles(pages, target)
         return target
     
+    def GeneratePDFIndex(self):
+        
+        # Set up
+        from reportlab.pdfgen.canvas import Canvas
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.units import inch
+        from reportlab.platypus import Paragraph, Frame, Preformatted, Table, Spacer, TableStyle, Image
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+
+        style = getSampleStyleSheet()
+        style.add(ParagraphStyle(
+            name='Bold',
+            parent=style['BodyText'],
+            fontName = 'TrebuchetMSBold',
+            bulletFontName = 'TrebuchetMS',
+            fontSize=kFontSize-1,
+        ))
+        style['BodyText'].fontName = 'TrebuchetMS'
+        style['BodyText'].bulletFontName = 'TrebuchetMS'
+        style['BodyText'].fontSize = kFontSize
+        style['Heading1'].fontName = 'TrebuchetMSBold'
+        style['Heading1'].fontSize = kFontSize
+        style['Heading1'].fontName = 'TrebuchetMSBold'
+        style['Heading1'].fontSize = kFontSize - 1
+
+        header_footer_font_size = 8
+
+        style.add(ParagraphStyle(
+            name='HeaderFooter',
+            parent=style['Normal'],
+            fontName='TrebuchetMS',
+            fontSize=header_footer_font_size,
+            firstLineIndent=0,
+            leftIndent=0,
+        ))
+        
+        style.add(ParagraphStyle(
+            name='Index',
+            parent=style['Normal'],
+            fontName='TrebuchetMS',
+            fontSize=12,
+            firstLineIndent=0,
+            leftIndent=0,
+            spaceBefore=0.1*inch, 
+        ))        
+ 
+        import collections
+        contents = collections.defaultdict(list)
+        tunes = {}
+        for i, page in enumerate(self.pages):
+            for tune in page.tunes:
+                tunes[tune.name] = tune
+                contents[tune.name].append(i+1)
+        
+        index = []
+        for name in contents:
+            tune = tunes[name]
+            index.append((tune.GetSortTitle(), tune))
+        index.sort()
+
+        cur_page = []
+        pages = [cur_page]
+        for ignore, tune in index:
+            
+            fulltitle = tune.title + ' - ' + tune.type.capitalize() + ' - ' + tune._FullKey()
+            if len(contents[tune.name]) > 1:
+                contents[tune.name].sort()
+                p = 'Pages ' + ', '.join([str(i) for i in contents[tune.name]])
+            else:
+                p = 'Page ' + str(contents[tune.name][0])
+            title = Paragraph(fulltitle + ' - %s' % p, style["Index"])
+            cur_page.append(title)
+            if len(cur_page) >= 37:
+                cur_page = []
+                pages.append(cur_page)
+        if len(pages[-1]) == 0:
+            pages = pages[:-1]
+
+        retval = []
+        for i, page in enumerate(pages):
+            
+            filename, ignore = self._GetCacheFile('-index-%i.pdf' % (i+1,))
+            
+            pdf = Canvas(filename, pagesize=letter)
+            pdf.setFont('TrebuchetMS', kFontSize)
+    
+            story=[]
+            story.extend(page)
+            
+            # Place body into frame
+            f = Frame(1.0*inch, 0.5*inch, 7.0*inch, 10.0*inch, leftPadding=0,
+                      bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
+            f.addFromList(story, pdf)
+    
+            # Add page number
+            pageno = 'Index %i' % (i + 1,)
+            pageno_width = kFont.stringWidth(pageno, header_footer_font_size)
+            pageno = Paragraph(pageno, style['HeaderFooter'])
+            ptable = Table([[pageno]], colWidths=[pageno_width], rowHeights=[0.25*inch])
+            ptable.setStyle(TableStyle([
+                ('ALIGN', (0, 0),(0, 0),'RIGHT'), 
+                ('VALIGN', (0, 0),(-1,-1),'TOP'), 
+                ('LEFTPADDING', (0, 0), (-1, -1), 0), 
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0), 
+                ('TOPPADDING', (0, 0), (-1, -1), 0), 
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                # For debugging
+                #( 'INNERGRID', (0,0), (-1,-1), 0.25, colors.black),
+                #( 'BOX', (0,0), (-1,-1), 0.25, colors.black),
+            ]))
+            f = Frame(8.0*inch-pageno_width, 10.5*inch, pageno_width, 0.25*inch, leftPadding=0,
+                      bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
+            f.add(ptable, pdf)
+    
+            # Add header/footer
+            if self.pages[0].header:
+                header = Paragraph(self.pages[0].header, style['HeaderFooter'])
+                f = Frame(1.0*inch, 10.5*inch, 7.0*inch, 0.25*inch, leftPadding=0.1*inch,
+                          bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
+                f.add(header, pdf)
+    
+            if self.pages[0].footer:
+                footer = Paragraph(self.pages[0].footer, style['HeaderFooter'])
+                f = Frame(1.0*inch, 0.25*inch, 7.0*inch, 0.25*inch, leftPadding=0.1*inch,
+                          bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
+                f.add(footer, pdf)
+    
+            # Close page and save to disk
+            pdf.save()
+            retval.append(filename)
+
+        return retval
+        
     def _GetCacheFile(self, book_type):
         
         dirname = os.path.join(kCacheLoc, 'book')
@@ -1010,7 +1157,7 @@ class CBook:
                 if IsFileNewer(spec_file, fn):
                     return fn, False
         
-        return fn, True
+        return fn, not kDebugBookGeneration
         
 class CSetBook(CBook):
     
