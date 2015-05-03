@@ -11,6 +11,7 @@ class CAllBookBySection(utils.CBook):
         
         self.title = 'Hubbard Hall Tune Jam'
         self.subtitle = 'All Tunes - By Type'
+        self.type_in_header = True
         self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
         self.name = 'all-by-section'
@@ -49,19 +50,8 @@ class CAllBookBySection(utils.CBook):
                 self.pages.append(tuneset)
                 
     def GeneratePDF(self):
-
-        target, up_to_date = self._GetCacheFile('.pdf')
-        if up_to_date:
-            return target
-
-        pages = []
-        for i, page in enumerate(self.pages):
-            pdf = page.MakeCardPDF(i+1, show_type=True)
-            pages.append(pdf)
-
-        utils.ConcatenatePDFFiles(pages, target)
-        return target
-
+        return utils.CBook.GeneratePDF(self, type_in_header=True)
+        
 class CAllBook(utils.CBook):
 
     def __init__(self):
@@ -84,11 +74,7 @@ class CAllBook(utils.CBook):
                     name = fn[:-len('.spec')]
                     tune = utils.CTune(name)
                     tune.ReadDatabase()
-                    title = tune.title
-                    if title.lower().startswith('the '):
-                        title = title[4:]
-                    elif title.lower().startswith('a '):
-                        title = title[2:]
+                    title = tune.GetSortTitle()
                     tunes.append((title, name))
         tunes.sort()
 
@@ -104,7 +90,7 @@ class CAllBook(utils.CBook):
             title = '%s - %s - %s' % tuple(title)
             tuneset = utils.CTuneSet(page_tunes, title, self.contact, '')
             self.pages.append(tuneset)
-
+            
 if __name__ == '__main__':
     
     book = CAllBook()
