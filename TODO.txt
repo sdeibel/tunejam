@@ -1,6 +1,8 @@
 * Website Phase One
   * Ability to create live-updating session page to sync devices
   * A way to generate random sets matching the filters
+  * A way to select tunes by length in measures
+  * Easier way to move to next tune/set when don't fit on screen
   * Improve saved sets
     * Clean up URLs for sets and operating on sets
     * Fix editing sets by only changing order (doesn't record changes for some reason)
