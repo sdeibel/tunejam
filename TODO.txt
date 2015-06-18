@@ -10,7 +10,6 @@
       creating a new one -- use file names based on title instead
     * Captcha or access control to prevent bots from creating sets
   * Book generation improvements
-    * Index and TOC
     * Flip book variant (three of same tune)
     * Optional matrix for know/at-speed/can-start/harmonies check rectangle
   * Browser issues
@@ -28,6 +27,8 @@
     approx beats/minute)
 * Find notebooks/bindings/printing options for flip books
 * More tunes for which we have recordings but no card
+  oak_leaf_reel (by Susie Secco in Bm)
+  my_own_home (trad scottish in A)
   opera_reel
   shetland_tune_1 (title?)
   shetland_tune_2 (title?)
@@ -48,6 +49,7 @@
   spootiskerry
   metsakukkia
 * Neither card nor recording
+  wedding_on_a_hill
   the_good_doctor
   swedish_tune (emailed 4/7 to get title)
 * Stephan's other tunes (probably separate project)
