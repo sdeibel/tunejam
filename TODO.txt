@@ -29,6 +29,7 @@
 * More tunes for which we have recordings but no card
   oak_leaf_reel (by Susie Secco in Bm)
   my_own_home (trad scottish in A)
+  westphalia_waltz (Texas Waltz in G)
   opera_reel
   shetland_tune_1 (title?)
   shetland_tune_2 (title?)
