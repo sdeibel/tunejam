@@ -41,6 +41,9 @@
   murphys_hornpipe (G Major)
   luna_moth (by Caz, E Minor / A Minor)
   unknown_strathspey (A Minor) -- look up title
+  seals_and_sky (by Stephan)
+  trolls_polska (D Minor)
+  round_the_horn (G Major by Jay Ungar)
 * No recordings or need to re-record those in corrupted file
   crocus_pocus
   our_outboard_died
@@ -66,6 +69,9 @@
   bachelor_duck
   the_tidley_idley
   away_to_me (tentative title)
+  janvrins_island
+  mountain_ash
+  the_bluejay
 * Database entries to drop
   queen_of_the_county_fair
 * Recordings to drop or ignore (have no database entries)

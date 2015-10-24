@@ -8,7 +8,6 @@ import utils
 import utils
 import utils
 
-#
 class CFlipBook(utils.CBook):
 
     def __init__(self):
