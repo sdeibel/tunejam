@@ -379,9 +379,11 @@ def tune(tune):
 
 def _get_all_books():
   import allbook
+  import flipbook
   retval = [
     allbook.CAllBook(),
     allbook.CAllBookBySection(),
+    flipbook.CFlipBook(), 
     None, 
   ]
   custom_books = []
@@ -447,6 +449,12 @@ def doprint(format=None, bookname=None):
     import setsheets
     book = utils.CBook(bookname)
     pdf = book.GeneratePDF(include_index=not bookname.startswith('draft'))
+    return send_file(pdf, mimetype='application/pdf')
+  
+  elif format == 'flip':
+    import flipbook
+    book = flipbook.CFlipBook()
+    pdf = book.GeneratePDF(type_in_header=True, include_index=True)
     return send_file(pdf, mimetype='application/pdf')
   
   else:

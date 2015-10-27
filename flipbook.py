@@ -1,11 +1,7 @@
 # Generate a flip book for making tune sets
 
+import time
 from setsheets import *
-import utils
-import utils
-import utils
-import utils
-import utils
 import utils
 
 class CFlipBook(utils.CBook):
@@ -14,9 +10,11 @@ class CFlipBook(utils.CBook):
         
         self.title = 'Hubbard Hall Tune Jam'
         self.subtitle = 'Set Flip Book'
-        self.date = 'DRAFT February 4, 2015 DRAFT'
+        self.type_in_header = True
+        self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
         self.name = 'flip'
+        self.url = self.name
     
         self.pages = []
         for section, section_name in utils.kSections:
@@ -46,13 +44,13 @@ class CFlipBook(utils.CBook):
                 tuneset = utils.CTuneSet(page_tunes, title, self.contact, '')
                 self.pages.append(tuneset)
 
-    def GenerateSmall(self):
-        pages = []
-        for page in self.pages:
-            abc = page.MakeFlipBook()
-            pages.append(utils.ABCToPostscript(abc))
+    #def GenerateSmall(self):
+        #pages = []
+        #for page in self.pages:
+            #abc = page.MakeFlipBook()
+            #pages.append(utils.ABCToPostscript(abc))
 
-        return pages
+        #return pages
 
 
 if __name__ == '__main__':
