@@ -62,6 +62,7 @@
 * Neither card nor recording
   wedding_on_a_hill
   the_good_doctor
+  battenkill_ramble (slip jig by caz)
 * Stephan's other tunes (probably separate project)
   bumble_bee_with_new_middle
   stephans_gypsy_tune

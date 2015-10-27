@@ -1067,11 +1067,13 @@ class CBook:
         for ignore, tune in index:
             
             fulltitle = tune.title + ' - ' + tune.type.capitalize() + ' - ' + tune._FullKey()
-            if len(contents[tune.name]) > 1:
-                contents[tune.name].sort()
-                p = 'Pages ' + ', '.join([str(i) for i in contents[tune.name]])
+            pnums = set(contents[tune.name])
+            pnums = list(pnums)
+            pnums.sort()
+            if len(pnums) > 1:
+                p = 'Pages ' + ', '.join([str(i) for i in pnums])
             else:
-                p = 'Page ' + str(contents[tune.name][0])
+                p = 'Page ' + str(pnums[0])
             title = Paragraph(fulltitle + ' - %s' % p, style["Index"])
             cur_page.append(title)
             if len(cur_page) >= 37:
