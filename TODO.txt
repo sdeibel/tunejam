@@ -44,6 +44,8 @@
   seals_and_sky (by Stephan)
   trolls_polska (D Minor)
   round_the_horn (G Major by Jay Ungar)
+  morpeth_rant (D Major)
+  planxty_george_brabazon (G Major)
 * No recordings or need to re-record those in corrupted file
   crocus_pocus
   our_outboard_died
@@ -63,6 +65,7 @@
   wedding_on_a_hill
   the_good_doctor
   battenkill_ramble (slip jig by caz)
+  crossing_to_ireland
 * Stephan's other tunes (probably separate project)
   bumble_bee_with_new_middle
   stephans_gypsy_tune
@@ -73,6 +76,7 @@
   janvrins_island
   mountain_ash
   the_bluejay
+  devils_dance
 * Database entries to drop
   queen_of_the_county_fair
 * Recordings to drop or ignore (have no database entries)
