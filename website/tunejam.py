@@ -292,6 +292,8 @@ padding-bottom:0.5em;
   selected_tunes = []
   tunes = utils.GetTuneIndex()
   for section in tunes:
+    if section == 'incomplete':
+      continue
     visible = True
     if filter == 'reel' and section not in ['reel', 'hornpipe', 'march', 'rag']:
       visible = False
