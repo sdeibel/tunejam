@@ -36,6 +36,9 @@ def music():
 
   sections = tunes.keys()
   sections.sort()
+  if 'incomplete'in sections:
+    sections.remove('incomplete')
+    sections.append('incomplete')
   for section in sections:
     parts.append(CH(utils.kSectionTitles[section], 2))
     for title, tune in tunes[section]:
@@ -53,6 +56,7 @@ def music():
       parts.extend(play)
       parts.append(CBreak())
       
+  parts.append(CBreak(2))
   return PageWrapper(parts)
 
 @app.route('/sets', methods=['GET', 'POST'])
@@ -266,6 +270,8 @@ padding-bottom:0.5em;
 
   keys = utils.kSectionTitles.keys()
   keys.sort()
+  if 'incomplete' in keys:
+    keys.remove('incomplete')
   for key in keys:
     if key == 'reel':
       title = "Reels, Marches, Hornpipes, and Rags"
@@ -874,6 +880,8 @@ if __name__ == '__main__':
     if fn.endswith('.book'):
       watch_files.append(os.path.join(utils.kDatabaseDir, fn))
   for section, section_name in utils.kSections:
+    if section == 'incomplete':
+      continue
     try:
       files = os.listdir(os.path.join(utils.kDatabaseDir, section))
     except OSError:

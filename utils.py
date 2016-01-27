@@ -47,6 +47,7 @@ kSections = [
     ('waltz', 'Waltzes'),
     ('hornpipe', 'Hornpipes'),
     ('other', 'Other'),
+    ('incomplete', 'Incomplete Listings'), 
 ]
 
 kSectionTitles = {name: title for name, title in kSections}
@@ -1195,7 +1196,10 @@ class CSetBook(CBook):
 def GetTuneIndex():
     idx = {}
 
+    incomplete_tunes = []
     for section, section_name in kSections:
+        if section == 'incomplete':
+            continue
         try:
             files = os.listdir(os.path.join(kDatabaseDir, section))
         except OSError:
@@ -1211,11 +1215,21 @@ def GetTuneIndex():
                     title = title[4:]
                 elif title.lower().startswith('a '):
                     title = title[2:]
-                tunes.append((title, name))
+                pfx = ''
+                if not tune.chords.strip() or not tune.notes.strip():
+                    title = tune.Type() + ': ' + title
+                    incomplete_tunes.append((title, name))
+                else:
+                    tunes.append((title, name))
+
         tunes.sort()
         
         idx[section] = tunes
-        
+
+    if incomplete_tunes:
+        incomplete_tunes.sort()
+        idx['incomplete'] = incomplete_tunes
+    
     return idx
 
 def ParseChords(chords):

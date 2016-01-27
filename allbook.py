@@ -19,6 +19,8 @@ class CAllBookBySection(utils.CBook):
     
         self.pages = []
         for section, section_name in utils.kSections:
+            if section == 'incomplete':
+                continue
             try:
                 files = os.listdir(os.path.join(utils.kDatabaseDir, section))
             except OSError:
@@ -65,6 +67,8 @@ class CAllBook(utils.CBook):
 
         tunes = []
         for section, section_name in utils.kSections:
+            if section == 'incomplete':
+                continue
             try:
                 files = os.listdir(os.path.join(utils.kDatabaseDir, section))
             except OSError:

@@ -26,26 +26,35 @@
   * A way to play recordings slowed down (record speed in DB so can show
     approx beats/minute)
 * Find notebooks/bindings/printing options for flip books
-* More tunes for which we have recordings but no card
-  oak_leaf_reel (by Susie Secco in Bm)
-  my_own_home (trad scottish in A)
-  westphalia_waltz (Texas Waltz in G)
-  opera_reel
+* More tunes for which we have recordings but no card [p=added placeholder listing]
+  oak_leaf_reel (by Susie Secco in Bm) p
+  my_own_home (trad scottish in A) p
+  westphalia_waltz (Texas Waltz in G) p
   shetland_tune_1 (title?)
   shetland_tune_2 (title?)
-  x
-  sculleys_reel
-  st_patricks_day
-  cold_frosty_morning
-  rileys_reel
-  murphys_hornpipe (G Major)
-  luna_moth (by Caz, E Minor / A Minor)
+  x p
+  sculleys_reel p (should redo the recording)
+  st_patricks_day p
+  cold_frosty_morning p
+  rileys_reel p
+  murphys_hornpipe (G Major) p
+  luna_moth (by Caz, E Minor / A Minor) p
   unknown_strathspey (A Minor) -- look up title
-  seals_and_sky (by Stephan)
-  trolls_polska (D Minor)
-  round_the_horn (G Major by Jay Ungar)
-  morpeth_rant (D Major)
-  planxty_george_brabazon (G Major)
+  devils_dance (by Stephan) p
+  trolls_polska (D Minor) p
+  round_the_horn (G Major by Jay Ungar) p
+  morpeth_rant (D Major) p
+  planxty_george_brabazon (G Major) p
+  crossing_to_ireland p
+  bumble_bee p
+  flat_foot_henry p
+  phillipine_xmas p
+  march_of_the_bullfrogs p
+  bachelor_duck p
+  janvrins_island p (should replace the recording)
+  up_and_down_the_mountain_ash p
+  the_bluejay p
+  remembering_the_warbler p
 * No recordings or need to re-record those in corrupted file
   crocus_pocus
   our_outboard_died
@@ -62,29 +71,11 @@
   spootiskerry
   metsakukkia
 * Neither card nor recording
-  wedding_on_a_hill
-  the_good_doctor
-  battenkill_ramble (slip jig by caz)
-  crossing_to_ireland
-* Stephan's other tunes (probably separate project)
-  bumble_bee_with_new_middle
-  stephans_gypsy_tune
-  march_of_the_bullfrogs
-  bachelor_duck
-  the_tidley_idley
-  away_to_me (tentative title)
-  janvrins_island
-  mountain_ash
-  the_bluejay
-  devils_dance
-* Database entries to drop
-  queen_of_the_county_fair
-* Recordings to drop or ignore (have no database entries)
-  ten_penny_bit
-  valentines_day
-  st_columba
-  canyon_creek
-  minstrel_boy
-  flat_foot_henry
-  cluck_old_hen
-  phillipine_xmas
+  wedding_on_a_hill p
+  the_good_doctor p
+  battenkill_ramble (slip jig by caz) p
+  valentines_day p
+  st_columba p
+  stephans_gypsy_tune (by Stephanx)
+  the_tidley_idley (by Stephan)
+  away_to_me (tentative title; by Stephan)
