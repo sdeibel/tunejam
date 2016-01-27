@@ -18,6 +18,8 @@ class CFlipBook(utils.CBook):
     
         self.pages = []
         for section, section_name in utils.kSections:
+            if section == 'incomplete':
+                continue
             try:
                 files = os.listdir(os.path.join(utils.kDatabaseDir, section))
             except OSError:
