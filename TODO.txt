@@ -1,8 +1,9 @@
 * Website Phase One
-  * Ability to create live-updating session page to sync devices
+  * Fix so it works on ipads and other devices
+  * Easier selection by typed fragments to quickly make sets  
   * A way to generate random sets matching the filters
-  * A way to select tunes by length in measures
   * Easier way to move to next tune/set when don't fit on screen
+  * Ability to create live-updating session page to sync devices
   * Improve saved sets
     * Clean up URLs for sets and operating on sets
     * Fix editing sets by only changing order (doesn't record changes for some reason)
@@ -10,7 +11,6 @@
       creating a new one -- use file names based on title instead
     * Captcha or access control to prevent bots from creating sets
   * Book generation improvements
-    * Flip book variant (three of same tune)
     * Optional matrix for know/at-speed/can-start/harmonies check rectangle
   * Browser issues
     * Opera sizing completely wrong -- rework how sizing is done (e.g. use the PNG
@@ -30,16 +30,12 @@
   oak_leaf_reel (by Susie Secco in Bm) p
   my_own_home (trad scottish in A) p
   westphalia_waltz (Texas Waltz in G) p
-  shetland_tune_1 (title?)
-  shetland_tune_2 (title?)
   x p
-  sculleys_reel p (should redo the recording)
   st_patricks_day p
   cold_frosty_morning p
   rileys_reel p
   murphys_hornpipe (G Major) p
   luna_moth (by Caz, E Minor / A Minor) p
-  unknown_strathspey (A Minor) -- look up title
   devils_dance (by Stephan) p
   trolls_polska (D Minor) p
   round_the_horn (G Major by Jay Ungar) p
@@ -51,10 +47,14 @@
   phillipine_xmas p
   march_of_the_bullfrogs p
   bachelor_duck p
-  janvrins_island p (should replace the recording)
   up_and_down_the_mountain_ash p
   the_bluejay p
   remembering_the_warbler p
+  sculleys_reel p (should redo the recording)
+  janvrins_island p (should replace the recording)
+  shetland_tune_1 (title?)
+  shetland_tune_2 (title?)
+  unknown_strathspey (A Minor) -- look up title
 * No recordings or need to re-record those in corrupted file
   crocus_pocus
   our_outboard_died
