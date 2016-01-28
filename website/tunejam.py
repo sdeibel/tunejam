@@ -244,7 +244,7 @@ vertical-align:top;
 div.scroll {
 height:400px;
 width:500px;
-overflow:auto;
+overflow:scroll;
 border: 1px solid #666666;
 padding: 8px;
 -webkit-overflow-scrolling:touch;
