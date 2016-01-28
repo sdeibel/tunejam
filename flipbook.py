@@ -30,6 +30,8 @@ class CFlipBook(utils.CBook):
                     name = fn[:-len('.spec')]
                     tune = utils.CTune(name)
                     tune.ReadDatabase()
+                    if not tune.chords or not tune.notes:
+                        continue
                     title = tune.title
                     if title.lower().startswith('the '):
                         title = title[4:]
