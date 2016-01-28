@@ -235,16 +235,17 @@ border:1px;
 }
 #selectedtunes {
 border:1px;
-width:100%;
 height:400px;
 }
 td {
 vertical-align:top;
 }
 div.scroll {
+float:left;
 height:400px;
-width:500px;
-overflow:scroll;
+width:350px;
+overflow-y:scroll;
+overflow-x:hidden;
 border: 1px solid #666666;
 padding: 8px;
 -webkit-overflow-scrolling:touch;
@@ -326,7 +327,7 @@ padding-bottom:0.5em;
   selected_list = CDiv(CList([selected_tunes], id='selectedtunes', hclass='connectedSortable'), hclass='scroll')
   
   parts.append(CTable(CTR([tunes_list, selected_list])))
-  parts.append(CBreak())
+  parts.append(CParagraph("On mobile devices, scroll with two fingers, or by dragging an item down, or by entering a text filter to shorten the list.", hclass="clear"))
   
   parts.append(CForm([
     CInput(type='checkbox', name="print", value="1", checked="", id="print-checkbox"),
@@ -553,7 +554,7 @@ outline-style:none;
 }
 #body {
 margin:20px;
-width:8.5in;
+width:95%;
 }
 div.tune-container-print-0 {
 position:absolute;
