@@ -555,6 +555,7 @@ outline-style:none;
 #body {
 margin:20px;
 width:95%;
+max-width:8.5in;
 }
 div.tune-container-print-0 {
 position:absolute;
