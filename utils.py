@@ -1193,7 +1193,7 @@ class CSetBook(CBook):
         if page:
             append_page(page, setnum)
 
-def GetTuneIndex():
+def GetTuneIndex(include_incomplete):
     idx = {}
 
     incomplete_tunes = []
@@ -1210,6 +1210,8 @@ def GetTuneIndex():
                 name = fn[:-len('.spec')]
                 tune = CTune(name)
                 tune.ReadDatabase()
+                if not include_incomplete and (not tune.chords or not tune.notes):
+                    continue
                 title = tune.title
                 if title.lower().startswith('the '):
                     title = title[4:]
@@ -1283,7 +1285,11 @@ def ABCToPostscript(abc, svg=False, eps=False, target=None):
         else:
             wrote_to = target[:-3] + '001.ps'
         if os.path.exists(wrote_to):
-            os.rename(wrote_to, target)
+            # Another process may do this at the same time
+            try:
+                os.rename(wrote_to, target)
+            except:
+                assert os.path.exists(target)
         
     if not os.path.exists(target):
         error("Could not create Postscript file %s" % target)

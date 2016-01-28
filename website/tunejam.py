@@ -32,7 +32,7 @@ def music():
   parts.append(CH("Tune Index", 1))
   parts.append(CParagraph("This lists all the tunes in the database so far.  If there is a recording, "
                           "you can click on the speaker icon to hear it."))
-  tunes = utils.GetTuneIndex()
+  tunes = utils.GetTuneIndex(True)
 
   sections = tunes.keys()
   sections.sort()
@@ -290,7 +290,7 @@ padding-bottom:0.5em;
   
   all_tunes = []
   selected_tunes = []
-  tunes = utils.GetTuneIndex()
+  tunes = utils.GetTuneIndex(False)
   for section in tunes:
     if section == 'incomplete':
       continue

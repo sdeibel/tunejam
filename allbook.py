@@ -31,6 +31,8 @@ class CAllBookBySection(utils.CBook):
                     name = fn[:-len('.spec')]
                     tune = utils.CTune(name)
                     tune.ReadDatabase()
+                    if not tune.chords or not tune.notes:
+                        continue
                     title = tune.title
                     if title.lower().startswith('the '):
                         title = title[4:]
@@ -78,6 +80,8 @@ class CAllBook(utils.CBook):
                     name = fn[:-len('.spec')]
                     tune = utils.CTune(name)
                     tune.ReadDatabase()
+                    if not tune.chords or not tune.notes:
+                        continue
                     title = tune.GetSortTitle()
                     tunes.append((title, name))
         tunes.sort()
