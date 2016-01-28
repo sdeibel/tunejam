@@ -1,5 +1,4 @@
 * Website Phase One
-  * Fix so it works on ipads and other devices
   * Easier selection by typed fragments to quickly make sets  
   * A way to generate random sets matching the filters
   * Easier way to move to next tune/set when don't fit on screen

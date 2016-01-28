@@ -247,6 +247,7 @@ width:500px;
 overflow:auto;
 border: 1px solid #666666;
 padding: 8px;
+-webkit-overflow-scrolling:touch;
 }
 p {
 padding-left:0px;
