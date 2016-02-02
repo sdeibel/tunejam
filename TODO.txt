@@ -1,5 +1,25 @@
 * Website Phase One
+  ** Change books to combine all 4/4 tune types (as option or always)
   ** Fix page cache to not share pages between books
+  ** Fix breakage of site when get exceptions on broken pipe:
+      Traceback (most recent call last):
+      File "/home/maint/music/lib/python2.7/SocketServer.py", line 295, in _handle_request_noblock
+        self.process_request(request, client_address)
+      File "/home/maint/music/lib/python2.7/SocketServer.py", line 321, in process_request
+        self.finish_request(request, client_address)
+      File "/home/maint/music/lib/python2.7/SocketServer.py", line 334, in finish_request
+        self.RequestHandlerClass(request, client_address, self)
+      File "/home/maint/music/lib/python2.7/SocketServer.py", line 657, in __init__
+        self.finish()
+      File "/home/maint/music/lib/python2.7/SocketServer.py", line 716, in finish
+        self.wfile.close()
+      File "/home/maint/music/lib/python2.7/socket.py", line 279, in close
+        self.flush()
+      File "/home/maint/music/lib/python2.7/socket.py", line 303, in flush
+        self._sock.sendall(view[write_offset:write_offset+buffer_size])
+    error: [Errno 32] Broken pipe
+    (although it also breaks w/o this, apparently when using Safari on OS X 10.9.5)
+  ** Can't play tunes in Safari on OS X 10.9.5 -- need file extension? (works on 10.10)
   ** Move all js packages to local server
   ** Ability to create live-updating session page to sync devices
     ** Add new /session page w/ list of sessions
@@ -25,6 +45,7 @@
   * Design / header / footer / menu / improve overall CSS
   * Review/improve URL structure
 * Website Phase Two+
+  * A way to select tunes by length in measures
   * Book generation improvements
     * Optional matrix for know/at-speed/can-start/harmonies check rectangle
   * Easier selection by typed fragments to quickly make sets  
