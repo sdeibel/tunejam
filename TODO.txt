@@ -1,15 +1,6 @@
 * Website Phase One
-  * Easier selection by typed fragments to quickly make sets  
-  * Easier way to move to next tune/set when don't fit on screen
-  * Ability to create live-updating session page to sync devices
-  * Improve saved sets
-    * Clean up URLs for sets and operating on sets
-    * Fix editing sets by only changing order (doesn't record changes for some reason)
-    * Fix editing to preload title/subtitle and so same set is updated rather than
-      creating a new one -- use file names based on title instead
-    * Captcha or access control to prevent bots from creating sets
-  * Book generation improvements
-    * Optional matrix for know/at-speed/can-start/harmonies check rectangle
+  ** Ability to create live-updating session page to sync devices
+  ** Move all js packages to local server
   * Browser issues
     * Opera sizing completely wrong -- rework how sizing is done (e.g. use the PNG
       of the tune instead of SVG)
@@ -17,6 +8,16 @@
   * Design / header / footer / menu / improve overall CSS
   * Review/improve URL structure
 * Website Phase Two+
+  * Book generation improvements
+    * Optional matrix for know/at-speed/can-start/harmonies check rectangle
+  * Improve saved sets and re-enable
+    * Clean up URLs for sets and operating on sets
+    * Fix editing sets by only changing order (doesn't record changes for some reason)
+    * Fix editing to preload title/subtitle and so same set is updated rather than
+      creating a new one -- use file names based on title instead
+    * Captcha or access control to prevent bots from creating sets
+  * Easier selection by typed fragments to quickly make sets  
+  * Easier way to move to next tune/set when don't fit on screen
   * Remove old unused doc generation code
   * Embedded audio player on same page?
   * A way to play the chords at a set tempo and/or metronome?
