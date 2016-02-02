@@ -196,12 +196,15 @@ function FilterTunes() {
 }
 function RandomThree() {
   var tunes = $("#alltunes").find("li");
-  var item1 = tunes[Math.floor(Math.random()*tunes.length)]
-  var item2 = tunes[Math.floor(Math.random()*tunes.length)]
-  var item3 = tunes[Math.floor(Math.random()*tunes.length)]
-  $(item1).appendTo("#selectedtunes");
-  $(item2).appendTo("#selectedtunes");
-  $(item3).appendTo("#selectedtunes");
+  var count = 0;
+  while (count < 3) {
+    var item = tunes[Math.floor(Math.random()*tunes.length)];
+    var display = $(item).css("display");
+    if (display != "none") {
+      $(item).appendTo("#selectedtunes");
+      count = count + 1;
+    }
+  }
 }
 function FilterSubmit() {
   return false;
@@ -271,9 +274,10 @@ padding-bottom:0.5em;
   if error:
     parts.append(CParagraph([CText("Error: ", bold=1), error], style="background-color:#FFFF00; padding-left:5px;"))
   parts.append(CParagraph("Drag one or more songs from the list "
-                          "on the left to the list on the right then "
+                          "on the left to the list on the right, or press the 'Random 3' "
+                          "button to select three random tuned.  Then "
                           "press Submit to generate the set.  Use "
-                          "Clear to create a new set:"))
+                          "Clear at the bottom to start a new set:"))
   
   
   section_options = [
