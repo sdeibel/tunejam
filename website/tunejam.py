@@ -194,6 +194,15 @@ function FilterTunes() {
     }
   });
 }
+function RandomThree() {
+  var tunes = $("#alltunes").find("li");
+  var item1 = tunes[Math.floor(Math.random()*tunes.length)]
+  var item2 = tunes[Math.floor(Math.random()*tunes.length)]
+  var item3 = tunes[Math.floor(Math.random()*tunes.length)]
+  $(item1).appendTo("#selectedtunes");
+  $(item2).appendTo("#selectedtunes");
+  $(item3).appendTo("#selectedtunes");
+}
 function FilterSubmit() {
   return false;
 }
@@ -287,7 +296,9 @@ padding-bottom:0.5em;
     CSelect(section_options, current=filter, name='filter',
             onchange='FilterTunes()', id='filterselect'),
     CInput(type='TEXT', name='text_filter', onkeyup='FilterTunes()', id='filtertext'), 
-    CInput(type='RESET', value='X', id='filter-reset', onclick='setTimeout(function() { FilterTunes(); })', style="border:0px; font-weight:bold;"), 
+    CInput(type='RESET', value='X', id='filter-reset', onclick='setTimeout(function() { FilterTunes(); })', style="border:0px; font-weight:bold;"),
+    CNBSP(2), 
+    CInput(type='BUTTON', value='-> Random 3', onclick='setTimeout(function() { RandomThree(); })'), 
   ], onsubmit="return FilterSubmit();", id="filter-form"))
   parts.append(CBreak())
   
