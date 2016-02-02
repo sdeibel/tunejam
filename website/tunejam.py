@@ -196,14 +196,22 @@ function FilterTunes() {
 }
 function RandomThree() {
   var tunes = $("#alltunes").find("li");
-  var count = 0;
-  while (count < 3) {
-    var item = tunes[Math.floor(Math.random()*tunes.length)];
+  visible = [];
+  for (i = 1; i < tunes.length; i++) {
+    var item = tunes[i];
     var display = $(item).css("display");
     if (display != "none") {
-      $(item).appendTo("#selectedtunes");
-      count = count + 1;
+      visible.push(item);
     }
+  }
+
+  var count = 0;
+  while (count < 3 && visible.length > 0) {
+    var idx = Math.floor(Math.random()*visible.length);
+    var item = visible[idx];
+    $(item).appendTo("#selectedtunes");
+    visible.splice(idx, 1);
+    count = count + 1;
   }
 }
 function FilterSubmit() {

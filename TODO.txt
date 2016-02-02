@@ -1,6 +1,5 @@
 * Website Phase One
   * Easier selection by typed fragments to quickly make sets  
-  * A way to generate random sets matching the filters
   * Easier way to move to next tune/set when don't fit on screen
   * Ability to create live-updating session page to sync devices
   * Improve saved sets
