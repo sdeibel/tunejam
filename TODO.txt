@@ -1,4 +1,5 @@
 * Website Phase One
+  ** Fix page cache to not share pages between books
   ** Ability to create live-updating session page to sync devices
   ** Move all js packages to local server
   * Browser issues
