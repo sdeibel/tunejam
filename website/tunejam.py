@@ -102,7 +102,7 @@ def sets(spec=None):
       name = 'C-' + md5sum.hexdigest()
       
       if save and title:
-        date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
+        date = time.strftime("%d %B %Y", time.localtime())
         book = '%s\n%s\n%s\nhttp://cambridgeny.net/music\n--\n' % (
           title, subtitle, date
         )

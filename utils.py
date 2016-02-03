@@ -930,7 +930,7 @@ class CBook:
         self.title = title
         self.subtitle = subtitle
         self.type_in_header = type_in_header
-        self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
+        self.date = time.strftime("%d %B %Y", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
         self.name = name
         self.url = 'book/%s' % name
@@ -1178,7 +1178,7 @@ class CSetBook(CBook):
     def __init__(self, name, title, subtitle, tunes):
         self.title = title
         self.subtitle = subtitle
-        self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
+        self.date = time.strftime("%d %B %Y", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
         self.name = name
         self.url = 'book/%s' % self.name
