@@ -1,8 +1,5 @@
 * Website Phase One
   ** Collect and add author information as separate line in the .specs or add to titles
-  ** Fix page cache to not share pages between books and PDFs from the sets page (header
-     and page number differs) -- see if removing page cache matters (most of the time may
-     be saved in the tune cache)
   ** Fix breakage of site when get exceptions on broken pipe:
       Traceback (most recent call last):
       File "/home/maint/music/lib/python2.7/SocketServer.py", line 295, in _handle_request_noblock

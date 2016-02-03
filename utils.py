@@ -743,8 +743,10 @@ class CTuneSet:
     def MakeCardPDF(self, page_num=None, show_type=False):
                 
         filename, up_to_date = self._GetCacheFile(resource='.pdf')
-        if up_to_date:
-            return filename
+        # Does not work to cache pages since header/footer vary by book and
+        # some books share pages w/ same three tunes in same order
+        #if up_to_date:
+            #return filename
         
         # Set up
         from reportlab.pdfgen.canvas import Canvas
