@@ -1,4 +1,7 @@
 * Website Phase One
+  ** Update Flask
+  ** Move all js packages to local server
+  ** Test with IE
   ** Collect and add author information as separate line in the .specs or add to titles
   ** Fix breakage of site when get exceptions on broken pipe:
       Traceback (most recent call last):
@@ -19,7 +22,6 @@
     error: [Errno 32] Broken pipe
     (although it also breaks w/o this, apparently when using Safari on OS X 10.9.5)
   ** Can't play tunes in Safari on OS X 10.9.5 -- need file extension? (works on 10.10)
-  ** Move all js packages to local server
   ** Ability to create live-updating session page to sync devices
     ** Add new /session page w/ list of sessions
     ** A way to create a session page (needs captcha or similar) + set page owner pw + 

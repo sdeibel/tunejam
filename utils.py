@@ -54,10 +54,10 @@ kSections = [
 kSectionTitles = {name: title for name, title in kSections}
 
 kTimeSignatures = [
-    ('2/4 and 4/4 Reels', ('reel', 'rag', 'march', 'hornpipe', 'strathspey')),
-    ('6/8 Jigs', ('jigs',)),
-    ('9/8 Slip Jigs', ('slip', )), 
-    ('3/4 Waltzes', ('waltz',)),
+    ('2/4 and 4/4', ('reel', 'rag', 'march', 'hornpipe', 'strathspey')),
+    ('6/8', ('jig',)),
+    ('9/8', ('slip', )), 
+    ('3/4', ('waltz',)),
     ('Other Tunes', ('other', )), 
 ]
 
