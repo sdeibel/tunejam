@@ -419,7 +419,8 @@ def _get_all_books():
     allbook.CAllBook(),
     allbook.CAllBookBySection(),
     allbook.CAllBookByTime(), 
-    flipbook.CFlipBook(), 
+    flipbook.CFlipBook(),
+    flipbook.CFlipBookByTime(), 
     None, 
   ]
   custom_books = []
@@ -497,6 +498,12 @@ def doprint(format=None, bookname=None):
     import flipbook
     book = flipbook.CFlipBook()
     pdf = book.GeneratePDF(type_in_header=True, include_index=True)
+    return send_file(pdf, mimetype='application/pdf')
+  
+  elif format == 'flip-by-time':
+    import flipbook
+    book = flipbook.CFlipBookByTime()
+    pdf = book.GeneratePDF(type_in_header=False, include_index=True)
     return send_file(pdf, mimetype='application/pdf')
   
   else:
