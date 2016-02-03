@@ -11,7 +11,7 @@ class CFlipBook(utils.CBook):
         self.title = 'Hubbard Hall Tune Jam'
         self.subtitle = 'Set Flip Book'
         self.type_in_header = True
-        self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
+        self.date = time.strftime("%d %B %Y", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
         self.name = 'flip'
         self.url = self.name
@@ -44,7 +44,7 @@ class CFlipBook(utils.CBook):
                 page_tunes = [name, name, name]
                 title = [self.title, self.subtitle, self.date]
                 title = [t.strip() for t in title]
-                title = '%s - %s\\n%s' % tuple(title)
+                title = '%s - %s - %s' % tuple(title)
                 tuneset = utils.CTuneSet(page_tunes, title, self.contact, '')
                 self.pages.append(tuneset)
 
