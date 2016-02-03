@@ -106,7 +106,7 @@ class CAllBookByTime(utils.CBook):
                 self.pages.append(tuneset)
                 
     def GeneratePDF(self):
-        return utils.CBook.GeneratePDF(self, type_in_header=True)
+        return utils.CBook.GeneratePDF(self, type_in_header=False)
         
 class CAllBook(utils.CBook):
 
