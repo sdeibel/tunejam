@@ -12,7 +12,7 @@ class CAllBookBySection(utils.CBook):
         self.title = 'Hubbard Hall Tune Jam'
         self.subtitle = 'All Tunes - By Type'
         self.type_in_header = True
-        self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
+        self.date = time.strftime("%d %B %Y", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
         self.name = 'all-by-section'
         self.url = self.name
@@ -63,7 +63,7 @@ class CAllBookByTime(utils.CBook):
         self.title = 'Hubbard Hall Tune Jam'
         self.subtitle = 'All Tunes - By Time Signature'
         self.type_in_header = True
-        self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
+        self.date = time.strftime("%d %B %Y", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
         self.name = 'all-by-time'
         self.url = self.name
@@ -114,7 +114,7 @@ class CAllBook(utils.CBook):
         
         self.title = 'Hubbard Hall Tune Jam'
         self.subtitle = 'All Tunes - Alphabetical'
-        self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
+        self.date = time.strftime("%d %B %Y", time.localtime())
         self.contact = 'http://cambridgeny.net/music'
         self.name = 'all'
         self.url = self.name
