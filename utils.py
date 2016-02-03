@@ -46,11 +46,20 @@ kSections = [
     ('march', 'Marches'),
     ('waltz', 'Waltzes'),
     ('hornpipe', 'Hornpipes'),
+    ('strathspey', 'Strathspeys'), 
     ('other', 'Other'),
     ('incomplete', 'Incomplete Listings'), 
 ]
 
 kSectionTitles = {name: title for name, title in kSections}
+
+kTimeSignatures = [
+    ('2/4 and 4/4 Reels', ('reel', 'rag', 'march', 'hornpipe', 'strathspey')),
+    ('6/8 Jigs', ('jigs',)),
+    ('9/8 Slip Jigs', ('slip', )), 
+    ('3/4 Waltzes', ('waltz',)),
+    ('Other Tunes', ('other', )), 
+]
 
 class CTune:
     def __init__(self, name):

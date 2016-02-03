@@ -56,6 +56,58 @@ class CAllBookBySection(utils.CBook):
     def GeneratePDF(self):
         return utils.CBook.GeneratePDF(self, type_in_header=True)
         
+class CAllBookByTime(utils.CBook):
+
+    def __init__(self):
+        
+        self.title = 'Hubbard Hall Tune Jam'
+        self.subtitle = 'All Tunes - By Time Signature'
+        self.type_in_header = True
+        self.date = time.strftime("%d %B %Y %H:%M:%S", time.localtime())
+        self.contact = 'http://cambridgeny.net/music'
+        self.name = 'all-by-time'
+        self.url = self.name
+    
+        self.pages = []
+        for section_name, types in utils.kTimeSignatures:
+            all_files = []
+            for section in types:
+                try:
+                    files = os.listdir(os.path.join(utils.kDatabaseDir, section))
+                    files = [os.path.join(utils.kDatabaseDir, section, f) for f in files if f.endswith('.spec')]
+                    all_files.extend(files)
+                except OSError:
+                    continue
+            tunes = []
+            for fn in all_files:
+                name = os.path.basename(fn)[:-len('.spec')]
+                tune = utils.CTune(name)
+                tune.ReadDatabase()
+                if not tune.chords or not tune.notes:
+                    continue
+                title = tune.title
+                if title.lower().startswith('the '):
+                    title = title[4:]
+                elif title.lower().startswith('a '):
+                    title = title[2:]
+                tunes.append((title, name))
+            tunes.sort()
+
+            for i in range(0, len(tunes), 3):
+                page_tunes = [tunes[i][1]]
+                if i + 1 < len(tunes):
+                    page_tunes.append(tunes[i+1][1])
+                if i + 2 < len(tunes):
+                    page_tunes.append(tunes[i+2][1])
+                title = [self.title, section_name, self.date]
+                title = [t.strip() for t in title]
+                title = '%s - %s - %s' % tuple(title)
+                tuneset = utils.CTuneSet(page_tunes, title, self.contact, '')
+                self.pages.append(tuneset)
+                
+    def GeneratePDF(self):
+        return utils.CBook.GeneratePDF(self, type_in_header=True)
+        
 class CAllBook(utils.CBook):
 
     def __init__(self):

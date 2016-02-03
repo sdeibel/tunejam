@@ -174,7 +174,7 @@ function FilterTunes() {
     if (filter == "all") {
       visible = 1;
     }
-    else if (filter == "reel" ) {
+    else if (filter == "ax4" ) {
       visible = (item.hasClass("reel") ||
                  item.hasClass("hornpipe") ||
                  item.hasClass("march") ||
@@ -293,12 +293,13 @@ padding-bottom:0.5em;
   ]
 
   keys = utils.kSectionTitles.keys()
+  keys.append('ax4')
   keys.sort()
   if 'incomplete' in keys:
     keys.remove('incomplete')
   for key in keys:
-    if key == 'reel':
-      title = "Reels, Marches, Hornpipes, and Rags"
+    if key == 'ax4':
+      title = "All 2/4 and 4/4 Time"
     else:
       title = utils.kSectionTitles[key]
     section_options.append((key, title))
@@ -417,6 +418,7 @@ def _get_all_books():
   retval = [
     allbook.CAllBook(),
     allbook.CAllBookBySection(),
+    allbook.CAllBookByTime(), 
     flipbook.CFlipBook(), 
     None, 
   ]
@@ -470,6 +472,12 @@ def doprint(format=None, bookname=None):
   elif format == 'all-by-section':
     import allbook
     book = allbook.CAllBookBySection()
+    pdf = book.GeneratePDF()
+    return send_file(pdf, mimetype='application/pdf')
+  
+  elif format == 'all-by-time':
+    import allbook
+    book = allbook.CAllBookByTime()
     pdf = book.GeneratePDF()
     return send_file(pdf, mimetype='application/pdf')
   
