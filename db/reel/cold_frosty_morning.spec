@@ -1,6 +1,12 @@
 T:Cold Frosty Morning
 K:Am
-L:1/4
+L:1/8
 M:4/4
 --
+EGAB A3 B|cBcd e2 (3DEF|
+e2 a a3 g|abag e3 d|
 --
+|: Am  | Am   | G   | GEm  |
+   Am  | Am   | AG  | Am  :|
+|: Am  | Am   | G   | Em   |
+   AmC | DmEm | AmG | Am  :|
