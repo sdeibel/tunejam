@@ -1,5 +1,6 @@
 * Website Phase One
-  ** Vertical spacing in tune pages is wrong in IE 11 and Safari
+  ** Vertical spacing in tune pages is wrong in IE 11 and breaks on all for long
+     notes since it seems to be aligning based on chord charts -- need to redesign
   ** Collect and add author information as separate line in the .specs or add to titles
   ** Fix breakage of site when get exceptions on broken pipe:
       Traceback (most recent call last):

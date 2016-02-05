@@ -637,7 +637,7 @@ position:relative;
 }
 div.tune-with-break img {
 position:absolute;
-right:1.0in;
+right:0.5in;
 z-index:100;
 }
 div.tune-break {
@@ -649,7 +649,7 @@ page-break-inside:avoid;
 div.notes {
 position:absolute;
 left:0in;
-top:0in;
+top:-0.2in;
 transform: scale(1.2, 1.2) translate(9%,7%);
 }
 div.notes-print {
@@ -677,6 +677,7 @@ padding-right:0.25in;
 div.trans {
 opacity:0;
 display:table;
+min-height:1.8in; /* For Chrome Safari; has no effect on Firefox */
 }
 
 /* Chord tables */
