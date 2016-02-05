@@ -133,11 +133,14 @@ def sets(spec=None):
     filter = None
   
   parts = []
-  parts.append("""<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
-<script src="//code.jquery.com/jquery-1.10.2.js"></script>
-<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+  # Extra JS libraries came from:
+  #https://github.com/padolsey-archive/jquery.fn/tree/master/sortElements
+  #https://raw.github.com/furf/jquery-ui-touch-punch/master/jquery.ui.touch-punch.min.js
+  parts.append("""<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/blitzer/jquery-ui.css">
+<script src="//code.jquery.com/jquery-1.12.0.min.js"></script>
+<script src="//code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
 <script src="/js/jquery.sortElements.js"></script>
-<script src="https://raw.github.com/furf/jquery-ui-touch-punch/master/jquery.ui.touch-punch.min.js"></script> 
+<script src="/js/jquery.ui.touch-punch.min.js"></script> 
  <script>
 $(function() {
   $( "#alltunes, #selectedtunes" ).sortable({

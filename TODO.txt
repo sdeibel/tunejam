@@ -1,5 +1,4 @@
 * Website Phase One
-  ** Move all js packages to local server
   ** Test with IE
   ** Collect and add author information as separate line in the .specs or add to titles
   ** Fix breakage of site when get exceptions on broken pipe:
