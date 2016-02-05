@@ -189,6 +189,7 @@ class CTune:
         return key_str
     
     def GetRecording(self):
+        # Prefer mp3 because idiotically m4a does not work in Safari
         for enc in ['.mp3', '.m4a']:
             recording = os.path.join(kRecordingsDir, self.name+enc)
             if os.path.isfile(recording):
