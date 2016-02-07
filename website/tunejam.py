@@ -587,7 +587,7 @@ list-style:none;
 h1.tune-title {
 clear:both;
 white-space:nowrap;
-font-size:3vw;
+font-size:3.5vw;
 }
 h2 {
 padding-top:10px;
@@ -618,15 +618,13 @@ top:0in;
 max-width:48%;
 min-width:2.5in;
 }
+
+/* Chord tables */
 table.chords {
 position:relative;
 top:0in;
 right:0in;
-font-size:3.5vw;
-}
-
-/* Chord tables */
-table.chords {
+font-size:3vw;
 border:0px;  /* For Chrome and Safari */
 border-left:2px solid #000;
 border-right:2px solid #000;

@@ -1,4 +1,5 @@
 * Website Phase One
+  ** Option to show only notes or only chords at 100% width
   ** Collect and add author information as separate line in the .specs or add to titles
   ** Fix breakage of site when get exceptions on broken pipe:
       Traceback (most recent call last):
