@@ -615,7 +615,7 @@ img.notes {
 position:relative;
 left:-0.1in;
 top:0in;
-max-width:50%;
+max-width:48%;
 min-width:2.5in;
 }
 table.chords {
@@ -652,6 +652,25 @@ td.first {
 padding-left:3px;
 padding-right:0.5em;
 }
+
+/* Adjust CSS for narrow devices */
+@media only screen and (max-width: 489px) {
+img.notes {
+width:100%;
+max-width:100%;
+min-width:100%;
+margin-top:5px;
+}
+table.chords {
+clear:both;
+left:0in;
+right:none;
+font-size:5.5vw;
+width:95%;
+float:left;
+}
+}
+
 """
   
   if media == 'print':
