@@ -1,6 +1,7 @@
 * Website Phase One
-  ** Vertical spacing in tune pages is wrong in IE 11 and breaks on all for long
-     notes since it seems to be aligning based on chord charts -- need to redesign
+  ** Test new layout with IE 11
+  ** Add JS to add clear=both to css when page is <N pixels and set notes and
+     chords to 100% width
   ** Collect and add author information as separate line in the .specs or add to titles
   ** Fix breakage of site when get exceptions on broken pipe:
       Traceback (most recent call last):

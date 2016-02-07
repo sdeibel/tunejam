@@ -253,7 +253,7 @@ M:%(meter)s
         
         return target
         
-    def MakeNotesPNGFile(self):
+    def MakeNotesPNGFile(self, density=600):
         
         eps_file = self.MakeNotesEPSFile()
         png_file, up_to_date = self._GetCacheFile('notes.png')
@@ -261,7 +261,7 @@ M:%(meter)s
             return png_file
         
         bin_dir = '%s/bin' % kBaseDir
-        cmd = 'PATH=$PATH:%s convert -density 600 -depth 8 -monochrome %s %s' % (bin_dir, eps_file, png_file)
+        cmd = 'PATH=$PATH:%s convert -density %i -depth 8 -monochrome %s %s' % (bin_dir, density, eps_file, png_file)
         os.system(cmd)
         
         return png_file
