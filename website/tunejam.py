@@ -49,7 +49,7 @@ def music():
       play = []
       if recording is not None:
         play = [
-          CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
+          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
                  href='/recording/%s' % tune, width=16, height=16),
         ]
       parts.append(CText(title, href="/tune/%s" % tune))
@@ -415,6 +415,12 @@ def tune(tune):
   parts.extend(CreateTuneHTML(tune))
   return PageWrapper(parts)
 
+@app.route('/png/<tune>')
+def png(tune):
+  tune = utils.CTune(tune)
+  png_file = tune.MakeNotesPNGFile(density=80)
+  return send_file(png_file, mimetype='image/png')
+
 def _get_all_books():
   import allbook
   import flipbook
@@ -579,12 +585,9 @@ line-height:140%;
 list-style:none;
 }
 h1.tune-title {
+clear:both;
 white-space:nowrap;
-}
-h1.tune-title-print {
-white-space:nowrap;
-font-size:19pt;
-margin-left:-0.25in;
+font-size:3vw;
 }
 h2 {
 padding-top:10px;
@@ -596,88 +599,30 @@ outline-style:none;
 #body {
 margin:20px;
 width:95%;
-max-width:8.5in;
-}
-div.tune-container-print-0 {
-position:absolute;
-top:0.0in;
-left:0.5in;
-height:3.5in;
-max-height:3.5in;
-min-height:3.5in;
-width:7.5in;
-max-width:7.5in;
-min-width:7.5in;
-page-break-before:always;
-}
-div.tune-container-print-1 {
-position:absolute;
-top:4.0in;
-left:0.5in;
-height:3.5in;
-max-height:3.5in;
-min-height:3.5in;
-width:7.5in;
-max-width:7.5in;
-min-width:7.5in;
-}
-div.tune-container-print-2 {
-position:absolute;
-top:8.0in;
-left:0.5in;
-height:3.5in;
-max-height:3.5in;
-min-height:3.5in;
-width:7.5in;
-max-width:7.5in;
-min-width:7.5in;
-}
-div.tune {
-position:relative;
-}
-div.tune-with-break img {
-position:absolute;
-right:0.5in;
-z-index:100;
 }
 div.tune-break {
-height:2.5em;
+clear:both;
+height:20px;
 }
-div.tune-with-break {
-page-break-inside:avoid;
-}
-div.notes {
+img.play-tune {
 position:absolute;
-left:0in;
-top:-0.2in;
-transform: scale(1.2, 1.2) translate(9%,7%);
+right:0in;
+padding-right:20px;
+margin-top:5px;
+max-width:5vw;
 }
-div.notes-print {
-position:absolute;
-left:0in;
+img.notes {
+position:relative;
+left:-0.1in;
 top:0in;
-margin-left:-0.25in
+max-width:50%;
+min-width:2.5in;
 }
-div.chords {
-position:absolute;
-right:0.5in;
-width:3.5in;
-top:0.5in;
-transform: scale(2.2, 2.2) translate(25%,15%);
-padding-right:0.25in;
-}
-div.chords-print {
-position:absolute;
-right:0.5in;
-width:3.5in;
-top:0.5in;
-transform: scale(1.8, 1.8) translate(17%,15%);
-padding-right:0.25in;
-}
-div.trans {
-opacity:0;
-display:table;
-min-height:1.8in; /* For Chrome Safari; has no effect on Firefox */
+table.chords {
+position:relative;
+top:0in;
+right:0in;
+font-size:3.5vw;
 }
 
 /* Chord tables */
@@ -758,12 +703,11 @@ margin-top:0px;
 }  
 </style>""")
   printing = False
-  hclass = 'tune-container'
   for i, tune in enumerate(tunes):
-    if hclass.endswith('-print'):
-      parts.append(CDiv(CreateTuneHTML(tune, printing=True), hclass=hclass+'-%i' % (i % 3)))
-    else:
-      parts.append(CDiv(CreateTuneHTML(tune), hclass=hclass))
+    if i > 0:
+      parts.append(CDiv(hclass='tune-break'))
+    parts.extend(CreateTuneHTML(tune))
+  parts.append(CDiv(hclass='tune-break'))
   
   return PageWrapper(parts)
 
@@ -772,13 +716,8 @@ def CreateTuneSetPDF(name, title, subtitle, tunes):
   pdf = book.GeneratePDF(include_index=False)
   return send_file(pdf, mimetype='application/pdf')
   
-def CreateTuneHTML(name, printing=False):
+def CreateTuneHTML(name):
   
-  if printing:
-    sfx = '-print'
-  else:
-    sfx = ''
-    
   obj = utils.CTune(name)
   try:
     obj.ReadDatabase()
@@ -788,45 +727,26 @@ def CreateTuneHTML(name, printing=False):
 
   key_str = obj.GetKeyString()
 
-  chords = ChordsToHTML(obj.chords)
   recording, mimetype, filename = obj.GetRecording()
+  if recording is not None:
+    play = CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
+                  href='/recording/%s' % name)
+  else:
+    play = CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
+
+  notes = '<img src="/png/%s"/ class="notes">' % name
+  chords = ChordsToHTML(obj.chords)
   
   tune = CDiv([
     CH([
       title + ' - ' + obj.type.capitalize() + ' - ' + key_str,
-    ], 1, hclass='tune-title'+sfx), 
-    CDiv(obj.MakeNotesSVG(), hclass='notes'+sfx),
-    CDiv(chords, hclass='chords'+sfx),
+      play, 
+    ], 1, hclass='tune-title'), 
+    notes,
+    chords,
   ], hclass='tune')
   
-  parts = []
-
-  if not printing:
-    if recording is not None:
-      play_div = CDiv([
-        CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
-               href='/recording/%s' % name),
-      ])
-    else:
-      play_div = CDiv([
-        CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
-      ])
-  else:
-    play_div = ''
-      
-  tune_with_break = CDiv([
-    CDiv(hclass='tune-break'),
-    play_div, 
-    tune, 
-    # Trickery to work around browser bugginess where it sizes
-    # according to unscaled chords table (we scale by 2.2; see css)
-    CDiv([CDiv(chords, style="width:100%"),
-          CDiv(chords, style="width:100%")], hclass='trans'), 
-  ], hclass='tune-with-break')
-
-  parts.append(tune_with_break)
-  
-  return parts
+  return [tune]
   
 def ChordsToHTML(chords):
     
