@@ -829,7 +829,7 @@ if __name__ == '__main__':
       except:
         pass
     if found_process:
-      time.sleep(1.0)
+      time.sleep(3.0)
       
   # Kick off background task process to regenerate books so they
   # are cached and load quickly for users
