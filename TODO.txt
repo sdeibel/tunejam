@@ -1,24 +1,7 @@
 * Website Phase One
+  ** Document need to remove reference to HAS_ALPN from lib/python2.7/ssl.py in Python 2.7.11
   ** Option to show only notes or only chords at 100% width
   ** Collect and add author information as separate line in the .specs or add to titles
-  ** Fix breakage of site when get exceptions on broken pipe:
-      Traceback (most recent call last):
-      File "/home/maint/music/lib/python2.7/SocketServer.py", line 295, in _handle_request_noblock
-        self.process_request(request, client_address)
-      File "/home/maint/music/lib/python2.7/SocketServer.py", line 321, in process_request
-        self.finish_request(request, client_address)
-      File "/home/maint/music/lib/python2.7/SocketServer.py", line 334, in finish_request
-        self.RequestHandlerClass(request, client_address, self)
-      File "/home/maint/music/lib/python2.7/SocketServer.py", line 657, in __init__
-        self.finish()
-      File "/home/maint/music/lib/python2.7/SocketServer.py", line 716, in finish
-        self.wfile.close()
-      File "/home/maint/music/lib/python2.7/socket.py", line 279, in close
-        self.flush()
-      File "/home/maint/music/lib/python2.7/socket.py", line 303, in flush
-        self._sock.sendall(view[write_offset:write_offset+buffer_size])
-    error: [Errno 32] Broken pipe
-    (although it also breaks w/o this, apparently when using Safari on OS X 10.9.5)
   ** Ability to create live-updating session page to sync devices
     ** Add new /session page w/ list of sessions
     ** A way to create a session page (needs captcha or similar) + set page owner pw + 
