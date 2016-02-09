@@ -556,8 +556,6 @@ def saved(action=None, book=None):
 
 @app.route('/recording/<tune>')
 def recording(tune):
-  if 'Safari' in request.headers.get('User-Agent'):
-    return PageWrapper(['Sorry, cannot serve recordings to Safari without crashing the entire website!<br/><br/>This is a bug I\'m trying to fix...'])
   obj = utils.CTune(tune)
   obj.ReadDatabase()
   recording, mimetype, filename = obj.GetRecording()
