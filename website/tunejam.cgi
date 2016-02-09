@@ -20,14 +20,14 @@ except Exception, e:
   print traceback.format_exc([10])
   print 'Problem in cgiappserver-prod with moc import: %s' % e 
 
-#class ScriptNameStripper(object):
-  #def __init__(self, app):
-    #self.app = app
-  #def __call__(self, environ, start_response):
-    #environ['SCRIPT_NAME'] = ''
-    #return self.app(environ, start_response)
+class ScriptNameStripper(object):
+  def __init__(self, app):
+    self.app = app
+  def __call__(self, environ, start_response):
+    environ['SCRIPT_NAME'] = ''
+    return self.app(environ, start_response)
 
-#app = ScriptNameStripper(app)
+app = ScriptNameStripper(app)
 
 try:
   CGIHandler().run(app)
