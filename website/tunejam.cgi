@@ -1,9 +1,22 @@
 #!/home/maint/music/bin/python2.7
 
-#from wsgiref.handlers import CGIHandler
-#from tunejam import app
+# To use this script, Apache needs to be configured with the following:
 
-#CGIHandler().run(app)
+#<VirtualHost *:80>
+#  ServerName music.cambridgeny.net
+#  DocumentRoot /home/maint/music/src/html
+#  ErrorLog logs/music-error.log
+#  CustomLog logs/music-access.log combined
+#
+#  RewriteEngine On
+#  RewriteLog logs/music-rewrite.log
+#  RewriteLogLevel 0
+#  RewriteRule ^/$ /cgi-bin/tunejam.cgi/ [PT]
+#  RewriteRule ^/(.+)/?$ /cgi-bin/tunejam.cgi/$1 [PT]
+#
+#  ScriptAlias /cgi-bin/ /home/maint/music/src/website/
+#
+#</VirtualHost>
 
 # This line enables CGI error reporting
 import cgitb
