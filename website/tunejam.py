@@ -75,6 +75,7 @@ def sets(spec=None):
     edit = False
     title = ''
     subtitle = ''
+    pagetype = 'both'
     
     for arg in args:
       if arg == 'print=1':
@@ -87,6 +88,8 @@ def sets(spec=None):
         title = arg[len('title='):].strip()
       elif arg.startswith('subtitle='):
         subtitle = arg[len('subtitle='):].strip()
+      elif arg.startswith('pagetype='):
+        pagetype = arg[len('pagetype='):].strip()
       elif arg:
         tunes.append(arg)
     
@@ -126,7 +129,7 @@ def sets(spec=None):
         preload_tunes = tunes
         
       else:
-        return CreateTuneSetHTML(tunes)
+        return CreateTuneSetHTML(tunes, pagetype)
 
   filter = request.form.get('filter')
   if filter == 'all':
@@ -164,6 +167,12 @@ function SubmitTunes() {
     if ($("#subtitle").val()) {
       tunes = tunes + "&subtitle=" + $("#subtitle").val();
     }
+  }
+  if ($("input:radio[name=pagetype]:checked").val() == "notes") {
+    tunes = tunes + "&pagetype=notes";
+  }
+  else if ($("input:radio[name=pagetype]:checked").val() == "chords") {
+    tunes = tunes + "&pagetype=chords";
   }
   window.location.href= "/sets/" + tunes;
 }
@@ -357,6 +366,14 @@ padding-bottom:0.5em;
   parts.append(CParagraph("On mobile devices, scroll with two fingers, or by dragging an item down, or by entering a text filter to shorten the list.", hclass="clear"))
   
   parts.append(CForm([
+    CText("Include:"), CNBSP(1), 
+    CInput(type='radio', name='pagetype', value='chords', checked=''), 
+    CText("Chords"), 
+    CInput(type='radio', name='pagetype', value='notes', checked=''),
+    CText("Notes"), 
+    CInput(type='radio', name='pagetype', value='both', checked='1'),
+    CText("Both"), 
+    CBreak(), 
     CInput(type='checkbox', name="print", value="1", checked="", id="print-checkbox"),
     CText("Generate printable pages (PDF)"), 
     #CBreak(), 
@@ -615,8 +632,14 @@ img.notes {
 position:relative;
 left:-0.1in;
 top:0in;
-max-width:48%;
+max-width:45%;
 min-width:2.5in;
+}
+img.notes-only {
+width:100%;
+max-width:100%;
+min-width:100%;
+margin-top:5px;
 }
 
 /* Chord tables */
@@ -624,13 +647,22 @@ table.chords {
 position:relative;
 top:0in;
 right:0in;
-font-size:3vw;
+font-size:2.8vw;
 border:0px;  /* For Chrome and Safari */
 border-left:2px solid #000;
 border-right:2px solid #000;
 margin-left:4px;
 margin-top:20px;
 float:right;
+}
+table.chords-only {
+clear:both;
+left:0in;
+right:none;
+font-size:5.0vw;
+width:95%;
+float:left;
+margin-top:2vw;
 }
 tr.even {
 background:#DDDDDD;
@@ -710,7 +742,7 @@ def PageWrapper(body, refresh=None):
   
   return html
   
-def CreateTuneSetHTML(tunes):
+def CreateTuneSetHTML(tunes, pagetype='both'):
   
   parts = []
   
@@ -723,7 +755,7 @@ margin-top:0px;
   for i, tune in enumerate(tunes):
     if i > 0:
       parts.append(CDiv(hclass='tune-break'))
-    parts.extend(CreateTuneHTML(tune))
+    parts.extend(CreateTuneHTML(tune, pagetype))
   parts.append(CDiv(hclass='tune-break'))
   
   return PageWrapper(parts)
@@ -733,7 +765,7 @@ def CreateTuneSetPDF(name, title, subtitle, tunes):
   pdf = book.GeneratePDF(include_index=False)
   return send_file(pdf, mimetype='application/pdf')
   
-def CreateTuneHTML(name):
+def CreateTuneHTML(name, pagetype='both'):
   
   obj = utils.CTune(name)
   try:
@@ -751,8 +783,15 @@ def CreateTuneHTML(name):
   else:
     play = CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
 
-  notes = '<img src="/png/%s"/ class="notes">' % name
-  chords = ChordsToHTML(obj.chords)
+  if pagetype == 'both':
+    notes = '<img src="/png/%s"/ class="notes">' % name
+    chords = ChordsToHTML(obj.chords)
+  elif pagetype == 'notes':
+    notes = '<img src="/png/%s"/ class="notes-only">' % name
+    chords = ''
+  elif pagetype == 'chords':
+    notes = ''
+    chords = ChordsToHTML(obj.chords, tclass='chords-only')    
   
   tune = CDiv([
     CH([
@@ -765,7 +804,7 @@ def CreateTuneHTML(name):
   
   return [tune]
   
-def ChordsToHTML(chords):
+def ChordsToHTML(chords, tclass='chords'):
     
     if not isinstance(chords, list):
         chords = utils.ParseChords(chords)
@@ -803,7 +842,7 @@ def ChordsToHTML(chords):
         else:
             part_class = 'even'
         
-    html = CTable(html, width=None, hclass="chords")
+    html = CTable(html, width=None, hclass=tclass)
     
     return html
     
@@ -831,24 +870,30 @@ if __name__ == '__main__':
     if found_process:
       time.sleep(3.0)
       
-  # Kick off background task process to regenerate books so they
-  # are cached and load quickly for users
-  if utils.kUseCache:
-    import crontask
-    def books_done(result):
-      pass
-    import multiprocessing
-    pool = multiprocessing.Pool(1)
-    job = pool.apply_async(crontask.regenerate_books, callback=books_done)
+  kWatchFiles = False  
+  if kWatchFiles:
+    
+    # Kick off background task process to regenerate books so they
+    # are cached and load quickly for users
+    if utils.kUseCache:
+      import crontask
+      def books_done(result):
+        pass
+      import multiprocessing
+      pool = multiprocessing.Pool(1)
+      job = pool.apply_async(crontask.regenerate_books, callback=books_done)
+    
+    # Get a list of all the files to watch to trigger restart (so the
+    # PDF books get rebuilt)
+    watch_files = set()
+    for book in get_all_books():
+      if book is None:
+        continue
+      watch_files.update(utils.GetWatchFiles(book))
   
-  # Get a list of all the files to watch to trigger restart (so the
-  # PDF books get rebuilt)
-  watch_files = set()
-  for book in get_all_books():
-    if book is None:
-      continue
-    watch_files.update(utils.GetWatchFiles(book))
-  
+  else:
+    watch_files = []
+    
   # Start new server
   from os import environ
   if 'WINGDB_ACTIVE' in environ:
