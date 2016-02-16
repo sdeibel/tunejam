@@ -421,7 +421,7 @@ def png(tune):
   png_file = tune.MakeNotesPNGFile(density=80)
   return send_file(png_file, mimetype='image/png')
 
-def _get_all_books():
+def get_all_books():
   import allbook
   import flipbook
   retval = [
@@ -460,7 +460,7 @@ def doprint(format=None, bookname=None):
       CBreak(), 
     ])
     
-    for book in _get_all_books():
+    for book in get_all_books():
       if book is None:
         parts.append(CBreak())
         continue
@@ -834,46 +834,20 @@ if __name__ == '__main__':
   # Kick off background task process to regenerate books so they
   # are cached and load quickly for users
   if utils.kUseCache:
-    def regenerate_books():
-      all_books = _get_all_books()
-      for book in all_books:
-        if book is None:
-          continue
-        f = open(os.path.join(utils.kDatabaseDir, book.name+'.lock'), 'w')
-        f.write('lock-%s' % str(os.getpid()))
-        f.close()
-      for book in all_books:
-        if book is None:
-          continue
-        book.GeneratePDF()
-        try:
-          os.unlink(os.path.join(utils.kDatabaseDir, book.name+'.lock'))
-        except OSError:
-          pass
-      return True
+    import crontask
     def books_done(result):
       pass
     import multiprocessing
     pool = multiprocessing.Pool(1)
-    job = pool.apply_async(regenerate_books, callback=books_done)
+    job = pool.apply_async(crontask.regenerate_books, callback=books_done)
   
   # Get a list of all the files to watch to trigger restart (so the
   # PDF books get rebuilt)
-  watch_files = []
-  files = os.listdir(utils.kDatabaseDir)
-  for fn in files:
-    if fn.endswith('.book'):
-      watch_files.append(os.path.join(utils.kDatabaseDir, fn))
-  for section, section_name in utils.kSections:
-    if section == 'incomplete':
+  watch_files = set()
+  for book in get_all_books():
+    if book is None:
       continue
-    try:
-      files = os.listdir(os.path.join(utils.kDatabaseDir, section))
-    except OSError:
-      continue
-    for fn in files:
-      if fn.endswith('.spec'):
-        watch_files.append(os.path.join(utils.kDatabaseDir, section, fn))
+    watch_files.update(utils.GetWatchFiles(book))
   
   # Start new server
   from os import environ
@@ -883,5 +857,5 @@ if __name__ == '__main__':
     host = None
   else:
     host = 'music.cambridgeny.net'
-  app.run(host=host, port=60080, use_reloader=True, extra_files=watch_files)
+  app.run(host=host, port=60080, use_reloader=True, extra_files=list(watch_files))
 

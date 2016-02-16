@@ -1171,6 +1171,10 @@ class CBook:
                 spec_file = tune._GetSpecFile()
                 if IsFileNewer(spec_file, fn):
                     return fn, False
+                
+        for sfn in GetSourceFiles():
+            if IsFileNewer(sfn, fn):
+                return fn, False
         
         return fn, not kDebugBookGeneration
         
@@ -1314,6 +1318,39 @@ def ConcatenatePDFFiles(files, target):
     cmd = "PATH=$PATH:%s gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s " % (bindir, target)
     cmd += ' '.join(files)
     os.system(cmd)
+    
+def GetWatchFiles(book):
+    """Get the dependencies for the given book, so we can decided whether
+    we need to rebuild them based on modtimes"""
+
+    watch_files = set()
+    
+    watch_files.add(os.path.join(kDatabaseDir, book.name+'.book'))
+    
+    for page in book.pages:
+        for tune in page.tunes:
+            watch_files.add(tune._GetSpecFile())
+
+    watch_files.update(GetSourceFiles())
+    
+    return watch_files
+
+def GetSourceFiles():
+    
+    dirs = [
+        os.path.dirname(__file__),
+        os.path.join(os.path.dirname(__file__), 'website'), 
+    ]
+
+    source_files = set()
+
+    for dirname in dirs:
+        files = os.listdir(dirname)
+        for fn in files:
+            if fn.endswith('.py'):
+                source_files.add(os.path.join(dirname, fn))
+
+    return source_files
 
 def IsFileNewer(name1, name2):
     """ Returns whether file with name1 is newer than file with name2.  Returns

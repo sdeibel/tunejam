@@ -1,5 +1,6 @@
 * Website Phase One
   ** Option to show only notes or only chords at 100% width
+  ** Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
   ** Collect and add author information as separate line in the .specs or add to titles
   ** Ability to create live-updating session page to sync devices
     ** Add new /session page w/ list of sessions
@@ -31,7 +32,6 @@
   * Easier selection by typed fragments to quickly make sets  
   * Easier way to move to next tune/set when don't fit on screen
   * Remove old unused doc generation code
-  * Embedded audio player on same page?
   * A way to play the chords at a set tempo and/or metronome?
   * A way to play set recordings in order one after the other and/or w/ repeat?
   * A way to play recordings slowed down (record speed in DB so can show
