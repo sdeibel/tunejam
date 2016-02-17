@@ -36,57 +36,46 @@
   * A way to play recordings slowed down (record speed in DB so can show
     approx beats/minute)
 * Find notebooks/bindings/printing options for flip books
-* More tunes for which we have recordings but no card [p=added placeholder listing]
+* More tunes for which we have recordings but no card [p=I've added a placeholder listing on website]
   oak_leaf_reel (by Susie Secco in Bm) p
-  my_own_home (trad scottish in A) p
-  westphalia_waltz (Texas Waltz in G) p
-  x p
   st_patricks_day p
-  cold_frosty_morning p
   rileys_reel p
   murphys_hornpipe (G Major) p
   luna_moth (by Caz, E Minor / A Minor) p
   devils_dance (by Stephan) p
-  trolls_polska (D Minor) p
-  round_the_horn (G Major by Jay Ungar) p
-  morpeth_rant (D Major) p
-  planxty_george_brabazon (G Major) p
-  crossing_to_ireland p
-  bumble_bee p
   flat_foot_henry p
   phillipine_xmas p
-  march_of_the_bullfrogs p
-  bachelor_duck p
-  up_and_down_the_mountain_ash p
-  the_bluejay p
-  remembering_the_warbler p
-  sculleys_reel p (should redo the recording)
-  janvrins_island p (should replace the recording)
+  march_of_the_bullfrogs (by Stephan) p
+  bachelor_duck (by Stephan) p
+  up_and_down_the_mountain_ash (by Stephan) p 
+  the_bluejay (by Stephan) p
+  remembering_the_warbler (by Stephan )p
+  sculleys_reel p (should redo the recording?)
+  janvrins_island p (by Stephan) (should replace the recording)
   braes_of_breadalbane (A Minor) p (aka unknown strathspey)
-  oliver_jack p (aka shetland tune 1)
-  willafjord p (aka shetland tune 2)
-* No recordings or need to re-record those in corrupted file
-  crocus_pocus
-  our_outboard_died
+  valentines_day p
+* No recordings or need to re-record those that were in a corrupted file
+  crocus_pocus (by Stephan)
+  our_outboard_died (by Stephan)
   rose_tree
-  golden_slippers
   roddy_mccorley
   les_fraise_et_les_framboise
   star_of_the_county_down
   flowers_of_the_thorn
   belle_meres_waltz
   canna_get_my_mare_tamed
-  driving_the_turkeys
+  driving_the_turkeys (by Caz)
   new_rigged_ship
   spootiskerry
   metsakukkia
 * Neither card nor recording
   january_thaw (or something like that?)
-  wedding_on_the_hill p
-  the_good_doctor p
-  battenkill_ramble (slip jig by caz) p
-  valentines_day p
+  wedding_on_the_hill (by Bonnie) p
+  the_good_doctor (by Stephan) p
+  battenkill_ramble (slip jig by Caz) p
   st_columba p
   stephans_gypsy_tune (by Stephan)
   the_tidley_idley (by Stephan)
   away_to_me (tentative title; by Stephan)
+  dissatisfaction (by Stephan)
+ 
