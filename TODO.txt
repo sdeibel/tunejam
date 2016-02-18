@@ -1,4 +1,5 @@
 * Website Phase One
+  ** Print variant of tune sets are broken (on the server only)
   ** Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
   ** Collect and add author information as separate line in the .specs or add to titles
   ** Ability to create live-updating session page to sync devices
@@ -45,8 +46,9 @@
   sculleys_reel (should redo the recording?)
   braes_of_breadalbane (A Minor) (aka unknown strathspey)
   valentines_day
-  devils_dance (by Stephan) [or remove from site?]
+  remembering_the_warbler (by Stephan)
   bachelor_duck (by Stephan) [or remove from site?]
+  devils_dance (by Stephan) [or remove from site?]
 * No recordings or need to re-record those that were in a corrupted file
   crocus_pocus (by Stephan)
   our_outboard_died (by Stephan)
@@ -66,17 +68,3 @@
   wedding_on_the_hill (by Bonnie)
   the_good_doctor (by Stephan)
   battenkill_ramble (slip jig by Caz)
-  st_columba [or did we drop this one?]
-* Remove from the site
-  flat_foot_henry
-  phillipine_xmas
-  march_of_the_bullfrogs (by Stephan)
-  up_and_down_the_mountain_ash (by Stephan)
-  the_bluejay (by Stephan)
-  remembering_the_warbler (by Stephan)
-  janvrins_island (by Stephan) (should replace the recording)
-* Not on the site and presumably shouldn't be added
-  stephans_gypsy_tune (by Stephan) [*]
-  the_tidley_idley (by Stephan) [*]
-  away_to_me (tentative title; by Stephan) [*]
-  dissatisfaction (by Stephan) [*]
