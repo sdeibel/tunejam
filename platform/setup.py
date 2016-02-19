@@ -86,9 +86,11 @@ if sys.platform == 'darwin':
   os.system('make install')
 
   # Used to convert notes from EPS to PNG so reportlab can embed them
+  # Note that ImageMagick 6.9.1 works but 6.9.3 has bugs causing corrupt PNGs
+  # conversion of EPS to PNG!
   os.chdir(os.path.join(kBaseDir, 'src', 'platform'))
   os.system('tar xzf ImageMagick.tar.gz')
-  os.chdir(os.path.join(kBaseDir, 'src', 'platform', 'ImageMagick-6.9.3-3'))
+  os.chdir(os.path.join(kBaseDir, 'src', 'platform', 'ImageMagick-6.9.1-0'))
   os.system('./configure --prefix=%s' % kBaseDir)
   os.system('make')
   os.system('make install')
