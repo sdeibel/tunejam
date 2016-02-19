@@ -435,7 +435,7 @@ def tune(tune):
 @app.route('/png/<tune>')
 def png(tune):
   tune = utils.CTune(tune)
-  png_file = tune.MakeNotesPNGFile(density=80)
+  png_file = tune.MakeNotesPNGFile(density=600)
   return send_file(png_file, mimetype='image/png')
 
 def get_all_books():
