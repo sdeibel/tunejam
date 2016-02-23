@@ -253,8 +253,10 @@ $(document).ready(function() {
     $('#print-checkbox').change(function() {
         if($("#save-checkbox").is(":checked") || $("#print-checkbox").is(":checked")) {
             $('#saveitems').css("display", "");
+        $('#include-radios').css("display", "none");
         } else {
             $('#saveitems').css("display", "none");
+        $('#include-radios').css("display", "");
         }
     });
     FilterTunes();
@@ -366,6 +368,9 @@ padding-bottom:0.5em;
   parts.append(CParagraph("On mobile devices, scroll with two fingers, or by dragging an item down, or by entering a text filter to shorten the list.", hclass="clear"))
   
   parts.append(CForm([
+    CInput(type='checkbox', name="print", value="1", checked="", id="print-checkbox"),
+    CText("Generate printable pages (PDF)"), 
+    CDiv([
     CText("Include:"), CNBSP(1), 
     CInput(type='radio', name='pagetype', value='chords', checked=''), 
     CText("Chords"), 
@@ -373,9 +378,8 @@ padding-bottom:0.5em;
     CText("Notes"), 
     CInput(type='radio', name='pagetype', value='both', checked='1'),
     CText("Both"), 
-    CBreak(), 
-    CInput(type='checkbox', name="print", value="1", checked="", id="print-checkbox"),
-    CText("Generate printable pages (PDF)"), 
+    CBreak(),
+    ], id='include-radios'), 
     #CBreak(), 
     #CInput(type='checkbox', name="save", value="1", checked="", id="save-checkbox"),
     #CText("Save this set"),
