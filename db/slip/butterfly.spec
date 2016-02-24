@@ -1,4 +1,4 @@
-T:The Butterfly
+T:The Butterfly (Trad. and by Tommy Potts)
 K:Em
 L:1/8
 M:9/8

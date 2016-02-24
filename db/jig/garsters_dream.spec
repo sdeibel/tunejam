@@ -1,4 +1,4 @@
-T:Garster's Dream
+T:Garster's Dream (a trowie tune)
 K:G
 L:1/8
 M:6/8

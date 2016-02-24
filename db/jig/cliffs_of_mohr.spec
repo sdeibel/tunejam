@@ -1,4 +1,4 @@
-T:Cliffs of Mohr
+T:Cliffs of Mohr (by Luke Brady)
 K:Am
 L:1/8
 M:6/8

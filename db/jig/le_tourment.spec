@@ -1,4 +1,4 @@
-T:Le Tourment
+T:Le Tourment (by John Paul Loyer)
 K:G
 L:1/8
 M:6/8

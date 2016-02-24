@@ -1,4 +1,4 @@
-T:Ballydesmond Polka II (aka Gneerequilla Polka)
+T:Ballydesmond Polka II
 K:Am
 L:1/8
 M:2/4

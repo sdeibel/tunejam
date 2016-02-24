@@ -1,4 +1,4 @@
-T:Scarce O Tatties
+T:Scarce O Tatties (by Norman Maclean)
 K:Am
 L:1/8
 M:6/8

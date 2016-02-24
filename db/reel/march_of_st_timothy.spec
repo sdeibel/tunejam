@@ -1,4 +1,4 @@
-T:March of Saint Timothy
+T:March of Saint Timothy (by Judi Morningstar)
 K:G
 L:1/2
 M:4/4

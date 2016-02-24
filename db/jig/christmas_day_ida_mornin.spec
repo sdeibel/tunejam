@@ -1,4 +1,4 @@
-T:Christmas Day Ida Mornin'
+T:Christmas Day Ida Mornin' (by Fredamann Stickle)
 K:D/Em
 L:1/8
 M:6/8

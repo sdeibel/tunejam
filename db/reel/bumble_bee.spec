@@ -1,4 +1,4 @@
-T:The Bumblebee
+T:The Bumblebee (by Stephan Deibel)
 K:G
 L:1/8
 M:2/4
