@@ -11,4 +11,4 @@ ef| g2ed edB2| BABG E2DE|
 |  Em    | G7C   | GEm   | AmD7  |
    Em    | G7C   | G/DD  | GCG   |
    Em    | G7C   | GEm   | AmD7  |
-   CD7/A | G/BEm | Am7D7 | GCG   |
+   CA    | G/BEm | Am7D7 | G     |
