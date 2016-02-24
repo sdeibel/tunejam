@@ -1,4 +1,4 @@
-T:Planxty Fanny Power
+T:Planxty Fanny Power (by O’Carolan)
 K:G
 L:1/8
 M:3/4

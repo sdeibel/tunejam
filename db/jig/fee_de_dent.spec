@@ -1,4 +1,4 @@
-T:Fee de Dent
+T:Fee de Dent (by André Brunet)
 K:G
 L:1/8
 M:6/8

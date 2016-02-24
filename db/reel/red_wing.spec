@@ -1,4 +1,4 @@
-T:Red Wing
+T:Red Wing (by Kerry Mills)
 K:G
 L:1/8
 M:2/4

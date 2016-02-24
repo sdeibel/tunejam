@@ -1,4 +1,4 @@
-T:Fair Jenny
+T:Fair Jenny (by Peter Barnes)
 K:D/G
 L:1/8
 M:6/8

@@ -1,4 +1,4 @@
-T:Planxty George Brabazon (by O'Carrolan)
+T:Planxty George Brabazon (by O'Carolan)
 K:G
 L:1/8
 M:4/4

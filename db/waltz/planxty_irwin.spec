@@ -1,4 +1,4 @@
-T:Planxty Irwin
+T:Planxty Irwin (by O’Carolan)
 K:D
 L:1/4
 M:3/4

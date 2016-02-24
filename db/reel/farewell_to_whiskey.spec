@@ -1,4 +1,4 @@
-T:Farewell to Whiskey
+T:Farewell to Whiskey (by Neil Gow)
 K:G
 L:1/8
 M:4/4

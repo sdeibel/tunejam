@@ -1,4 +1,4 @@
-T:The Old Man and the Old Woman
+T:The Old Man and the Old Woman (by Mary Travis)
 K:G
 L:1/16
 M:2/4
