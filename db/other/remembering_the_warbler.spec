@@ -1,4 +1,4 @@
-T:Remembering the Warbler (by Stephan Deibel)
+T:Remembering the Warbler (by S. Deibel)
 K:D
 L:1/4
 M:4/4
