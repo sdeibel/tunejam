@@ -608,7 +608,7 @@ list-style:none;
 h1.tune-title {
 clear:both;
 white-space:nowrap;
-font-size:3.5vw;
+font-size:3.3vw;
 }
 h2 {
 padding-top:10px;
