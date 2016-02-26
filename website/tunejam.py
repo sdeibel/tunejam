@@ -608,7 +608,17 @@ list-style:none;
 h1.tune-title {
 clear:both;
 white-space:nowrap;
-font-size:3.3vw;
+font-size:3.5vw;
+}
+h1.long-tune-title {
+clear:both;
+white-space:nowrap;
+font-size:2.6vw;
+}
+h1.extra-long-tune-title {
+clear:both;
+white-space:nowrap;
+font-size:2.5vw;
 }
 h2 {
 padding-top:10px;
@@ -796,12 +806,19 @@ def CreateTuneHTML(name, pagetype='both'):
   elif pagetype == 'chords':
     notes = ''
     chords = ChordsToHTML(obj.chords, tclass='chords-only')    
-  
+
+  if len(title) > 50:
+    tclass = 'extra-long-tune-title'
+  elif len(title) > 35:
+    tclass = 'long-tune-title'
+  else:
+    tclass = 'tune-title'
+    
   tune = CDiv([
     CH([
       title + ' - ' + obj.type.capitalize() + ' - ' + key_str,
       play, 
-    ], 1, hclass='tune-title'), 
+    ], 1, hclass=tclass), 
     notes,
     chords,
   ], hclass='tune')
