@@ -44,13 +44,11 @@
   sculleys_reel (should redo the recording?)
   braes_of_breadalbane (A Minor) (aka unknown strathspey)
   valentines_day
-  remembering_the_warbler (by Stephan)
   bachelor_duck (by Stephan)
   devils_dance (by Stephan)
   fishers_hornpipe (D Major)
   evenings_and_weekends (eventually replace this recording)
   morrisons_jig
-  whiskey_before_breakfast
   wedding_on_the_hill (by Bonnie)
 * No recordings or need to re-record those that were in a corrupted file
   crocus_pocus (by Stephan)
