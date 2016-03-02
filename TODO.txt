@@ -35,7 +35,7 @@
   * A way to play recordings slowed down (record speed in DB so can show
     approx beats/minute)
 * Find notebooks/bindings/printing options for flip books
-* More tunes for which we have recordings but no card
+* Missing notes and/or chords
   oak_leaf_reel (by Susie Secco in Bm)
   st_patricks_day
   rileys_reel
@@ -50,11 +50,12 @@
   evenings_and_weekends (eventually replace this recording)
   morrisons_jig
   wedding_on_the_hill (by Bonnie)
-* No recordings or need to re-record those that were in a corrupted file
+* Missing recordings
   star_of_the_county_down
   belle_meres_waltz
   metsakukkia
   the_good_doctor
-* Neither card nor recording
+* Missing everything
   january_thaw (by Bliss)
+  january_waltz
   battenkill_ramble (slip jig by Caz)
