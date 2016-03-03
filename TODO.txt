@@ -1,6 +1,5 @@
 * Website Phase One
   ** Ability to create live-updating session page to sync devices
-    ** When delete session, indicate it's ended on /session page
     ** Improve reload so it's only done if there is a change in current set (use Javascript check)
     ** Add captcha for creating + entering a session
     * A way to sort sets in the session
