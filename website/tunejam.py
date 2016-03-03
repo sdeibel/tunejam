@@ -745,7 +745,7 @@ display:none;
   return Response(css, mimetype='text/css')
 
 @app.route('/sessions')
-@app.route('/sessions/<delete>')
+@app.route('/sessions/delete/<delete>')
 def sessions(delete=None):
   
   if delete:
@@ -762,8 +762,6 @@ def sessions(delete=None):
     for session in sessions:
       parts.extend([
         CText(session.title, href='/session/%s' % session.name), 
-        CNBSP(), 
-        CText('X', href='/sessions/%s' % session.name),
         CBreak(), 
       ])
   else:
@@ -774,7 +772,7 @@ def sessions(delete=None):
   parts.append(CForm([
     CText("Create a New Session:", bold=1),
     CBreak(1),
-    CText("Title:"), CInput(type='TEXT', name='title', id='session-title'), 
+    CText("Title:"), CInput(type='TEXT', name='title', id='session-title', size=100, maxlength=200), 
     CBreak(2),
     CInput(type='SUBMIT', value='Create'), 
   ], action='/session', method='POST', id="session-form"))
@@ -821,9 +819,22 @@ def session(sid=None, add=None, delete=None, curr=None):
     session.WriteSession()
     return redirect('/session/%s' % sid)
     
+  if session.title:
+    title = session.title
+  else:
+    title = "Deleted"
+    
   parts = []
   parts.append(CH("Session: %s" % session.title, 1))
   
+  if not session.title:
+    parts.extend([
+      CText("This session has been deleted"),
+      CBreak(2), 
+      CText('Return to session list', href='/sessions'),
+    ])
+    return PageWrapper(parts, 5)
+    
   if not session.current_set:
     c = 'None'
   else:
@@ -877,6 +888,13 @@ def session(sid=None, add=None, delete=None, curr=None):
     CInput(type="SUBMIT", value="Add a Set"), 
   ], action='/sets/sid/%s' % sid, method='GET', id="add-set-form"))
   
+  parts.extend([
+    CBreak(2), 
+    CText('Return to session list', href='/sessions'),
+    CBreak(), 
+    CText('Delete this session', href='/sessions/delete/%s' % session.name),
+  ])
+  
   return PageWrapper(parts, 5)
 
 @app.route('/watch/<sid>')
@@ -888,12 +906,19 @@ def watch(sid, type=None):
     
   session = utils.CSession(sid)
   session.ReadSession()
-  
+
+  if session.title:
+    title = session.title
+  else:
+    title = "Deleted"
+    
   parts = []
-  parts.append(CH("Session: %s" % session.title, 1))
+  parts.append(CH("Session: %s" % title, 1))
   parts.append(CBreak())
   
-  if not session.current_set:
+  if not session.title:
+    parts.append(CText("This session has been deleted", italic=1))
+  elif not session.current_set:
     parts.append(CText("Please wait for a current set to be established", italic=1))
   else:
     tunes = session.current_set.split('&')
@@ -906,8 +931,12 @@ def watch(sid, type=None):
     
     parts.extend(CreateTuneSetHTML(tunes, type))
   
-  parts.append(CBreak(2))
-  parts.append(CText("Return to Set List", href="/session/%s" % sid))
+  if not session.title:
+    parts.append(CBreak(2))
+    parts.append(CText("Return to session list", href="/sessions"))
+  else:
+    parts.append(CBreak(2))
+    parts.append(CText("Return to set list", href="/session/%s" % sid))
   parts.append(CBreak())
   
   return PageWrapper(parts, 5)
