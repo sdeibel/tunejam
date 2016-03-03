@@ -1,6 +1,8 @@
 * Website Phase One
   ** Ability to create live-updating session page to sync devices
     ** Improve reload so it's only done if there is a change in current set (use Javascript check)
+    ** Archive deleted sessions and allow undeleting
+    * A way to mark a session as permanent to prevent deletion except by admin
     * A way to sort sets in the session
     * A way to clone a session
   ** Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
