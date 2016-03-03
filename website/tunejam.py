@@ -13,6 +13,8 @@ import utils
 
 from flask import Flask, Response, request, send_file, make_response, redirect
 app = Flask(__name__)
+app.secret_key = 'TunejamIsAtHubbardHallEachTuesday'
+app.config['SESSION_TYPE'] = 'filesystem'
 
 @app.route('/')
 def home():
@@ -748,6 +750,10 @@ display:none;
 @app.route('/sessions/delete/<delete>')
 def sessions(delete=None):
   
+  parts = CheckPassword('/sessions')
+  if parts:
+    return PageWrapper(parts)
+   
   if delete:
     utils.DeleteSession(delete)
     return redirect('/sessions')
@@ -786,6 +792,10 @@ def sessions(delete=None):
 @app.route('/session/<sid>/current/<curr>')
 def session(sid=None, add=None, delete=None, curr=None):
 
+  parts = CheckPassword('/sessions')
+  if parts:
+    return PageWrapper(parts)
+  
   def get_set_title(s):
     titles = []
     for tid in s.split('&'):
@@ -901,6 +911,10 @@ def session(sid=None, add=None, delete=None, curr=None):
 @app.route('/watch/<type>/<sid>')
 def watch(sid, type=None):
   
+  parts = CheckPassword('/sessions')
+  if parts:
+    return PageWrapper(parts)
+  
   if type is None:
     type = 'both'
     
@@ -940,6 +954,46 @@ def watch(sid, type=None):
   parts.append(CBreak())
   
   return PageWrapper(parts, 5)
+
+@app.route('/password', methods=['POST'])
+def password():
+
+  from flask import session
+  
+  pw = request.form['pw']
+  target = request.form['target']
+  
+  if pw != 'tunejam':
+    parts = CheckPassword(target)
+    return PageWrapper(parts)
+  
+  session['password'] = pw
+  
+  return redirect(target)
+
+def CheckPassword(target):
+  
+  from flask import session
+  pw = session.get('password')
+  if pw == 'tunejam':
+    return []
+  
+  parts = []
+
+  parts.extend([
+    CH("Please Enter Password", 1), 
+    CText("You need to prove you're human to use this part of the site.  The password is 'tunejam' (without the quotes)."),
+    CBreak(2),
+    CForm([
+      CText("Password:"),
+      CInput(type="HIDDEN", name='target', value=target), 
+      CInput(type='TEXT', name='pw', size=30, maxlength=60), 
+      CBreak(2),
+      CInput(type='SUBMIT', value='Submit'), 
+    ], action='/password', method='POST')
+  ])
+  
+  return parts
 
 def PageWrapper(body, refresh=None):
   
