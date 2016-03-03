@@ -11,7 +11,7 @@ else:
   
 import utils
 
-from flask import Flask, Response, request, send_file, make_response
+from flask import Flask, Response, request, send_file, make_response, redirect
 app = Flask(__name__)
 
 @app.route('/')
@@ -23,6 +23,7 @@ def home():
   parts.append(CParagraph([CText("Tune Jam - Music Index", href='/music'), CBreak()]))
   parts.append(CParagraph([CText("Tune Jam - Create Set Sheets", href='/sets'), CBreak()]))
   parts.append(CParagraph([CText("Tune Jam - Printing Tune Books", href='/print'), CBreak()]))
+  parts.append(CParagraph([CText("Tune Jam - Sessions", href='/sessions'), CBreak()]))
       
   return PageWrapper(parts)
 
@@ -62,7 +63,8 @@ def music():
 @app.route('/sets', methods=['GET', 'POST'])
 @app.route('/sets/')
 @app.route('/sets/<spec>')
-def sets(spec=None):
+@app.route('/sets/sid/<sid>')
+def sets(spec=None, sid=None):
   
   error = None
   preload_tunes = []
@@ -129,7 +131,7 @@ def sets(spec=None):
         preload_tunes = tunes
         
       else:
-        return CreateTuneSetHTML(tunes, pagetype)
+        return PageWrapper(CreateTuneSetHTML(tunes, pagetype))
 
   filter = request.form.get('filter')
   if filter == 'all':
@@ -150,7 +152,7 @@ $(function() {
     connectWith: ".connectedSortable"
   }).disableSelection();
 });
-function SubmitTunes() {
+function SubmitTunes(sid) {
   var tunes = $( "#selectedtunes" ).sortable( "serialize", {key:"tune"});
   tunes = tunes.replace(/\+/g, "_");
   tunes = tunes.replace(/tune=/g, "");
@@ -174,7 +176,11 @@ function SubmitTunes() {
   else if ($("input:radio[name=pagetype]:checked").val() == "chords") {
     tunes = tunes + "&pagetype=chords";
   }
-  window.location.href= "/sets/" + tunes;
+  if (sid == "") {
+    window.location.href= "/sets/" + tunes;
+  } else {
+    window.location.href= "/session/" + sid + "/add/" + tunes;
+  }
 }
 function FilterTunes() {
   var filter = $("#filterselect").val();
@@ -367,36 +373,42 @@ padding-bottom:0.5em;
   parts.append(CTable(CTR([tunes_list, selected_list])))
   parts.append(CParagraph("On mobile devices, scroll with two fingers, or by dragging an item down, or by entering a text filter to shorten the list.", hclass="clear"))
   
-  parts.append(CForm([
-    CInput(type='checkbox', name="print", value="1", checked="", id="print-checkbox"),
-    CText("Generate printable pages (PDF)"), 
-    CDiv([
-    CText("Include:"), CNBSP(1), 
-    CInput(type='radio', name='pagetype', value='chords', checked=''), 
-    CText("Chords"), 
-    CInput(type='radio', name='pagetype', value='notes', checked=''),
-    CText("Notes"), 
-    CInput(type='radio', name='pagetype', value='both', checked='1'),
-    CText("Both"), 
-    CBreak(),
-    ], id='include-radios'), 
-    #CBreak(), 
-    #CInput(type='checkbox', name="save", value="1", checked="", id="save-checkbox"),
-    #CText("Save this set"),
-    CTable([
-      [
-        CTD(CText("Title:", bold=1), style="width:8em; padding-top:5px;"), 
-        CInput(type='TEXT', name='title', id='title', maxlength="65", style="width:40em"),
-      ],
-      [
-        CTD(CText("Subtitle:", bold=1), style="width:8em;"), 
-        CInput(type='TEXT', name='subtitle', id='subtitle', maxlength="65", style="width:40em"),
-      ], 
-    ], id='saveitems'), 
-    CBreak(2), 
-    CInput(type='button', value="Submit", onclick='SubmitTunes();'),
-    CInput(type='button', value="Clear", onclick='ClearTunes();'), 
-  ], id='tunesform'))
+  if sid is None:
+    parts.append(CForm([
+      CInput(type='checkbox', name="print", value="1", checked="", id="print-checkbox"),
+      CText("Generate printable pages (PDF)"), 
+      CDiv([
+      CText("Include:"), CNBSP(1), 
+      CInput(type='radio', name='pagetype', value='chords', checked=''), 
+      CText("Chords"), 
+      CInput(type='radio', name='pagetype', value='notes', checked=''),
+      CText("Notes"), 
+      CInput(type='radio', name='pagetype', value='both', checked='1'),
+      CText("Both"), 
+      CBreak(),
+      ], id='include-radios'), 
+      #CBreak(), 
+      #CInput(type='checkbox', name="save", value="1", checked="", id="save-checkbox"),
+      #CText("Save this set"),
+      CTable([
+        [
+          CTD(CText("Title:", bold=1), style="width:8em; padding-top:5px;"), 
+          CInput(type='TEXT', name='title', id='title', maxlength="65", style="width:40em"),
+        ],
+        [
+          CTD(CText("Subtitle:", bold=1), style="width:8em;"), 
+          CInput(type='TEXT', name='subtitle', id='subtitle', maxlength="65", style="width:40em"),
+        ], 
+      ], id='saveitems'), 
+      CBreak(2), 
+      CInput(type='button', value="Submit", onclick="SubmitTunes('');"),
+      CInput(type='button', value="Clear", onclick='ClearTunes();'), 
+    ], id='tunesform'))
+  else:
+    parts.append(CForm([
+      CInput(type='button', value="Submit", onclick="SubmitTunes('%s');" % sid),
+      CInput(type='button', value="Clear", onclick='ClearTunes();'), 
+    ], id='sessionsetform'))    
 
   saved = []
   for fn in os.listdir(utils.kSaveLoc):
@@ -732,6 +744,174 @@ display:none;
     """
   return Response(css, mimetype='text/css')
 
+@app.route('/sessions')
+@app.route('/sessions/<delete>')
+def sessions(delete=None):
+  
+  if delete:
+    utils.DeleteSession(delete)
+    return redirect('/sessions')
+    
+  parts = []
+  parts.append(CH("Sessions", 1))
+
+  sessions = utils.ReadSessions()
+  sessions.sort(key=lambda s:s.title)
+
+  if sessions:
+    for session in sessions:
+      parts.extend([
+        CText(session.title, href='/session/%s' % session.name), 
+        CNBSP(), 
+        CText('X', href='/sessions/%s' % session.name),
+        CBreak(), 
+      ])
+  else:
+    parts.append(CParagraph(CText("There are no active sessions.", italic=1)))
+    
+  parts.append(CBreak())
+  
+  parts.append(CForm([
+    CText("Create a New Session:", bold=1),
+    CBreak(1),
+    CText("Title:"), CInput(type='TEXT', name='title', id='session-title'), 
+    CBreak(2),
+    CInput(type='SUBMIT', value='Create'), 
+  ], action='/session', method='POST', id="session-form"))
+  
+  return PageWrapper(parts)
+
+@app.route('/session', methods=['POST'])
+@app.route('/session/<sid>')
+@app.route('/session/<sid>/add/<add>')
+@app.route('/session/<sid>/delete/<delete>')
+@app.route('/session/<sid>/current/<curr>')
+def session(sid=None, add=None, delete=None, curr=None):
+
+  def get_set_title(s):
+    titles = []
+    for tid in s.split('&'):
+      tune = utils.CTune(tid)
+      tune.ReadDatabase()
+      titles.append(tune.title)
+    titles = ' - '.join(titles)
+    return titles
+  
+  if request.environ['REQUEST_METHOD'] == 'POST':
+    title = request.form['title']
+    sid = utils.CreateSession(title)
+    
+  session = utils.CSession(sid)
+  session.ReadSession()
+  
+  if add is not None:
+    session.sets.append(add)
+    session.WriteSession()
+    return redirect('/session/%s' % sid)
+    
+  if delete is not None:
+    session.sets.remove(delete)
+    if session.current_set == delete:
+      session.current_set = ''
+    session.WriteSession()
+    return redirect('/session/%s' % sid)
+    
+  if curr is not None:
+    session.current_set = curr
+    session.WriteSession()
+    return redirect('/session/%s' % sid)
+    
+  parts = []
+  parts.append(CH("Session: %s" % session.title, 1))
+  
+  if not session.current_set:
+    c = 'None'
+  else:
+    c = get_set_title(session.current_set)
+
+  parts.extend([
+    CText("Watch this Session:", bold=1),
+    CNBSP(),
+    CText("Notes", href='/watch/notes/%s' % sid), 
+    CNBSP(), 
+    CText("Chords", href='/watch/chords/%s' % sid), 
+    CNBSP(), 
+    CText("Both", href='/watch/%s' % sid),
+    CBreak(2), 
+    CText("Current Set: ", bold=1), 
+    CText(c),
+    CBreak(2), 
+  ])
+  
+  parts.append(CH("Available Sets:", 2))
+  if not session.sets:
+    parts.append(CText("No sets have been defined for this session", italic=1))
+  else:
+    for s in session.sets:
+      titles = get_set_title(s)
+      
+      url = '/sets/%s' % s
+      if s == session.current_set:
+        parts.append(CImage(src='/image/check-mark.png', style="height:1.0em"))
+      else:
+        parts.append(CImage(src='/image/red-square.png', href="/session/%s/current/%s" % (sid, s),
+                            style="height:1.0em"))
+        
+      parts.extend([
+        CNBSP(),
+        CText('X', bold=1, href='/session/%s/delete/%s' % (sid, s)),
+        CNBSP(2), 
+        CText("Notes", href=url+'&pagetype=notes'), 
+        CNBSP(), 
+        CText("Chords", href=url+'&pagetype=chords'), 
+        CNBSP(), 
+        CText("Both", href=url),
+        CNBSP(2), 
+        CText(titles), 
+      ])
+      
+      parts.append(CBreak())
+    
+  parts.append(CBreak(2))
+  parts.append(CForm([
+    CInput(type="SUBMIT", value="Add a Set"), 
+  ], action='/sets/sid/%s' % sid, method='GET', id="add-set-form"))
+  
+  return PageWrapper(parts, 5)
+
+@app.route('/watch/<sid>')
+@app.route('/watch/<type>/<sid>')
+def watch(sid, type=None):
+  
+  if type is None:
+    type = 'both'
+    
+  session = utils.CSession(sid)
+  session.ReadSession()
+  
+  parts = []
+  parts.append(CH("Session: %s" % session.title, 1))
+  parts.append(CBreak())
+  
+  if not session.current_set:
+    parts.append(CText("Please wait for a current set to be established", italic=1))
+  else:
+    tunes = session.current_set.split('&')
+    
+    import hashlib
+    md5sum = hashlib.md5()
+    for tune in tunes:
+      md5sum.update(tune)
+    name = 'C-' + md5sum.hexdigest()
+    
+    parts.extend(CreateTuneSetHTML(tunes, type))
+  
+  parts.append(CBreak(2))
+  parts.append(CText("Return to Set List", href="/session/%s" % sid))
+  parts.append(CBreak())
+  
+  return PageWrapper(parts, 5)
+
 def PageWrapper(body, refresh=None):
   
   # Build html head
@@ -772,7 +952,7 @@ margin-top:0px;
     parts.extend(CreateTuneHTML(tune, pagetype))
   parts.append(CDiv(hclass='tune-break'))
   
-  return PageWrapper(parts)
+  return parts
 
 def CreateTuneSetPDF(name, title, subtitle, tunes):
   book = utils.CSetBook(name, title, subtitle, tunes)

@@ -33,6 +33,7 @@ kImageDir = os.path.join(os.path.dirname(__file__), 'images')
 kRecordingsDir = os.path.join(os.path.dirname(__file__), 'recordings')
 kCacheLoc = os.path.join(os.path.dirname(__file__), 'website', 'cache')
 kSaveLoc = os.path.join(os.path.dirname(__file__), 'website', 'saved-sets')
+kSessionsLoc = os.path.join(os.path.dirname(__file__), 'website', 'sessions')
 kJSDir = os.path.join(os.path.dirname(__file__), 'website', 'js')
 
 from reportlab import rl_config
@@ -1209,6 +1210,78 @@ class CSetBook(CBook):
         if page:
             append_page(page, setnum)
 
+class CSession:
+    
+    def __init__(self, name):
+        self.name = name
+        self.title = ''
+        self.sets = []
+        self.current_set = ''
+        
+    def ReadSession(self):
+        fn = os.path.join(kSessionsLoc, self.name+'.ses')
+        if not os.path.exists(fn):
+            return
+        f = open(fn, 'r')
+        lines = f.read()
+        f.close()
+        lines = lines.split('\n')
+        self.title = lines[0]
+        self.current_set = lines[1]
+        self.sets = [l.strip() for l in lines[2:]]
+        
+    def WriteSession(self):
+        fn = os.path.join(kSessionsLoc, self.name+'.ses')
+        lines = [
+            self.title,
+            self.current_set
+        ] + self.sets
+        f = open(fn, 'w')
+        f.write('\n'.join(lines))
+        f.close()
+
+def ReadSessions():
+    
+    files = os.listdir(kSessionsLoc)
+
+    sessions = []
+    for fn in files:
+        if fn.endswith('.ses'):
+            session = CSession(fn[:-len('.ses')])
+            session.ReadSession()
+            sessions.append(session)
+            
+    return sessions
+
+def CreateSession(title):
+    
+    parts = title.split()
+    first = [p[0] for p in parts]
+    name = ''.join(first)
+    session_file = os.path.join(kSessionsLoc, name+'.ses')
+    i = 0
+    while os.path.exists(session_file):
+        i += 1
+        session_file = os.path.join(kSessionsLoc, name + ('-%i' % i) +'.ses')
+    if i:
+        name = name + '-%i' % i
+        
+    name = name.lower()
+    
+    session = CSession(name)
+    session.title = title
+    session.WriteSession()
+    
+    return name
+        
+def DeleteSession(sid):
+    
+    fn = os.path.join(kSessionsLoc, sid+'.ses')
+    if not os.path.exists(fn):
+        return
+    
+    os.unlink(fn)
+    
 def GetTuneIndex(include_incomplete):
     idx = {}
 
