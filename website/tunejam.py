@@ -868,8 +868,10 @@ def session(sid=None, add=None, delete=None, curr=None):
       CBreak(2), 
       CText('Return to session list', href='/sessions'),
     ])
-    return PageWrapper(parts, 5)
+    return PageWrapper(parts)
     
+  parts.extend(SessionReloader(sid))
+  
   if not session.current_set:
     c = 'None'
   else:
@@ -930,7 +932,7 @@ def session(sid=None, add=None, delete=None, curr=None):
     CText('Delete this session', href='/sessions/delete/%s' % session.name),
   ])
   
-  return PageWrapper(parts, 5)
+  return PageWrapper(parts)
 
 @app.route('/watch/<sid>')
 @app.route('/watch/<type>/<sid>')
@@ -952,6 +954,9 @@ def watch(sid, type=None):
     title = "Deleted"
     
   parts = []
+  
+  parts.extend(SessionReloader(sid))
+  
   parts.append(CH("Watching Session: %s" % title, 2))
   parts.append(CBreak())
   
@@ -978,7 +983,7 @@ def watch(sid, type=None):
     parts.append(CText("Return to set list", href="/session/%s" % sid))
   parts.append(CBreak())
   
-  return PageWrapper(parts, 5)
+  return PageWrapper(parts)
 
 @app.route('/password', methods=['POST'])
 def password():
@@ -995,6 +1000,12 @@ def password():
   session['password'] = pw
   
   return redirect(target)
+
+@app.route('/ajax/session/<sid>/current')
+def ajax_session_current(sid):
+  s = utils.CSession(sid)
+  s.ReadSession()
+  return s.current_set + '&' + str(len(s.sets))
 
 def CheckPassword(target):
   
@@ -1016,6 +1027,39 @@ def CheckPassword(target):
       CBreak(2),
       CInput(type='SUBMIT', value='Submit'), 
     ], action='/password', method='POST')
+  ])
+  
+  return parts
+
+def SessionReloader(sid):
+
+  s = utils.CSession(sid)
+  s.ReadSession()
+  
+  parts = []
+  
+  parts.append("""<script src="//code.jquery.com/jquery-1.12.0.min.js"></script>
+<script src="//code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
+""")
+  
+  parts.extend([
+    """<script>
+function CheckSession() {
+  $.ajax({
+    url: "/ajax/session/%s/current",
+    cache: false,
+    success: function(txt){
+      if (txt.trim() != "%s") {
+        location.reload();
+      }
+    }
+  });
+}
+$(document).ready(function() {
+   setInterval(CheckSession, 5000);
+});
+</script>""" % (sid, s.current_set + '&' + str(len(s.sets)))
+             
   ])
   
   return parts
