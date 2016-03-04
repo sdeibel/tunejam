@@ -1,4 +1,5 @@
 #!/home/maint/music/bin/python
+#coding:utf-8
 import sys, os
 import time
 from html import *
@@ -19,13 +20,33 @@ app.config['SESSION_TYPE'] = 'filesystem'
 @app.route('/')
 def home():
   parts = []
-  parts.append(CH("Hubbard Hall Tune Jam", 1))
-  parts.append(CParagraph("Welcome!"))
-  parts.append(CParagraph("This is under development.  Here are the existing pages you can try:"))
-  parts.append(CParagraph([CText("Tune Jam - Music Index", href='/music'), CBreak()]))
-  parts.append(CParagraph([CText("Tune Jam - Create Set Sheets", href='/sets'), CBreak()]))
-  parts.append(CParagraph([CText("Tune Jam - Printing Tune Books", href='/print'), CBreak()]))
-  parts.append(CParagraph([CText("Tune Jam - Sessions", href='/sessions'), CBreak()]))
+  
+  parts.extend([
+    CH("Hubbard Hall Tune Jam", 1),
+    CParagraph("Welcome!"),
+    CParagraph("This website hosts a database of traditional and modern tunes "
+               "played by the Hubbard Hall Tune Jam Band, an adhoc collection of musicians "
+               "from the Cambridge NY area."),
+    CParagraph("The focus of the site "
+               "is to facilitate learning tunes by ear, and playing them together "
+               "at contra dances and for sessions.  For each tune, we have collected a short recording, "
+               "a chord chart, and written melody reminders containing the first few "
+               "measures of each part."),
+    CParagraph("There are currently a total of %i tunes on the site." % TuneCount()), 
+    CH("The following resources are available:", 2),
+    CList([
+      CItem([CText("Tune Index", href='/music'), CNBSP(),
+             CText(" -- A list of all the available tunes, organized by type.")]), 
+      CItem([CText("Set Sheets", href='/sets'), CNBSP(),
+             CText(" -- Create your own sets of tunes, for screen display or printing.")]), 
+      CItem([CText("Printable Books", href='/print'), CNBSP(),
+             CText(" -- Premade books in several formats, with index.")]), 
+      CItem([CText("Sessions", href='/sessions'), CNBSP(),
+             CText(" -- Sharable set lists that auto-update on each participating device.")]),
+    ]), 
+    CParagraph("This site was designed and built by Stephan Deibel, with content by "
+               "contributed by Bliss and Robbie McIntosh.")
+  ])
       
   return PageWrapper(parts)
 
@@ -33,8 +54,9 @@ def home():
 def music():
   parts = []
   parts.append(CH("Tune Index", 1))
-  parts.append(CParagraph("This lists all the tunes in the database so far.  If there is a recording, "
-                          "you can click on the speaker icon to hear it."))
+  parts.append(CParagraph("This lists all the %i tunes in the database so far.  If there is a recording, " % TuneCount() + 
+                          "you can click on the speaker icon to hear it.  Click on the tune name "
+                          "to view the chords and melody reminders."))
   tunes = utils.GetTuneIndex(True)
 
   sections = tunes.keys()
@@ -44,6 +66,9 @@ def music():
     sections.append('incomplete')
   for section in sections:
     parts.append(CH(utils.kSectionTitles[section], 2))
+    if section == 'incomplete':
+      parts.append(CParagraph("The tunes in this section do not yet have completed chords and/or "
+                              "melody reminders."))
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
@@ -323,9 +348,8 @@ padding-bottom:0.5em;
     parts.append(CParagraph([CText("Error: ", bold=1), error], style="background-color:#FFFF00; padding-left:5px;"))
   parts.append(CParagraph("Drag one or more songs from the list "
                           "on the left to the list on the right, or press the 'Random 3' "
-                          "button to select three random tuned.  Then "
-                          "press Submit to generate the set.  Use "
-                          "Clear at the bottom to start a new set:"))
+                          "button to select three random tunes.  Then "
+                          "press Submit to generate the set:"))
   
   
   section_options = [
@@ -390,7 +414,10 @@ padding-bottom:0.5em;
   tunes_list = CDiv(CList(all_tunes, id='alltunes', hclass='connectedSortable'), hclass='scroll')
   selected_list = CDiv(CList([selected_tunes], id='selectedtunes', hclass='connectedSortable'), hclass='scroll')
   
-  parts.append(CTable(CTR([tunes_list, selected_list])))
+  parts.append(CTable([
+    CTR([CText("Available:"), CText("Selected:")]), 
+    CTR([tunes_list, selected_list])
+  ]))
   parts.append(CParagraph("On mobile devices, scroll with two fingers, or by dragging an item down, or by entering a text filter to shorten the list.", hclass="clear"))
   
   if sid is None:
@@ -400,9 +427,9 @@ padding-bottom:0.5em;
       CDiv([
       CText("Include:"), CNBSP(1), 
       CInput(type='radio', name='pagetype', value='chords', checked=''), 
-      CText("Chords"), 
+      CText("Chords"), CNBSP(), 
       CInput(type='radio', name='pagetype', value='notes', checked=''),
-      CText("Notes"), 
+      CText("Notes"), CNBSP(), 
       CInput(type='radio', name='pagetype', value='both', checked='1'),
       CText("Both"), 
       CBreak(),
@@ -412,22 +439,22 @@ padding-bottom:0.5em;
       #CText("Save this set"),
       CTable([
         [
-          CTD(CText("Title:", bold=1), style="width:8em; padding-top:5px;"), 
+          CTD(CText("Title:", bold=1), style="width:5em; padding-top:5px;"), 
           CInput(type='TEXT', name='title', id='title', maxlength="65", style="width:40em"),
         ],
         [
-          CTD(CText("Subtitle:", bold=1), style="width:8em;"), 
+          CTD(CText("Subtitle:", bold=1), style="width:5em;"), 
           CInput(type='TEXT', name='subtitle', id='subtitle', maxlength="65", style="width:40em"),
         ], 
       ], id='saveitems'), 
-      CBreak(2), 
-      CInput(type='button', value="Submit", onclick="SubmitTunes('');"),
-      CInput(type='button', value="Clear", onclick='ClearTunes();'), 
+      CBreak(), 
+      CInput(type='button', value="Create Set", onclick="SubmitTunes('');"),
+      CInput(type='button', value="Clear Selected", onclick='ClearTunes();'), 
     ], id='tunesform'))
   else:
     parts.append(CForm([
-      CInput(type='button', value="Submit", onclick="SubmitTunes('%s');" % sid),
-      CInput(type='button', value="Clear", onclick='ClearTunes();'), 
+      CInput(type='button', value="Add Set", onclick="SubmitTunes('%s');" % sid),
+      CInput(type='button', value="Clear Selected", onclick='ClearTunes();'), 
     ], id='sessionsetform'))    
 
   saved = []
@@ -487,7 +514,8 @@ def get_all_books():
   retval = [
     allbook.CAllBook(),
     allbook.CAllBookBySection(),
-    allbook.CAllBookByTime(), 
+    allbook.CAllBookByTime(),
+    None, 
     flipbook.CFlipBook(),
     flipbook.CFlipBookByTime(), 
     None, 
@@ -516,8 +544,7 @@ def doprint(format=None, bookname=None):
   if format is None:
     parts.extend([
       CH('Printable Books', 1), 
-      CParagraph("The following printing options are available:"),
-      CBreak(), 
+      CParagraph("The following printable books are available in PDF format:"),
     ])
     
     for book in get_all_books():
@@ -642,7 +669,18 @@ margin:0;
 padding:0;
 font-family: varela_round, "Trebuchet MS", Arial, Verdana, sans-serif;
 line-height:140%;
-list-style:none;
+}
+p {
+font-size:110%;
+padding-top:0.5em;
+padding-bottom:0.5em;
+}
+span, a, li, b, i {
+font-size:110%;
+}
+ul {
+list-style-type:none;
+padding-left:0.1em;
 }
 h1.tune-title {
 clear:both;
@@ -660,8 +698,8 @@ white-space:nowrap;
 font-size:2.5vw;
 }
 h2 {
-padding-top:10px;
-padding-bottom:5px;
+padding-top:0.7em;
+padding-bottom:0.5em;
 }
 a {
 outline-style:none;
@@ -785,9 +823,17 @@ def sessions(delete=None):
     
   parts = []
   parts.append(CH("Sessions", 1))
+  
+  parts.append("Sessions make it easier to play together as a group.  The group "
+               "leader creates the session, adds sets to it, and specifies which set "
+               "is currently being played.  Other musicians can watch the session "
+               "and all the participating devices (ipads, phones, laptops, etc) will update "
+               "as the session changes.")
 
   sessions = utils.ReadSessions()
   sessions.sort(key=lambda s:s.title)
+
+  parts.append(CParagraph("The following sessions are available:"))
 
   if sessions:
     for session in sessions:
@@ -796,7 +842,7 @@ def sessions(delete=None):
         CBreak(), 
       ])
   else:
-    parts.append(CParagraph(CText("There are no active sessions.", italic=1)))
+    parts.append(CParagraph(CText("There are no active sessions right now.", italic=1)))
     
   parts.append(CBreak())
   
@@ -861,10 +907,11 @@ def session(sid=None, add=None, delete=None, curr=None):
     
   parts = []
   parts.append(CH("Session: %s" % session.title, 1))
+  parts.append(CParagraph(""))
   
   if not session.title:
     parts.extend([
-      CText("This session has been deleted"),
+      CParagraph("This session has been deleted"),
       CBreak(2), 
       CText('Return to session list', href='/sessions'),
     ])
@@ -878,23 +925,25 @@ def session(sid=None, add=None, delete=None, curr=None):
     c = get_set_title(session.current_set)
 
   parts.extend([
-    CText("Watch this Session:", bold=1),
+    CText("Now Playing: ", bold=1), 
+    CSpan(c),
+    CBreak(), 
+    CText("Watch Current Set:", bold=1),
     CNBSP(),
     CText("Notes", href='/watch/notes/%s' % sid), 
     CNBSP(), 
     CText("Chords", href='/watch/chords/%s' % sid), 
     CNBSP(), 
     CText("Both", href='/watch/%s' % sid),
-    CBreak(2), 
-    CText("Current Set: ", bold=1), 
-    CText(c),
-    CBreak(2), 
+    CBreak(), 
   ])
   
   parts.append(CH("Available Sets:", 2))
   if not session.sets:
     parts.append(CText("No sets have been defined for this session", italic=1))
   else:
+    parts.append(CParagraph("Click on a red dot change the current set.  View a set with "
+                            "melody reminders, chords, or both. <b>X</b> deletes the set."))
     for s in session.sets:
       titles = get_set_title(s)
       
@@ -906,8 +955,6 @@ def session(sid=None, add=None, delete=None, curr=None):
                             style="height:1.0em"))
         
       parts.extend([
-        CNBSP(),
-        CText('X', bold=1, href='/session/%s/delete/%s' % (sid, s)),
         CNBSP(2), 
         CText("Notes", href=url+'&pagetype=notes&session=%s' % sid), 
         CNBSP(), 
@@ -915,7 +962,9 @@ def session(sid=None, add=None, delete=None, curr=None):
         CNBSP(), 
         CText("Both", href=url+'&session=%s' % sid),
         CNBSP(2), 
-        CText(titles), 
+        CSpan(titles), 
+        CNBSP(),
+        CText('X', bold=1, href='/session/%s/delete/%s' % (sid, s)),
       ])
       
       parts.append(CBreak())
@@ -1017,16 +1066,15 @@ def CheckPassword(target):
   parts = []
 
   parts.extend([
-    CH("Please Enter Password", 1), 
-    CText("You need to prove you're human to use this part of the site.  The password is 'tunejam' (without the quotes)."),
-    CBreak(2),
+    CH("Please Enter Password", 2), 
+    CParagraph("You need to prove you're human to use this part of the site.  The password is 'tunejam'."),
     CForm([
       CText("Password:"),
       CInput(type="HIDDEN", name='target', value=target), 
       CInput(type='TEXT', name='pw', size=30, maxlength=60), 
       CBreak(2),
       CInput(type='SUBMIT', value='Submit'), 
-    ], action='/password', method='POST')
+    ], action='/password', method='POST'), 
   ])
   
   return parts
@@ -1198,6 +1246,22 @@ def ChordsToHTML(chords, tclass='chords'):
     html = CTable(html, width=None, hclass=tclass)
     
     return html
+  
+gTuneCountCache = [0]
+def TuneCount():
+
+  if gTuneCountCache[0] != 0:
+    return gTuneCountCache[0]
+  
+  tunes = utils.GetTuneIndex(True)
+  tune_count = 0
+  for section in tunes:
+    tune_count += len(tunes[section])
+
+  gTuneCountCache[0] = tune_count
+  return tune_count
+
+TuneCount._cache_count = None
     
 if __name__ == '__main__':
 
