@@ -149,6 +149,10 @@ def sets(spec=None, sid=None):
 
         return PageWrapper(parts)
 
+  if sid is not None:
+    s = utils.CSession(sid)
+    s.ReadSession()
+    
   filter = request.form.get('filter')
   if filter == 'all':
     filter = None
