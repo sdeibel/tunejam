@@ -960,10 +960,10 @@ def password():
 
   from flask import session
   
-  pw = request.form['pw']
+  pw = request.form['pw'].lower()
   target = request.form['target']
   
-  if pw != 'tunejam':
+  if 'tune'not in pw or 'jam' not in pw:
     parts = CheckPassword(target)
     return PageWrapper(parts)
   
@@ -974,8 +974,8 @@ def password():
 def CheckPassword(target):
   
   from flask import session
-  pw = session.get('password')
-  if pw == 'tunejam':
+  pw = session.get('password', '').lower()
+  if 'tune' in pw and 'jam' in pw:
     return []
   
   parts = []
