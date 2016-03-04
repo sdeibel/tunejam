@@ -94,6 +94,10 @@ def sets(spec=None, sid=None):
         subtitle = arg[len('subtitle='):].strip()
       elif arg.startswith('pagetype='):
         pagetype = arg[len('pagetype='):].strip()
+      elif arg.startswith('session='):
+        sid = arg[len('session='):].strip()
+        s = utils.CSession(sid)
+        s.ReadSession()
       elif arg:
         tunes.append(arg)
     
@@ -133,7 +137,17 @@ def sets(spec=None, sid=None):
         preload_tunes = tunes
         
       else:
-        return PageWrapper(CreateTuneSetHTML(tunes, pagetype))
+        parts = CreateTuneSetHTML(tunes, pagetype)
+
+        if sid is not None:
+          parts.insert(0, CH("Set from Session %s" % s.title, 2))
+          parts.extend([
+            CBreak(2),
+            CText("Return to session %s" % s.title, href='/session/%s' % sid), 
+            CBreak(2)
+          ])
+
+        return PageWrapper(parts)
 
   filter = request.form.get('filter')
   if filter == 'all':
@@ -442,6 +456,13 @@ padding-bottom:0.5em;
         CText('Delete', href='/saved/delete/%s' % book.name), 
       ])
   
+  if sid is not None:
+    parts.extend([
+      CBreak(2),
+      CText("Return to session %s" % s.title, href='/session/%s' % sid), 
+      CBreak(2)
+    ])
+    
   return PageWrapper(parts)
 
 @app.route('/tune/<tune>')
@@ -882,11 +903,11 @@ def session(sid=None, add=None, delete=None, curr=None):
         CNBSP(),
         CText('X', bold=1, href='/session/%s/delete/%s' % (sid, s)),
         CNBSP(2), 
-        CText("Notes", href=url+'&pagetype=notes'), 
+        CText("Notes", href=url+'&pagetype=notes&session=%s' % sid), 
         CNBSP(), 
-        CText("Chords", href=url+'&pagetype=chords'), 
+        CText("Chords", href=url+'&pagetype=chords&session=%s' % sid), 
         CNBSP(), 
-        CText("Both", href=url),
+        CText("Both", href=url+'&session=%s' % sid),
         CNBSP(2), 
         CText(titles), 
       ])
@@ -927,7 +948,7 @@ def watch(sid, type=None):
     title = "Deleted"
     
   parts = []
-  parts.append(CH("Session: %s" % title, 1))
+  parts.append(CH("Watching Session: %s" % title, 2))
   parts.append(CBreak())
   
   if not session.title:
