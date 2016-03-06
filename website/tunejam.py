@@ -17,6 +17,14 @@ app = Flask(__name__)
 app.secret_key = 'TunejamIsAtHubbardHallEachTuesday'
 app.config['SESSION_TYPE'] = 'filesystem'
 
+kMenu = [
+  ('Home', '/', 'home'), 
+  ('Tune Index', '/index', 'index'),
+  ('Create Sets', '/sets', 'sets'),
+  ('Printable Books', '/print', 'print'),
+  ('Sessions', '/sessions', 'session'), 
+]
+
 @app.route('/')
 def home():
   parts = []
@@ -35,7 +43,7 @@ def home():
     CParagraph("There are currently a total of %i tunes on the site." % TuneCount()), 
     CH("The following resources are available:", 2),
     CList([
-      CItem([CText("Tune Index", href='/music'), CNBSP(),
+      CItem([CText("Tune Index", href='/index'), CNBSP(),
              CText(" -- A list of all the available tunes, organized by type.")]), 
       CItem([CText("Set Sheets", href='/sets'), CNBSP(),
              CText(" -- Create your own sets of tunes, for screen display or printing.")]), 
@@ -44,13 +52,13 @@ def home():
       CItem([CText("Sessions", href='/sessions'), CNBSP(),
              CText(" -- Sharable set lists that auto-update on each participating device.")]),
     ]), 
-    CParagraph("This site was designed and built by Stephan Deibel, with content by "
+    CParagraph("This site was designed and built by Stephan Deibel, with content "
                "contributed by Bliss and Robbie McIntosh.")
   ])
       
-  return PageWrapper(parts)
+  return PageWrapper(parts, 'home')
 
-@app.route('/music')
+@app.route('/index')
 def music():
   parts = []
   parts.append(CH("Tune Index", 1))
@@ -85,7 +93,7 @@ def music():
       parts.append(CBreak())
       
   parts.append(CBreak(2))
-  return PageWrapper(parts)
+  return PageWrapper(parts, 'index')
 
 @app.route('/sets', methods=['GET', 'POST'])
 @app.route('/sets/')
@@ -139,7 +147,7 @@ def sets(spec=None, sid=None):
       
       if save and title:
         date = time.strftime("%d %B %Y", time.localtime())
-        book = '%s\n%s\n%s\nhttp://cambridgeny.net/music\n--\n' % (
+        book = '%s\n%s\n%s\nhttp://cambridgeny.net/index\n--\n' % (
           title, subtitle, date
         )
         page = []
@@ -171,8 +179,11 @@ def sets(spec=None, sid=None):
             CText("Return to session %s" % s.title, href='/session/%s' % sid), 
             CBreak(2)
           ])
-
-        return PageWrapper(parts)
+          section = 'session'
+        else:
+          section = 'sets'
+          
+        return PageWrapper(parts, section)
 
   if sid is not None:
     s = utils.CSession(sid)
@@ -493,8 +504,11 @@ padding-bottom:0.5em;
       CText("Return to session %s" % s.title, href='/session/%s' % sid), 
       CBreak(2)
     ])
+    section = 'session'
+  else:
+    section = 'sets'
     
-  return PageWrapper(parts)
+  return PageWrapper(parts, section)
 
 @app.route('/tune/<tune>')
 def tune(tune):
@@ -605,21 +619,21 @@ def doprint(format=None, bookname=None):
   else:
     parts.append(CParagraph('Unknown print directive'))
 
-  return PageWrapper(parts, refresh)
+  return PageWrapper(parts, 'print', refresh=refresh)
 
 @app.route('/saved/<action>/<book>')
 def saved(action=None, book=None):
   parts = []
   if action is None or book is None:
     parts.append("Book list here")
-    return PageWrapper(parts)
+    return PageWrapper(parts, 'sets')
 
   fn = os.path.join(utils.kDatabaseDir, book+'.book')
   if not os.path.isfile(fn):
     fn = os.path.join(utils.kSaveLoc, book+'.book')
   if not os.path.isfile(fn):
     parts.append(CParagraph("Book %s does not exist" % book))
-    return PageWrapper(parts)
+    return PageWrapper(parts, 'sets')
     
   book = utils.CBook(fn)
   
@@ -637,7 +651,7 @@ def saved(action=None, book=None):
     os.unlink(fn)
     return sets()
   else:
-    parts.append(CParagraph("Invalid action %s" % action))
+    parts.append(CParagraph("Invalid action %s" % action, 'sets'))
   
   return PageWrapper(parts)
 
@@ -678,28 +692,49 @@ padding-bottom:0.5em;
 span, a, li, b, i {
 font-size:110%;
 }
+#main-menu {
+padding-top:0.4em;
+padding-bottom:0.8em;
+}
+.menu-item {
+text-decoration:none;
+color:#005511;
+padding-bottom:0.5em;
+}
+.menu-item-current {
+color:#dd1111;
+text-decoration:none;
+border-bottom: 1px solid #ff0000;
+}
 ul {
 list-style-type:none;
 padding-left:0.1em;
+}
+h1 {
+color:#044300;
 }
 h1.tune-title {
 clear:both;
 white-space:nowrap;
 font-size:3.5vw;
+color:#000000;
 }
 h1.long-tune-title {
 clear:both;
 white-space:nowrap;
 font-size:2.6vw;
+color:#000000;
 }
 h1.extra-long-tune-title {
 clear:both;
 white-space:nowrap;
 font-size:2.5vw;
+color:#000000;
 }
 h2 {
 padding-top:0.7em;
 padding-bottom:0.5em;
+color:#004400;
 }
 a {
 outline-style:none;
@@ -707,6 +742,7 @@ outline-style:none;
 #body {
 margin:20px;
 width:95%;
+max-width:1079px;
 }
 div.tune-break {
 clear:both;
@@ -815,7 +851,7 @@ def sessions(delete=None):
   
   parts = CheckPassword('/sessions')
   if parts:
-    return PageWrapper(parts)
+    return PageWrapper(parts, 'session')
    
   if delete:
     utils.DeleteSession(delete)
@@ -854,7 +890,7 @@ def sessions(delete=None):
     CInput(type='SUBMIT', value='Create'), 
   ], action='/session', method='POST', id="session-form"))
   
-  return PageWrapper(parts)
+  return PageWrapper(parts, 'session')
 
 @app.route('/session', methods=['POST'])
 @app.route('/session/<sid>')
@@ -865,7 +901,7 @@ def session(sid=None, add=None, delete=None, curr=None):
 
   parts = CheckPassword('/sessions')
   if parts:
-    return PageWrapper(parts)
+    return PageWrapper(parts, 'session')
   
   def get_set_title(s):
     titles = []
@@ -915,7 +951,7 @@ def session(sid=None, add=None, delete=None, curr=None):
       CBreak(2), 
       CText('Return to session list', href='/sessions'),
     ])
-    return PageWrapper(parts)
+    return PageWrapper(parts, 'session')
     
   parts.extend(SessionReloader(sid))
   
@@ -981,7 +1017,7 @@ def session(sid=None, add=None, delete=None, curr=None):
     CText('Delete this session', href='/sessions/delete/%s' % session.name),
   ])
   
-  return PageWrapper(parts)
+  return PageWrapper(parts, 'session')
 
 @app.route('/watch/<sid>')
 @app.route('/watch/<type>/<sid>')
@@ -1006,8 +1042,8 @@ def watch(sid, type=None):
   
   parts.extend(SessionReloader(sid))
   
-  parts.append(CH("Watching Session: %s" % title, 2))
-  parts.append(CBreak())
+  parts.append(CText("Watching Session: %s" % title, bold=1))
+  parts.append(CBreak(2))
   
   if not session.title:
     parts.append(CText("This session has been deleted", italic=1))
@@ -1044,7 +1080,7 @@ def password():
   
   if 'tune'not in pw or 'jam' not in pw:
     parts = CheckPassword(target)
-    return PageWrapper(parts)
+    return PageWrapper(parts, 'session')
   
   session['password'] = pw
   
@@ -1112,7 +1148,7 @@ $(document).ready(function() {
   
   return parts
 
-def PageWrapper(body, refresh=None):
+def PageWrapper(body, section=None, refresh=None):
   
   # Build html head
   title = "Tune Jam"
@@ -1129,6 +1165,26 @@ def PageWrapper(body, refresh=None):
 
   head = CHead(head)
 
+  if section is not None:
+    
+    items = []
+    for title, url, msection in kMenu:
+      if msection == section:
+        iclass = 'menu-item-current'
+      else:
+        iclass = 'menu-item'
+      items.append(CText(title, href=url, hclass=iclass))
+      items.append(CNBSP())
+  
+    body = [
+      CImage(src='/image/header.png'), 
+      CDiv(items, id='main-menu')
+    ] + body + [
+      CBreak(), 
+      CHR(),
+      CText('Maintained by Stephan Deibel'),
+    ]
+  
   body_div = CBody([CDiv(body, id="body")])
   
   html = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">"""
