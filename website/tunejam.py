@@ -179,11 +179,8 @@ def sets(spec=None, sid=None):
             CText("Return to session %s" % s.title, href='/session/%s' % sid), 
             CBreak(2)
           ])
-          section = None
-        else:
-          section = 'sets'
           
-        return PageWrapper(parts, section)
+        return PageWrapper(parts)
 
   if sid is not None:
     s = utils.CSession(sid)
