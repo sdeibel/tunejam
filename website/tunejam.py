@@ -173,13 +173,13 @@ def sets(spec=None, sid=None):
         parts = CreateTuneSetHTML(tunes, pagetype)
 
         if sid is not None:
-          parts.insert(0, CH("Set from Session %s" % s.title, 2))
+          parts.insert(0, CText("Set from Session: %s" % s.title, bold=1))
           parts.extend([
             CBreak(2),
             CText("Return to session %s" % s.title, href='/session/%s' % sid), 
             CBreak(2)
           ])
-          section = 'session'
+          section = None
         else:
           section = 'sets'
           
@@ -1180,7 +1180,7 @@ def PageWrapper(body, section=None, refresh=None):
       CImage(src='/image/header.png'), 
       CDiv(items, id='main-menu')
     ] + body + [
-      CBreak(), 
+      CBreak(2), 
       CHR(),
       CText('Maintained by Stephan Deibel'),
     ]
