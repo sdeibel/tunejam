@@ -1216,7 +1216,7 @@ def PageWrapper(body, section=None, refresh=None):
       items.append(CNBSP())
   
     body = [
-      CDiv([CImage(src='/image/header.png')], id='header'), 
+      CDiv([CImage(src='/image/header.jpg')], id='header'), 
       CDiv(items, id='main-menu')
     ] + body + [
       CBreak(2), 
