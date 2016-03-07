@@ -19,10 +19,10 @@ app.config['SESSION_TYPE'] = 'filesystem'
 
 kMenu = [
   ('Home', '/', 'home'), 
-  ('Tune Index', '/index', 'index'),
-  ('Create Sets', '/sets', 'sets'),
-  ('Printable Books', '/print', 'print'),
-  ('Sessions', '/sessions', 'session'), 
+  ('Index', '/index', 'index'),
+  ('Sets', '/sets', 'sets'),
+  ('Printing', '/print', 'print'),
+  ('Sessions', '/sessions', 'session'),
 ]
 
 @app.route('/')
@@ -51,6 +51,8 @@ def home():
              CText(" -- Premade books in several formats, with index.")]), 
       CItem([CText("Sessions", href='/sessions'), CNBSP(),
              CText(" -- Sharable set lists that auto-update on each participating device.")]),
+      CItem([CText("Email List", href='http://cambridgeny.net/mailman/listinfo/tunejam'), CNBSP(),
+             CText(" -- The Hubbard Hall Tune Jam email list.")]),
     ]),
     CBreak(), 
     CParagraph("This site was designed and built by Stephan Deibel, with content "
