@@ -51,7 +51,8 @@ def home():
              CText(" -- Premade books in several formats, with index.")]), 
       CItem([CText("Sessions", href='/sessions'), CNBSP(),
              CText(" -- Sharable set lists that auto-update on each participating device.")]),
-    ]), 
+    ]),
+    CBreak(), 
     CParagraph("This site was designed and built by Stephan Deibel, with content "
                "contributed by Bliss and Robbie McIntosh.")
   ])
@@ -689,6 +690,9 @@ padding-bottom:0.5em;
 span, a, li, b, i {
 font-size:110%;
 }
+#header {
+overflow:hidden;
+}
 #main-menu {
 padding-top:0.4em;
 padding-bottom:0.8em;
@@ -737,8 +741,7 @@ a {
 outline-style:none;
 }
 #body {
-margin:20px;
-width:95%;
+margin:12px;
 max-width:1079px;
 }
 div.tune-break {
@@ -1174,7 +1177,7 @@ def PageWrapper(body, section=None, refresh=None):
       items.append(CNBSP())
   
     body = [
-      CImage(src='/image/header.png'), 
+      CDiv([CImage(src='/image/header.png')], id='header'), 
       CDiv(items, id='main-menu')
     ] + body + [
       CBreak(2), 
