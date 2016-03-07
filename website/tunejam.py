@@ -33,7 +33,7 @@ def home():
     CH("Hubbard Hall Tune Jam", 1),
     CParagraph("Welcome!"),
     CParagraph("This website hosts a collection of tunes "
-               "played by the Hubbard Hall Tune Jam Band, a group of musicians "
+               "played by the Hubbard Hall Tune Jam Band, an informal group of musicians "
                "from the Cambridge NY area.  We meet every Tuesday from 5:30pm to 7:30pm "
                "in the Beacon Feed (aka Studio) building behind <a href='http://www.hubbardhall.org/'>"
                "Hubbard Hall</a> to play traditional and modern Irish, Scottish, Shetland, "
