@@ -21,8 +21,8 @@ kMenu = [
   ('Home', '/', 'home'), 
   ('Index', '/index', 'index'),
   ('Sets', '/sets', 'sets'),
-  ('Printing', '/print', 'print'),
   ('Sessions', '/sessions', 'session'),
+  ('Printing', '/print', 'print'),
 ]
 
 @app.route('/')
@@ -47,10 +47,10 @@ def home():
              CText(" -- A list of all the available tunes, organized by type.")]), 
       CItem([CText("Set Sheets", href='/sets'), CNBSP(),
              CText(" -- Create your own sets of tunes, for screen display or printing.")]), 
-      CItem([CText("Printable Books", href='/print'), CNBSP(),
-             CText(" -- Premade books in several formats, with index.")]), 
       CItem([CText("Sessions", href='/sessions'), CNBSP(),
              CText(" -- Sharable set lists that auto-update on each participating device.")]),
+      CItem([CText("Printable Books", href='/print'), CNBSP(),
+             CText(" -- Premade books in several formats, with index.")]), 
       CItem([CText("Email List", href='http://cambridgeny.net/mailman/listinfo/tunejam'), CNBSP(),
              CText(" -- The Hubbard Hall Tune Jam email list.")]),
     ]),
@@ -851,7 +851,8 @@ display:none;
 
 @app.route('/sessions')
 @app.route('/sessions/delete/<delete>')
-def sessions(delete=None):
+@app.route('/sessions/undelete/<undelete>')
+def sessions(delete=None, undelete=None):
   
   parts = CheckPassword('/sessions')
   if parts:
@@ -860,7 +861,12 @@ def sessions(delete=None):
   if delete:
     utils.DeleteSession(delete)
     return redirect('/sessions')
-    
+  if undelete:
+    utils.DeleteSession(undelete, undelete=True)
+    return redirect('/sessions')
+  
+  utils.PurgeDeletedSessions()
+  
   parts = []
   parts.append(CH("Sessions", 1))
   
@@ -873,7 +879,7 @@ def sessions(delete=None):
   sessions = utils.ReadSessions()
   sessions.sort(key=lambda s:s.title)
 
-  parts.append(CParagraph("The following sessions are available:"))
+  parts.append(CParagraph("The following sessions are active:"))
 
   if sessions:
     for session in sessions:
@@ -884,6 +890,16 @@ def sessions(delete=None):
   else:
     parts.append(CParagraph(CText("There are no active sessions right now.", italic=1)))
     
+  inactive = utils.ReadSessions(deleted=True)
+  if inactive:
+    parts.append(CParagraph("Recently deleted sessions:"))
+    for session in inactive:
+      parts.extend([
+        CSpan(session.title+' - '),
+        CText("Undelete", href='/sessions/undelete/%s' % session.name),
+        CBreak(), 
+      ])
+  
   parts.append(CBreak())
   
   parts.append(CForm([

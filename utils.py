@@ -34,8 +34,12 @@ kRecordingsDir = os.path.join(os.path.dirname(__file__), 'recordings')
 kCacheLoc = os.path.join(os.path.dirname(__file__), 'website', 'cache')
 kSaveLoc = os.path.join(os.path.dirname(__file__), 'website', 'saved-sets')
 kSessionsLoc = os.path.join(os.path.dirname(__file__), 'website', 'sessions')
+kSessionArchiveLoc = os.path.join(kSessionsLoc, 'archive')
 kJSDir = os.path.join(os.path.dirname(__file__), 'website', 'js')
 
+if not os.path.exists(kSessionArchiveLoc):
+    os.mkdir(kSessionArchiveLoc)
+        
 from reportlab import rl_config
 rl_config.warnOnMissingFontGlyphs = 0
 
@@ -1218,13 +1222,20 @@ class CSession:
         self.sets = []
         self.current_set = ''
         
-    def ReadSession(self):
-        fn = os.path.join(kSessionsLoc, self.name+'.ses')
+    def ReadSession(self, deleted=False):
+        if deleted:
+            dirname = kSessionArchiveLoc
+        else:
+            dirname = kSessionsLoc
+            
+        fn = os.path.join(dirname, self.name+'.ses')
         if not os.path.exists(fn):
             return
+        
         f = open(fn, 'r')
         lines = f.read()
         f.close()
+        
         lines = lines.split('\n')
         self.title = lines[0]
         self.current_set = lines[1]
@@ -1240,15 +1251,20 @@ class CSession:
         f.write('\n'.join(lines))
         f.close()
 
-def ReadSessions():
-    
-    files = os.listdir(kSessionsLoc)
+def ReadSessions(deleted=False):
+
+    if deleted:
+        dirname = kSessionArchiveLoc
+    else:
+        dirname = kSessionsLoc
+        
+    files = os.listdir(dirname)
 
     sessions = []
     for fn in files:
         if fn.endswith('.ses'):
             session = CSession(fn[:-len('.ses')])
-            session.ReadSession()
+            session.ReadSession(deleted=deleted)
             sessions.append(session)
             
     return sessions
@@ -1274,14 +1290,42 @@ def CreateSession(title):
     
     return name
         
-def DeleteSession(sid):
+def DeleteSession(sid, undelete=False):
     
-    fn = os.path.join(kSessionsLoc, sid+'.ses')
-    if not os.path.exists(fn):
+    session_fn = os.path.join(kSessionsLoc, sid+'.ses')
+    archive_fn = os.path.join(kSessionArchiveLoc, sid+'.ses')
+
+    if not undelete:
+        fn1 = session_fn
+        fn2 = archive_fn
+    else:
+        fn1 = archive_fn
+        fn2 = session_fn
+        
+    if not os.path.exists(fn1):
         return
+
+    f = open(fn1, 'r')
+    txt = f.read()
+    f.close()
     
-    os.unlink(fn)
+    f = open(fn2, 'w')
+    f.write(txt)
+    f.close()
     
+    os.unlink(fn1)
+    
+def PurgeDeletedSessions():
+    
+    sessions = os.listdir(kSessionArchiveLoc)
+    for session in sessions:
+        if not session.endswith('.ses'):
+            continue
+        fn = os.path.join(kSessionArchiveLoc, session)
+        mod_time = os.stat(fn)[stat.ST_MTIME]
+        if mod_time < time.time() - (7 * 24 * 60 * 60):
+            os.unlink(fn)
+        
 def GetTuneIndex(include_incomplete):
     idx = {}
 
