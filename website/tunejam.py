@@ -42,8 +42,8 @@ def home():
                "pot luck dinner."),
     CParagraph("The focus of the site is to facilitate learning tunes by ear, and playing "
                "them together at contra dances and other events.  For each "
-               "tune, we have collected a short recording, a chord chart, and written "
-               "melody reminders containing the first few measures of each part."),
+               "tune, we have collected a short recording, a chord chart, and a written "
+               "melody reminder containing the first few measures of each part."),
     CParagraph("There are currently a total of %i tunes on the site." % TuneCount()), 
     CH("The following resources are available:", 2),
     CList([
