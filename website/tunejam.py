@@ -179,9 +179,8 @@ def sets(spec=None, sid=None):
           parts.insert(0, CText("Set from Session: %s" % s.title, bold=1))
           parts.extend([
             CBreak(2),
-            CText("Return to session %s" % s.title, href='/session/%s' % sid),
-            CBreak(),
-            CText("Delete this set", href='/session/%s/delete/%s' % (sid, '&'.join(tunes))),
+            CText("Return to session %s" % s.title, href='/session/%s' % sid, hclass='bottom-menu-left'),
+            CText("Delete this set", href='/session/%s/delete/%s' % (sid, '&'.join(tunes)), hclass='bottom-menu-right'),
             CBreak(2)
           ])
           
@@ -710,6 +709,27 @@ padding-bottom:0.5em;
 color:#dd1111;
 text-decoration:none;
 border-bottom: 1px solid #ff0000;
+}
+#set-menu {
+width:100%;
+border:1px solid #ff0000;
+}
+.bottom-menu-left {
+}
+.bottom-menu-right {
+float:right;
+}
+@media only screen and (max-width: 589px) {
+.bottom-menu-left {
+float:left;
+clear:both;
+}
+.bottom-menu-right {
+clear:both;
+float:left;
+padding-top:30px;
+padding-bottom:20px;
+}
 }
 ul {
 list-style-type:none;
