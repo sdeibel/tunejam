@@ -32,14 +32,18 @@ def home():
   parts.extend([
     CH("Hubbard Hall Tune Jam", 1),
     CParagraph("Welcome!"),
-    CParagraph("This website hosts a database of traditional and modern tunes "
-               "played by the Hubbard Hall Tune Jam Band, an adhoc collection of musicians "
-               "from the Cambridge NY area."),
-    CParagraph("The focus of the site "
-               "is to facilitate learning tunes by ear, and playing them together "
-               "at contra dances and for sessions.  For each tune, we have collected a short recording, "
-               "a chord chart, and written melody reminders containing the first few "
-               "measures of each part."),
+    CParagraph("This website hosts a collection of tunes "
+               "played by the Hubbard Hall Tune Jam Band, an adhoc group of musicians "
+               "from the Cambridge NY area.  We meet every Tuesday from 5:30pm to 7:30pm "
+               "in the Beacon Feed (aka Studio) building behind <a href='http://www.hubbardhall.org/'>"
+               "Hubbard Hall</a> to play traditional and modern Irish, Scottish, Shetland, "
+               "Quebecois, New England, and locally written music by ear.  The sessions are "
+               "open to all levels of skill and all instruments, and are followed by a "
+               "pot luck dinner."),
+    CParagraph("The focus of the site is to facilitate learning tunes by ear, and playing "
+               "them together at contra dances and other events.  For each "
+               "tune, we have collected a short recording, a chord chart, and written "
+               "melody reminders containing the first few measures of each part."),
     CParagraph("There are currently a total of %i tunes on the site." % TuneCount()), 
     CH("The following resources are available:", 2),
     CList([
@@ -55,7 +59,7 @@ def home():
              CText(" -- The Hubbard Hall Tune Jam email list.")]),
     ]),
     CBreak(), 
-    CParagraph("This site was designed and built by Stephan Deibel, with content "
+    CParagraph("This website was designed and built by Stephan Deibel, with content "
                "contributed by Bliss and Robbie McIntosh.")
   ])
       
