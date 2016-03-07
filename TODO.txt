@@ -1,7 +1,5 @@
 * Website Phase One
   ** Ability to create live-updating session page to sync devices
-    ** Move set deletion to the set page so don't accidentally delete (return to
-      set list after delete)
     ** Archive deleted sessions and allow undeleting within N days
     * A way to mark a session as permanent to prevent deletion except by admin
     * A way to sort sets in the session
