@@ -179,7 +179,9 @@ def sets(spec=None, sid=None):
           parts.insert(0, CText("Set from Session: %s" % s.title, bold=1))
           parts.extend([
             CBreak(2),
-            CText("Return to session %s" % s.title, href='/session/%s' % sid), 
+            CText("Return to session %s" % s.title, href='/session/%s' % sid),
+            CBreak(),
+            CText("Delete this set", href='/session/%s/delete/%s' % (sid, '&'.join(tunes))),
             CBreak(2)
           ])
           
@@ -981,7 +983,8 @@ def session(sid=None, add=None, delete=None, curr=None):
     parts.append(CText("No sets have been defined for this session", italic=1))
   else:
     parts.append(CParagraph("Click on a red dot change the current set.  View a set with "
-                            "melody reminders, chords, or both. <b>X</b> deletes the set."))
+                            "melody reminders, chords, or both.  To delete a set, view it "
+                            "and use the link at the bottom of the page."))
     for s in session.sets:
       titles = get_set_title(s)
       
@@ -1001,8 +1004,6 @@ def session(sid=None, add=None, delete=None, curr=None):
         CText("Both", href=url+'&session=%s' % sid),
         CNBSP(2), 
         CSpan(titles), 
-        CNBSP(),
-        CText('X', bold=1, href='/session/%s/delete/%s' % (sid, s)),
       ])
       
       parts.append(CBreak())
