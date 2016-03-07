@@ -1,14 +1,16 @@
 * Website Phase One
-  ** Ability to create live-updating session page to sync devices
-    * A way to mark a session as permanent to prevent deletion except by admin
+  * Ability to create live-updating session page to sync devices
+    * A way to mark a session as permanent to prevent deletion except by owner
+      (could have pw field that can be entered during creation)
+    * A way to prevent editing of a session except by owner
     * A way to sort sets in the session
     * A way to clone a session
   * Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
-  Enable and improve old saved sets impl or just remove it?
-    * Clean up URLs for sets and operating on sets
-    * Fix editing sets by only changing order (doesn't record changes for some reason)
-    * Fix editing to preload title/subtitle and so same set is updated rather than
-      creating a new one -- use file names based on title instead
+  * Enable and improve old saved sets impl or just remove it?
+  * Clean up URLs for sets and operating on sets
+  * Fix editing sets by only changing order (doesn't record changes for some reason)
+  * Fix editing to preload title/subtitle and so same set is updated rather than
+    creating a new one -- use file names based on title instead
   * Browser issues
     * Chrome forgets selected tunes when go back to page
   * Review/improve URL structure
