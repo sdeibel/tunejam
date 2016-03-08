@@ -1002,10 +1002,10 @@ class CBook:
             
         return pages
             
-    def GeneratePDF(self, type_in_header=False, include_index=True):
+    def GeneratePDF(self, type_in_header=False, include_index=True, generate=False):
             
         target, up_to_date = self._GetCacheFile('.pdf')
-        if up_to_date:
+        if (not generate and os.path.exists(target)) or up_to_date:
             return target
 
         pages = []
