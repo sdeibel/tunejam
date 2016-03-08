@@ -1014,7 +1014,7 @@ class CBook:
             pages.append(pdf)
 
         if include_index:
-            pages.extend(self.GeneratePDFIndex(generate=True))
+            pages.extend(self.GeneratePDFIndex())
         
         ConcatenatePDFFiles(pages, target)
         return target
