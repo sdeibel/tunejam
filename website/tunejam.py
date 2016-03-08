@@ -645,7 +645,7 @@ def saved(action=None, book=None):
   if action == 'view':
     parts.append(CreateTuneSetHTML(book.AllTunes()))
   elif action == 'print':
-    pdf = book.GeneratePDF()
+    pdf = book.GeneratePDF(generate=True)
     return send_file(pdf, mimetype='application/pdf')
   elif action == 'edit':
     tunes = book.AllTunes()
@@ -1255,7 +1255,7 @@ margin-top:0px;
 
 def CreateTuneSetPDF(name, title, subtitle, tunes):
   book = utils.CSetBook(name, title, subtitle, tunes)
-  pdf = book.GeneratePDF(include_index=False)
+  pdf = book.GeneratePDF(include_index=False, generate=True)
   return send_file(pdf, mimetype='application/pdf')
   
 def CreateTuneHTML(name, pagetype='both'):

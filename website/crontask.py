@@ -62,7 +62,7 @@ def regenerate_books(force=False, log=True):
     if not up_to_date:
       if log:
         print("Regenerating book %s" % target)
-      book.GeneratePDF()
+      book.GeneratePDF(generate=True)
     else:
       if log:
         print("Book %s was up to date" % target)
