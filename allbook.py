@@ -53,8 +53,8 @@ class CAllBookBySection(utils.CBook):
                 tuneset = utils.CTuneSet(page_tunes, title, self.contact, '')
                 self.pages.append(tuneset)
                 
-    def GeneratePDF(self):
-        return utils.CBook.GeneratePDF(self, type_in_header=True)
+    def GeneratePDF(self, generate=False):
+        return utils.CBook.GeneratePDF(self, type_in_header=True, generate=generate)
         
 class CAllBookByTime(utils.CBook):
 
@@ -105,8 +105,8 @@ class CAllBookByTime(utils.CBook):
                 tuneset = utils.CTuneSet(page_tunes, title, self.contact, '')
                 self.pages.append(tuneset)
                 
-    def GeneratePDF(self):
-        return utils.CBook.GeneratePDF(self, type_in_header=False)
+    def GeneratePDF(self, generate=False):
+        return utils.CBook.GeneratePDF(self, type_in_header=False, generate=generate)
         
 class CAllBook(utils.CBook):
 
