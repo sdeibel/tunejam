@@ -1311,6 +1311,7 @@ def ChordsToHTML(chords, tclass='chords'):
         
     html = []
     part_class = 'even'
+    max_line_len = 0
     for i, part in enumerate(chords):
         row = []
         for i, measure in enumerate(part):
@@ -1329,9 +1330,11 @@ def ChordsToHTML(chords, tclass='chords'):
                 row.append(CTD(measure, hclass=hclass))
             if len(row) == 5 and (i + 1 >= len(part) or part[i+1] != ':|'):
                 row.append(CTD('', hclass='last'))
+                max_line_len = max(max_line_len, len(row))
                 html.append(CTR(row, hclass=part_class))
                 row = []
             elif len(row) == 6:
+                max_line_len = max(max_line_len, len(row))
                 html.append(CTR(row, hclass=part_class))
                 row = []
         if row:
@@ -1341,6 +1344,10 @@ def ChordsToHTML(chords, tclass='chords'):
             part_class = 'odd'
         else:
             part_class = 'even'
+        
+    for row in html:
+      while len(row.body) < max_line_len:
+        row.append(CTD(''))
         
     html = CTable(html, width=None, hclass=tclass)
     
