@@ -1415,7 +1415,7 @@ if __name__ == '__main__':
   if 'WINGDB_ACTIVE' in environ:
     app.debug = False
   if sys.platform == 'darwin':
-    host = None
+    host = '0.0.0.0'
   else:
     host = 'music.cambridgeny.net'
   app.run(host=host, port=60080, use_reloader=True, extra_files=list(watch_files))
