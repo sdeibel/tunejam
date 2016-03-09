@@ -1,6 +1,8 @@
 * Website Phase One
   * Ability to create live-updating session page to sync devices
     * A way to sort sets in the session
+    * A way to name sets
+    * A way to indicate a missing song (not in database)
     * A way to prevent editing or deletion of session except by owner (could have pw 
       field that can be entered during creation)
   * Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
