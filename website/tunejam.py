@@ -375,8 +375,6 @@ padding-bottom:0.5em;
   keys = utils.kSectionTitles.keys()
   keys.append('ax4')
   keys.sort()
-  if 'incomplete' in keys:
-    keys.remove('incomplete')
   for key in keys:
     if key == 'ax4':
       title = "All 2/4 and 4/4 Time"
@@ -397,10 +395,8 @@ padding-bottom:0.5em;
   
   all_tunes = []
   selected_tunes = []
-  tunes = utils.GetTuneIndex(False)
+  tunes = utils.GetTuneIndex(include_incomplete=True)
   for section in tunes:
-    if section == 'incomplete':
-      continue
     visible = True
     if filter == 'reel' and section not in ['reel', 'hornpipe', 'march', 'rag']:
       visible = False
@@ -1024,7 +1020,7 @@ def session(sid=None, add=None, delete=None, curr=None):
   else:
     parts.append(CParagraph("Click on a red dot change the current set.  View a set with "
                             "melody reminders, chords, or both.  To delete a set, view it "
-                            "and use the link at the bottom of the page."))
+                            "and use the link at the bottom of its page."))
     for s in session.sets:
       titles = get_set_title(s)
       
@@ -1276,7 +1272,11 @@ def CreateTuneHTML(name, pagetype='both'):
   else:
     play = CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
 
-  if pagetype == 'both':
+  if not obj.chords:
+    notes = ''
+    chords = CDiv(CText("Notes and chords are not yet available for this tune", bold=1, italic=1),
+                  style="padding-top:10px")
+  elif pagetype == 'both':
     notes = '<img src="/png/%s"/ class="notes">' % name
     chords = ChordsToHTML(obj.chords)
   elif pagetype == 'notes':
