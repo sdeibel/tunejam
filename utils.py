@@ -1405,6 +1405,9 @@ def ABCToPostscript(abc, svg=False, eps=False, target=None):
         svg_arg = ''
         if target is None:
             target = os.path.splitext(fn)[0] + '.ps'
+            
+    os.unlink(target)
+    
     cmdline = [kExecutable, fn, svg_arg, '-O', target]
     cmdline = ' '.join(cmdline)
 
