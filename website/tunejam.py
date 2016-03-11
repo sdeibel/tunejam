@@ -1272,19 +1272,34 @@ def CreateTuneHTML(name, pagetype='both'):
   else:
     play = CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
 
-  if not obj.chords:
-    notes = ''
-    chords = CDiv(CText("Notes and chords are not yet available for this tune", bold=1, italic=1),
-                  style="padding-top:10px")
-  elif pagetype == 'both':
-    notes = '<img src="/png/%s"/ class="notes">' % name
-    chords = ChordsToHTML(obj.chords)
+  if pagetype == 'both':
+    if not obj.chords and not obj.notes:
+      notes = ''
+      chords = CDiv(CText("Notes and chords are not yet available for this tune", bold=1, italic=1),
+                    style="padding-top:10px")
+    else:
+      if obj.notes:
+        notes = '<img src="/png/%s"/ class="notes">' % name
+      else:
+        notes = CText("Notes are not yet available for this tune", bold=1)
+      if obj.chords:
+        chords = ChordsToHTML(obj.chords)
+      else:
+        chords = ChordsToHTML('Chords not yet available')
   elif pagetype == 'notes':
-    notes = '<img src="/png/%s"/ class="notes-only">' % name
+    if obj.notes:
+      notes = '<img src="/png/%s"/ class="notes-only">' % name
+    else:
+      notes = CDiv(CText("Notes are not yet available for this tune", bold=1, italic=1),
+                   style="padding-top:10px")
     chords = ''
   elif pagetype == 'chords':
     notes = ''
-    chords = ChordsToHTML(obj.chords, tclass='chords-only')    
+    if obj.chords:
+      chords = ChordsToHTML(obj.chords, tclass='chords-only')
+    else:
+      chords = CDiv(CText("Chords are not yet available for this tune", bold=1, italic=1),
+                   style="padding-top:10px")
 
   if len(title) > 50:
     tclass = 'extra-long-tune-title'
