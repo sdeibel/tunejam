@@ -899,7 +899,7 @@ def sessions(delete=None, undelete=None):
   sessions = utils.ReadSessions()
   sessions.sort(key=lambda s:s.title)
 
-  parts.append(CParagraph("The following sessions are active:"))
+  parts.append(CParagraph(CText("The following sessions are active:", bold=1)))
 
   if sessions:
     for session in sessions:
@@ -910,9 +910,20 @@ def sessions(delete=None, undelete=None):
   else:
     parts.append(CParagraph(CText("There are no active sessions right now.", italic=1)))
     
+  parts.append(CForm([
+    CBreak(), 
+    CText("Create a New Session:", bold=1),
+    CBreak(1),
+    CText("Title:"), CInput(type='TEXT', name='title', id='session-title', size=100, maxlength=200), 
+    CBreak(2),
+    CInput(type='SUBMIT', value='Create'), 
+  ], action='/session', method='POST', id="session-form"))
+  
+  parts.append(CBreak())
+  
   inactive = utils.ReadSessions(deleted=True)
   if inactive:
-    parts.append(CParagraph("Recently deleted sessions:"))
+    parts.append(CParagraph(CText("Recently deleted sessions:", bold=1)))
     for session in inactive:
       parts.extend([
         CSpan(session.title+' - '),
@@ -921,14 +932,6 @@ def sessions(delete=None, undelete=None):
       ])
   
   parts.append(CBreak())
-  
-  parts.append(CForm([
-    CText("Create a New Session:", bold=1),
-    CBreak(1),
-    CText("Title:"), CInput(type='TEXT', name='title', id='session-title', size=100, maxlength=200), 
-    CBreak(2),
-    CInput(type='SUBMIT', value='Create'), 
-  ], action='/session', method='POST', id="session-form"))
   
   return PageWrapper(parts, 'session')
 
