@@ -30,7 +30,6 @@
   luna_moth (by Caz, E Minor / A Minor)
   braes_of_breadalbane (A Minor) (aka unknown strathspey)
   valentines_day
-  bachelor_duck (by Stephan) -- need the notes
   devils_dance (by Stephan)
   fishers_hornpipe (D Major)
   evenings_and_weekends (eventually replace this recording)
