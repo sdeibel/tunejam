@@ -23,18 +23,18 @@
     approx beats/minute)
 * Find notebooks/bindings/printing options for flip books
 * Missing notes and/or chords
-  oak_leaf_reel (by Susie Secco in Bm)
+  oak_leaf_reel
   st_patricks_day
   rileys_reel
-  murphys_hornpipe (G Major)
-  luna_moth (by Caz, E Minor / A Minor)
-  braes_of_breadalbane (A Minor) (aka unknown strathspey)
+  murphys_hornpipe
+  luna_moth
+  braes_of_breadalbane
   valentines_day
-  devils_dance (by Stephan)
-  fishers_hornpipe (D Major)
+  devils_dance
+  fishers_hornpipe
   evenings_and_weekends (eventually replace this recording)
   morrisons_jig
-  wedding_on_the_hill (by Bonnie)
+  wedding_on_the_hill
 * Missing recordings
   star_of_the_county_down
   belle_meres_waltz
