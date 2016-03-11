@@ -1,10 +1,13 @@
 * Website Phase One
   * Ability to create live-updating session page to sync devices
+    * Get it working when there is only a local router and no internet
+    * Allow printing session pages or the whole session
+    * Allow viewing sessions w/o pw -- only authors/leaders need pw
+    * A way to prevent editing or deletion of session except by owner (could have pw 
+      field that can be entered during creation)
     * A way to sort sets in the session
     * A way to name sets
     * A way to indicate a missing song (not in database)
-    * A way to prevent editing or deletion of session except by owner (could have pw 
-      field that can be entered during creation)
   * Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
   * Clean up
     * Remove old saved sets impl
@@ -25,10 +28,9 @@
   rileys_reel
   murphys_hornpipe (G Major)
   luna_moth (by Caz, E Minor / A Minor)
-  sculleys_reel (should redo the recording?)
   braes_of_breadalbane (A Minor) (aka unknown strathspey)
   valentines_day
-  bachelor_duck (by Stephan)
+  bachelor_duck (by Stephan) -- need the notes
   devils_dance (by Stephan)
   fishers_hornpipe (D Major)
   evenings_and_weekends (eventually replace this recording)
@@ -39,6 +41,7 @@
   belle_meres_waltz
   metsakukkia
   the_good_doctor
+  sculleys_reel (should redo the recording?)
 * Missing everything
   january_thaw (by Bliss)
   january_waltz
