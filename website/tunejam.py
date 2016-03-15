@@ -1067,7 +1067,7 @@ def session(sid=None, add=None, delete=None, curr=None):
     ], action='/sets/sid/%s' % sid, method='GET', id="add-set-form"))
   
   parts.extend([
-    CBreak(2), 
+    CBreak(), 
     CText('Return to session list', href='/sessions'),
     CBreak(), 
   ])
@@ -1076,6 +1076,7 @@ def session(sid=None, add=None, delete=None, curr=None):
       CText('Delete this session', href='/sessions/delete/%s' % session.name),
     ] + LogoutForm('/session/%s' % session.name))
   else:
+    parts.append(CBreak())
     parts.extend(LoginForm('/session/%s' % session.name))
 
   return PageWrapper(parts, 'session')
@@ -1142,7 +1143,7 @@ def authorize(target):
     CForm([
       CText("Password:"),
       CInput(type="HIDDEN", name='target', value=target), 
-      CInput(type='TEXT', name='pw', size=30, maxlength=60), 
+      CInput(type='TEXT', name='pw', size=30, maxlength=60, autofocus=1), 
       CBreak(2),
       CInput(type='SUBMIT', value='Submit'), 
     ], action='/login', method='POST'), 
