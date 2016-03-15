@@ -1033,6 +1033,8 @@ def session(sid=None, add=None, delete=None, curr=None):
       parts.append(CParagraph("Click on a red dot change the current set.  View a set with "
                               "melody reminders, chords, or both.  To delete a set, view it "
                               "and use the link at the bottom of its page."))
+    else:
+      parts.append(CParagraph("View a particular set with melody reminders, chords, or both:"))
 
     for s in session.sets:
       titles = get_set_title(s)
@@ -1143,7 +1145,7 @@ def authorize(target):
     CForm([
       CText("Password:"),
       CInput(type="HIDDEN", name='target', value=target), 
-      CInput(type='TEXT', name='pw', size=30, maxlength=60, autofocus=1), 
+      CInput(type='PASSWORD', name='pw', size=30, maxlength=60, autofocus=1), 
       CBreak(2),
       CInput(type='SUBMIT', value='Submit'), 
     ], action='/login', method='POST'), 
