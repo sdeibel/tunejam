@@ -18,18 +18,20 @@
 #
 #</VirtualHost>
 
+import sys, os
+fp = os.path.abspath(__file__)
+src_dir = os.path.dirname(os.path.dirname(fp))
+sys.path.append(src_dir)
+log_dir = os.path.join(os.path.dirname(src_dir), 'log')
+import utils
+utils.kCGI = True
+
 # This line enables CGI error reporting
 import cgitb
-cgitb.enable()
+cgitb.enable(logdir=log_dir)
 
 from wsgiref.handlers import CGIHandler
 import traceback
-
-import sys, os
-fp = os.path.abspath(__file__)
-sys.path.append(os.path.dirname(os.path.dirname((fp))))
-import utils
-utils.kCGI = True
 
 app = None
 try:
