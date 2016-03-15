@@ -25,6 +25,12 @@ cgitb.enable()
 from wsgiref.handlers import CGIHandler
 import traceback
 
+import sys, os
+fp = os.path.abspath(__file__)
+sys.path.append(os.path.dirname(os.path.dirname((fp))))
+import utils
+utils.kCGI = True
+
 app = None
 try:
   import tunejam
