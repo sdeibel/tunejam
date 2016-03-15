@@ -915,7 +915,7 @@ def sessions(delete=None, undelete=None):
     parts.append(CParagraph(CText("There are no active sessions right now.", italic=1)))
     
   if not editor:
-    parts.extend(LoginForm('/sessions'))
+    parts.append(LoginButton('/sessions'))
     return PageWrapper(parts, 'session')
 
   parts.append(CForm([
@@ -940,8 +940,7 @@ def sessions(delete=None, undelete=None):
         CBreak(), 
       ])
   
-  parts.extend(LogoutForm('/sessions'))
-  
+  parts.append(LogoutButton('/sessions'))
   parts.append(CBreak())
   
   return PageWrapper(parts, 'session')
@@ -1074,10 +1073,11 @@ def session(sid=None, add=None, delete=None, curr=None):
   if editor:
     parts.extend([               
       CText('Delete this session', href='/sessions/delete/%s' % session.name),
-    ] + LogoutForm('/session/%s' % session.name))
+      LogoutButton('/session/%s' % session.name),
+    ])
   else:
     parts.append(CBreak())
-    parts.extend(LoginForm('/session/%s' % session.name))
+    parts.append(LoginButton('/session/%s' % session.name))
 
   return PageWrapper(parts, 'session')
 
@@ -1226,27 +1226,23 @@ $(document).ready(function() {
   
   return parts
 
-def LoginForm(target):
+def LoginButton(target):
   
-  return [
-    CForm([
+  return CForm([
       CBreak(),
       CText("Log in to create or edit sessions", bold=1),
       CBreak(2), 
       CInput(type='SUBMIT', value="Login"),
       CBreak(2), 
     ], action='/authorize%s' % target, method='GET')
-  ]
   
-def LogoutForm(target):
+def LogoutButton(target):
   
-  return [
-    CForm([
+  return CForm([
       CBreak(2),
       CInput(type='SUBMIT', value="Logout"),
       CBreak(2), 
     ], action='/logout%s' % target, method='GET')
-  ]
   
 def PageWrapper(body, section=None, refresh=None):
   
