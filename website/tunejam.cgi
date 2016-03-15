@@ -22,13 +22,12 @@ import sys, os
 fp = os.path.abspath(__file__)
 src_dir = os.path.dirname(os.path.dirname(fp))
 sys.path.append(src_dir)
-log_dir = os.path.join(os.path.dirname(src_dir), 'log')
 import utils
 utils.kCGI = True
 
 # This line enables CGI error reporting
 import cgitb
-cgitb.enable(logdir=log_dir)
+cgitb.enable()
 
 from wsgiref.handlers import CGIHandler
 import traceback

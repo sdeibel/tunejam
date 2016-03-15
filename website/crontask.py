@@ -78,3 +78,6 @@ def regenerate_books(force=False, log=True):
 #########################################################################
 if __name__ == '__main__':
   regenerate_books(force='--force' in sys.argv)
+  import fixperms
+  fixperms.fix()
+  
