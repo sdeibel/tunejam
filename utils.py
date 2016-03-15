@@ -1486,8 +1486,12 @@ def IsFileNewer(name1, name2):
     mod_time2 = os.stat(name2)[stat.ST_MTIME]
     return (mod_time1 > mod_time2)
     
+kCGI = False
 def error(txt):
-    print(txt)
+    if kCGI:
+        raise RuntimeError(txt)
+    else:
+        print(txt)
     sys.exit(1)
     
 
