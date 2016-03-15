@@ -124,11 +124,12 @@ def sets(spec=None, sid=None):
     tunes = []
     _print = False
     save = False
-    edit = spec is not None
+    edit = '/edit/' in request.url and spec is not None
     title = ''
     subtitle = ''
     pagetype = 'both'
     
+    # XXX This is a mess and needs to be cleaned up
     for arg in args:
       if arg == 'print=1':
         _print = True
