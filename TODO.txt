@@ -2,11 +2,10 @@
   * Ability to create live-updating session page to sync devices
     * Get it working when there is only a local router and no internet (need all'
       Javascript local)
+    * Per-session passwords to prevent edit/deletion by others + on set creation
+      require entering the set password + some sort of captcha
     * Allow printing session pages or the whole session
-    * A way to prevent editing or deletion of session except by owner (could have pw 
-      field that can be entered during creation)
     * A way to sort sets in the session
-    * A way to edit sets in the session (see old saved sets feature)
     * A way to name sets
     * A way to indicate a missing song (not in database)
   * Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
@@ -15,6 +14,7 @@
     * Remove old unused doc generation code
 * Website Phase Two+
   * A way to clone a session
+  * Allow setting session expiration date (default to 1 month)
   * A way to select tunes by length in measures
   * In books:  Optional matrix for know/at-speed/can-start/harmonies check rectangle
   * Easier selection by typed fragments to quickly make sets (OR on each word?)

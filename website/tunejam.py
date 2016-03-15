@@ -107,6 +107,7 @@ def music():
 @app.route('/sets/')
 @app.route('/sets/<spec>')
 @app.route('/sets/sid/<sid>')
+@app.route('/sets/sid/<sid>/edit/<spec>')
 def sets(spec=None, sid=None):
   
   editor = CheckPassword()
@@ -114,12 +115,16 @@ def sets(spec=None, sid=None):
   error = None
   preload_tunes = []
 
+  if sid is not None:
+    s = utils.CSession(sid)
+    s.ReadSession()
+    
   if spec is not None:
     args = spec.split('&')
     tunes = []
     _print = False
     save = False
-    edit = False
+    edit = spec is not None
     title = ''
     subtitle = ''
     pagetype = 'both'
@@ -129,8 +134,6 @@ def sets(spec=None, sid=None):
         _print = True
       elif arg == 'save=1':
         save = True
-      elif arg == 'edit=1':
-        edit = True
       elif arg.startswith('title='):
         title = arg[len('title='):].strip()
       elif arg.startswith('subtitle='):
@@ -196,10 +199,6 @@ def sets(spec=None, sid=None):
           
         return PageWrapper(parts)
 
-  if sid is not None:
-    s = utils.CSession(sid)
-    s.ReadSession()
-    
   filter = request.form.get('filter')
   if filter == 'all':
     filter = None
@@ -219,7 +218,7 @@ $(function() {
     connectWith: ".connectedSortable"
   }).disableSelection();
 });
-function SubmitTunes(sid) {
+function SubmitTunes(sid, old_set) {
   var tunes = $( "#selectedtunes" ).sortable( "serialize", {key:"tune"});
   tunes = tunes.replace(/\+/g, "_");
   tunes = tunes.replace(/tune=/g, "");
@@ -245,8 +244,10 @@ function SubmitTunes(sid) {
   }
   if (sid == "") {
     window.location.href= "/sets/" + tunes;
-  } else {
+  } else if (old_set == "") {
     window.location.href= "/session/" + sid + "/add/" + tunes;
+  } else {
+    window.location.href= "/session/" + sid + "/add/" + tunes + "/replace/" + old_set;
   }
 }
 function FilterTunes() {
@@ -400,7 +401,6 @@ padding-bottom:0.5em;
   parts.append(CBreak())
   
   all_tunes = []
-  selected_tunes = []
   tunes = utils.GetTuneIndex(include_incomplete=True)
   for section in tunes:
     visible = True
@@ -413,21 +413,24 @@ padding-bottom:0.5em;
       obj.ReadDatabase()
       title += ' - %s - %s' % (obj.type.capitalize(), obj.GetKeyString())
       if tune in preload_tunes:
-        use_list = selected_tunes
-      else:
-        use_list = all_tunes
+        continue
       if visible:
-        use_list.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'),
+        all_tunes.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'),
                                        hclass='ui-state-default %s' % section)))
       else:
-        use_list.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'),
+        all_tunes.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'),
                                        hclass='ui-state-default %s' % section,
                                        style="display:none")))
+  selected_tunes = []
+  for tune in preload_tunes:
+    obj = utils.CTune(tune)
+    obj.ReadDatabase()
+    title = '%s - %s - %s' % (obj.title, obj.type.capitalize(), obj.GetKeyString())
+    selected_tunes.append(CItem(title, id='tune_%s' % tune.replace('_', '+'),
+                                 hclass='ui-state-default %s' % obj.type))
 
   all_tunes.sort()
   all_tunes = [i[1] for i in all_tunes]
-  
-  selected_tunes = [i[1] for i in selected_tunes]
   
   tunes_list = CDiv(CList(all_tunes, id='alltunes', hclass='connectedSortable'), hclass='scroll')
   selected_list = CDiv(CList([selected_tunes], id='selectedtunes', hclass='connectedSortable'), hclass='scroll')
@@ -438,6 +441,7 @@ padding-bottom:0.5em;
   ]))
   parts.append(CParagraph("On mobile devices, scroll with two fingers, or by dragging an item down, or by entering a text filter to shorten the list.", hclass="clear"))
   
+  # Creating set outside of session
   if sid is None:
     parts.append(CForm([
       CInput(type='checkbox', name="print", value="1", checked="", id="print-checkbox"),
@@ -466,15 +470,24 @@ padding-bottom:0.5em;
         ], 
       ], id='saveitems'), 
       CBreak(), 
-      CInput(type='button', value="Create Set", onclick="SubmitTunes('');"),
+      CInput(type='button', value="Create Set", onclick="SubmitTunes('', '');"),
       CInput(type='button', value="Clear Selected", onclick='ClearTunes();'), 
     ], id='tunesform'))
+    
+  # Adding a spec to a session
+  elif spec is None:
+    parts.append(CForm([
+      CInput(type='button', value="Add Set", onclick="SubmitTunes('%s', '');" % sid),
+      CInput(type='button', value="Clear Selected", onclick='ClearTunes();'), 
+    ], id='sessionsetform'))
+  
+  # Editing a spec in a session
   else:
     parts.append(CForm([
-      CInput(type='button', value="Add Set", onclick="SubmitTunes('%s');" % sid),
+      CInput(type='button', value="Update Set", onclick="SubmitTunes('%s', '%s');" % (sid, spec)),
       CInput(type='button', value="Clear Selected", onclick='ClearTunes();'), 
-    ], id='sessionsetform'))    
-
+    ], id='sessionsetform'))
+    
   saved = []
   for fn in os.listdir(utils.kSaveLoc):
     if fn.endswith('.book'):
@@ -948,9 +961,10 @@ def sessions(delete=None, undelete=None):
 @app.route('/session', methods=['POST'])
 @app.route('/session/<sid>')
 @app.route('/session/<sid>/add/<add>')
+@app.route('/session/<sid>/add/<add>/replace/<old>')
 @app.route('/session/<sid>/delete/<delete>')
 @app.route('/session/<sid>/current/<curr>')
-def session(sid=None, add=None, delete=None, curr=None):
+def session(sid=None, add=None, delete=None, curr=None, old=None):
 
   editor = CheckPassword()
   
@@ -971,10 +985,14 @@ def session(sid=None, add=None, delete=None, curr=None):
   session.ReadSession()
   
   if add is not None and editor:
-    session.sets.append(add)
+    if old is not None:
+      pos = session.sets.index(old)
+      session.sets[pos] = add
+    else:
+      session.sets.append(add)
     session.WriteSession()
     return redirect('/session/%s' % sid, code=303)
-    
+  
   if delete is not None and editor:
     session.sets.remove(delete)
     if session.current_set == delete:
@@ -1058,6 +1076,14 @@ def session(sid=None, add=None, delete=None, curr=None):
         CNBSP(2), 
         CSpan(titles), 
       ])
+      
+      if editor:
+        parts.extend([
+          CText(' - '),
+          CText("Edit", href='/sets/sid/%s/edit/%s' % (sid, s)),
+          CText(' - '), 
+          CText("Delete", href='/session/%s/delete/%s' % (sid, s)),
+        ])
       
       parts.append(CBreak())
     
