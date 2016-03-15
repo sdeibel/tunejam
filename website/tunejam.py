@@ -4,6 +4,7 @@ import sys, os
 import time
 from html import *
 import tempfile
+import datetime
 
 if sys.platform == 'darwin':
   sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -108,6 +109,8 @@ def music():
 @app.route('/sets/sid/<sid>')
 def sets(spec=None, sid=None):
   
+  editor = CheckPassword()
+  
   error = None
   preload_tunes = []
 
@@ -184,9 +187,12 @@ def sets(spec=None, sid=None):
           parts.extend([
             CBreak(2),
             CText("Return to session %s" % s.title, href='/session/%s' % sid, hclass='bottom-menu-left'),
-            CText("Delete this set", href='/session/%s/delete/%s' % (sid, '&'.join(tunes)), hclass='bottom-menu-right'),
-            CBreak(2)
           ])
+          if editor:
+            parts.extend([
+              CText("Delete this set", href='/session/%s/delete/%s' % (sid, '&'.join(tunes)), hclass='bottom-menu-right'),
+            ])
+          parts.append(CBreak(2))
           
         return PageWrapper(parts)
 
@@ -874,16 +880,14 @@ display:none;
 @app.route('/sessions/undelete/<undelete>')
 def sessions(delete=None, undelete=None):
   
-  parts = CheckPassword('/sessions')
-  if parts:
-    return PageWrapper(parts, 'session')
+  editor = CheckPassword()
    
-  if delete:
+  if delete and editor:
     utils.DeleteSession(delete)
-    return redirect('/sessions')
-  if undelete:
+    return redirect('/sessions', code=303)
+  if undelete and editor:
     utils.DeleteSession(undelete, undelete=True)
-    return redirect('/sessions')
+    return redirect('/sessions', code=303)
   
   utils.PurgeDeletedSessions()
   
@@ -910,6 +914,10 @@ def sessions(delete=None, undelete=None):
   else:
     parts.append(CParagraph(CText("There are no active sessions right now.", italic=1)))
     
+  if not editor:
+    parts.extend(LoginForm('/sessions'))
+    return PageWrapper(parts, 'session')
+
   parts.append(CForm([
     CBreak(), 
     CText("Create a New Session:", bold=1),
@@ -925,11 +933,14 @@ def sessions(delete=None, undelete=None):
   if inactive:
     parts.append(CParagraph(CText("Recently deleted sessions:", bold=1)))
     for session in inactive:
+      expires = time.strftime('%x %X', time.localtime(session.GetExpiration()))
       parts.extend([
-        CSpan(session.title+' - '),
+        CSpan(session.title+' - Expires '+expires+' - '),
         CText("Undelete", href='/sessions/undelete/%s' % session.name),
         CBreak(), 
       ])
+  
+  parts.extend(LogoutForm('/sessions'))
   
   parts.append(CBreak())
   
@@ -942,9 +953,7 @@ def sessions(delete=None, undelete=None):
 @app.route('/session/<sid>/current/<curr>')
 def session(sid=None, add=None, delete=None, curr=None):
 
-  parts = CheckPassword('/sessions')
-  if parts:
-    return PageWrapper(parts, 'session')
+  editor = CheckPassword()
   
   def get_set_title(s):
     titles = []
@@ -962,22 +971,22 @@ def session(sid=None, add=None, delete=None, curr=None):
   session = utils.CSession(sid)
   session.ReadSession()
   
-  if add is not None:
+  if add is not None and editor:
     session.sets.append(add)
     session.WriteSession()
-    return redirect('/session/%s' % sid)
+    return redirect('/session/%s' % sid, code=303)
     
-  if delete is not None:
+  if delete is not None and editor:
     session.sets.remove(delete)
     if session.current_set == delete:
       session.current_set = ''
     session.WriteSession()
-    return redirect('/session/%s' % sid)
+    return redirect('/session/%s' % sid, code=303)
     
-  if curr is not None:
+  if curr is not None and editor:
     session.current_set = curr
     session.WriteSession()
-    return redirect('/session/%s' % sid)
+    return redirect('/session/%s' % sid, code=303)
     
   if session.title:
     title = session.title
@@ -1021,18 +1030,22 @@ def session(sid=None, add=None, delete=None, curr=None):
   if not session.sets:
     parts.append(CText("No sets have been defined for this session", italic=1))
   else:
-    parts.append(CParagraph("Click on a red dot change the current set.  View a set with "
-                            "melody reminders, chords, or both.  To delete a set, view it "
-                            "and use the link at the bottom of its page."))
+    if editor:
+      parts.append(CParagraph("Click on a red dot change the current set.  View a set with "
+                              "melody reminders, chords, or both.  To delete a set, view it "
+                              "and use the link at the bottom of its page."))
+
     for s in session.sets:
       titles = get_set_title(s)
       
       url = '/sets/%s' % s
       if s == session.current_set:
         parts.append(CImage(src='/image/check-mark.png', style="height:1.0em"))
-      else:
+      elif editor:
         parts.append(CImage(src='/image/red-square.png', href="/session/%s/current/%s" % (sid, s),
                             style="height:1.0em"))
+      else:
+        parts.append(CImage(src='/image/red-square.png', style="height:1.0em"))
         
       parts.extend([
         CNBSP(2), 
@@ -1047,27 +1060,29 @@ def session(sid=None, add=None, delete=None, curr=None):
       
       parts.append(CBreak())
     
-  parts.append(CBreak(2))
-  parts.append(CForm([
-    CInput(type="SUBMIT", value="Add a Set"), 
-  ], action='/sets/sid/%s' % sid, method='GET', id="add-set-form"))
+  if editor:
+    parts.append(CBreak(2))
+    parts.append(CForm([
+      CInput(type="SUBMIT", value="Add a Set"), 
+    ], action='/sets/sid/%s' % sid, method='GET', id="add-set-form"))
   
   parts.extend([
     CBreak(2), 
     CText('Return to session list', href='/sessions'),
     CBreak(), 
-    CText('Delete this session', href='/sessions/delete/%s' % session.name),
   ])
-  
+  if editor:
+    parts.extend([               
+      CText('Delete this session', href='/sessions/delete/%s' % session.name),
+    ] + LogoutForm('/session/%s' % session.name))
+  else:
+    parts.extend(LoginForm('/session/%s' % session.name))
+
   return PageWrapper(parts, 'session')
 
 @app.route('/watch/<sid>')
 @app.route('/watch/<type>/<sid>')
 def watch(sid, type=None):
-  
-  parts = CheckPassword('/sessions')
-  if parts:
-    return PageWrapper(parts)
   
   if type is None:
     type = 'both'
@@ -1112,35 +1127,13 @@ def watch(sid, type=None):
   
   return PageWrapper(parts)
 
-@app.route('/password', methods=['POST'])
-def password():
+@app.route('/authorize/<path:target>')
+def authorize(target):
 
-  from flask import session
-  
-  pw = request.form['pw'].lower()
-  target = request.form['target']
-  
-  if 'tune'not in pw or 'jam' not in pw:
-    parts = CheckPassword(target)
-    return PageWrapper(parts, 'session')
-  
-  session['password'] = pw
-  
-  return redirect(target)
-
-@app.route('/ajax/session/<sid>/current')
-def ajax_session_current(sid):
-  s = utils.CSession(sid)
-  s.ReadSession()
-  return s.current_set + '&' + str(len(s.sets))
-
-def CheckPassword(target):
-  
-  from flask import session
-  pw = session.get('password', '').lower()
-  if 'tune' in pw and 'jam' in pw:
-    return []
-  
+  editor = CheckPassword()
+  if editor:
+    return redirect('/'+target, code=303)
+    
   parts = []
 
   parts.extend([
@@ -1152,11 +1145,53 @@ def CheckPassword(target):
       CInput(type='TEXT', name='pw', size=30, maxlength=60), 
       CBreak(2),
       CInput(type='SUBMIT', value='Submit'), 
-    ], action='/password', method='POST'), 
+    ], action='/login', method='POST'), 
   ])
   
-  return parts
+  return PageWrapper(parts, 'session')
 
+@app.route('/login', methods=['POST'])
+def login():
+
+  from flask import session
+  
+  pw = request.form['pw'].lower()
+  target = request.form['target']
+  
+  if 'tune'not in pw or 'jam' not in pw:
+    parts = CheckPassword()
+    return PageWrapper(parts, 'session')
+  
+  session['password'] = pw
+  
+  return redirect(target, code=303)
+
+@app.route('/logout/<path:target>')
+def logout(target):
+  Logout()
+  return redirect('/'+target, code=303)
+
+@app.route('/ajax/session/<sid>/current')
+def ajax_session_current(sid):
+  s = utils.CSession(sid)
+  s.ReadSession()
+  return s.current_set + '&' + str(len(s.sets))
+
+def CheckPassword():
+  
+  from flask import session
+  pw = session.get('password', '').lower()
+  if 'tune' in pw and 'jam' in pw:
+    return True
+  else:
+    return False
+
+def Logout():
+  
+  from flask import session
+  if 'password' in session:
+    del session['password']
+  
 def SessionReloader(sid):
 
   s = utils.CSession(sid)
@@ -1190,6 +1225,28 @@ $(document).ready(function() {
   
   return parts
 
+def LoginForm(target):
+  
+  return [
+    CForm([
+      CBreak(),
+      CText("Log in to create or edit sessions", bold=1),
+      CBreak(2), 
+      CInput(type='SUBMIT', value="Login"),
+      CBreak(2), 
+    ], action='/authorize%s' % target, method='GET')
+  ]
+  
+def LogoutForm(target):
+  
+  return [
+    CForm([
+      CBreak(2),
+      CInput(type='SUBMIT', value="Logout"),
+      CBreak(2), 
+    ], action='/logout%s' % target, method='GET')
+  ]
+  
 def PageWrapper(body, section=None, refresh=None):
   
   # Build html head
