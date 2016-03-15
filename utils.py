@@ -1492,6 +1492,6 @@ def error(txt):
         raise RuntimeError(txt)
     else:
         print(txt)
-    sys.exit(1)
+        sys.exit(1)
     
 
