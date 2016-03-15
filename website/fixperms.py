@@ -8,13 +8,20 @@ cmds = [
   'sudo chmod g+s `find . -type d`',   
 ]
 
-fp = os.path.fullpath(__file__)
+fp = os.path.abspath(__file__)
 cache_dir = os.path.join(os.path.dirname(fp), 'cache')
+sessions_dir = os.path.join(os.path.dirname(fp), 'sessions')
+
+all_dirs = [
+  cache_dir,
+  sessions_dir
+]
 
 def fix():
-  os.chdir(cache_dir)
-  for cmd in cmds:
-    os.system(cmd)
+  for dirname in all_dirs:
+    os.chdir(dirname)
+    for cmd in cmds:
+      os.system(cmd)
 
 if __name__ == '__main__':
   fix()
