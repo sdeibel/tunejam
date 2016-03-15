@@ -1250,6 +1250,15 @@ class CSession:
         f = open(fn, 'w')
         f.write('\n'.join(lines))
         f.close()
+        
+    def GetExpiration(self):
+        
+        fn = os.path.join(kSessionArchiveLoc, self.name+'.ses')
+        if not os.path.exists(fn):
+            return None
+        
+        mod_time = os.stat(fn)[stat.ST_MTIME]
+        return mod_time + kSessionExpiration        
 
 def ReadSessions(deleted=False):
 
@@ -1315,6 +1324,7 @@ def DeleteSession(sid, undelete=False):
     
     os.unlink(fn1)
     
+kSessionExpiration = 7 * 24 * 60 * 60
 def PurgeDeletedSessions():
     
     sessions = os.listdir(kSessionArchiveLoc)
@@ -1323,7 +1333,7 @@ def PurgeDeletedSessions():
             continue
         fn = os.path.join(kSessionArchiveLoc, session)
         mod_time = os.stat(fn)[stat.ST_MTIME]
-        if mod_time < time.time() - (7 * 24 * 60 * 60):
+        if mod_time < time.time() - kSessionExpiration:
             os.unlink(fn)
         
 def GetTuneIndex(include_incomplete):
