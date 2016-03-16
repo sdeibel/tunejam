@@ -1,4 +1,4 @@
-T:Snow Storm's Coming
+T:Snow Storm's Coming (by Jody Kruskal)
 K:Am
 L:1/8
 M:6/8

@@ -1,4 +1,4 @@
-T:Books and Ladders
+T:Books and Ladders (by John Goodin)
 K:D
 L:1/8
 M:6/8
