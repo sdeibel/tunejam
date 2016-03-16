@@ -205,15 +205,18 @@ def sets(spec=None, sid=None):
     filter = None
   
   parts = []
+  # Jquery and jquery-ui came from:
+  # http://jquery.com/download/ (version 1.22.0)
+  # http://jqueryui.com/download/ (version 1.11.4)
   # Extra JS libraries came from:
-  #https://github.com/padolsey-archive/jquery.fn/tree/master/sortElements
-  #https://raw.github.com/furf/jquery-ui-touch-punch/master/jquery.ui.touch-punch.min.js
-  parts.append("""<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/blitzer/jquery-ui.css">
-<script src="//code.jquery.com/jquery-1.12.0.min.js"></script>
-<script src="//code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
+  # https://github.com/padolsey-archive/jquery.fn/tree/master/sortElements
+  # https://raw.github.com/furf/jquery-ui-touch-punch/master/jquery.ui.touch-punch.min.js
+  parts.append("""<link rel="stylesheet" href="/js/ui/jquery-ui.css">
+<script src="/js/jquery-1.12.0.min.js"></script>
+<script src="/js/ui/jquery-ui.min.js"></script>
 <script src="/js/jquery.sortElements.js"></script>
 <script src="/js/jquery.ui.touch-punch.min.js"></script> 
- <script>
+<script>
 $(function() {
   $( "#alltunes, #selectedtunes" ).sortable({
     connectWith: ".connectedSortable"
@@ -690,10 +693,13 @@ def image(image):
   img_file = os.path.join(utils.kImageDir, image)
   return send_file(img_file, mimetype='image/png')
   
-@app.route('/js/<filename>')
+@app.route('/js/<path:filename>')
 def js(filename):
   js_file = os.path.join(utils.kJSDir, filename)
-  return send_file(js_file, mimetype='text/javascript')
+  if filename.endswith('.js'):
+    return send_file(js_file, mimetype='text/javascript')
+  else:
+    return send_file(js_file, mimetype='text/css')
   
 @app.route('/css/<media>')
 def css(media):
@@ -1229,8 +1235,9 @@ def SessionReloader(sid):
   
   parts = []
   
-  parts.append("""<script src="//code.jquery.com/jquery-1.12.0.min.js"></script>
-<script src="//code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
+  parts.append("""
+<script src="/js/jquery-1.12.0.min.js"></script>
+<script src="/js/ui/jquery-ui.min.js"></script>
 """)
   
   parts.extend([
