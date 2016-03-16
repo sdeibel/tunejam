@@ -4,7 +4,7 @@ L:1/8
 M:6/8
 --
 a2a bag|eaf ged|
-e=fe dBA|efe dBA|
+efe dBA|efe dBA|
 --
 |: Am  | Am | G   | Em    | 
    Am  | Am | AmG | EmAm :|
