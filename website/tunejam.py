@@ -1053,7 +1053,7 @@ def session(sid=None, add=None, delete=None, curr=None, old=None):
     CText("Now Playing: ", bold=1), 
     CSpan(c),
     CBreak(), 
-    CText("Watch Current Set:", bold=1),
+    CText("Follow This Session:", bold=1),
     CNBSP(),
     CText("Notes", href='/watch/notes/%s' % sid), 
     CNBSP(), 
@@ -1124,7 +1124,8 @@ def session(sid=None, add=None, delete=None, curr=None, old=None):
     CBreak(), 
   ])
   if editor:
-    parts.extend([               
+    parts.extend([
+      CBreak(), 
       CText('Delete this session', href='/sessions/delete/%s' % session.name),
       LogoutButton('/session/%s' % session.name),
     ])

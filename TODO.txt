@@ -1,7 +1,8 @@
 * Website Phase One
   * Ability to create live-updating session page to sync devices
     * Per-session passwords to prevent edit/deletion by others + on set creation
-      require entering the set password + some sort of captcha
+      require entering the set password + some sort of captcha -- if not pw entered,
+      generate one
     * A way to sort sets in the session
     - A way to name sets
     - A way to indicate a missing song (not in database)
