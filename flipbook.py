@@ -12,7 +12,7 @@ class CFlipBook(utils.CBook):
         self.subtitle = 'Set Flip Book - By Type'
         self.type_in_header = True
         self.date = time.strftime("%d %B %Y", time.localtime())
-        self.contact = 'http://cambridgeny.net/music'
+        self.contact = 'http://music.cambridgeny.net'
         self.name = 'flip'
         self.url = self.name
     
@@ -56,7 +56,7 @@ class CFlipBookByTime(utils.CBook):
         self.subtitle = 'Set Flip Book - By Time Signature'
         self.type_in_header = True
         self.date = time.strftime("%d %B %Y", time.localtime())
-        self.contact = 'http://cambridgeny.net/music'
+        self.contact = 'http://music.cambridgeny.net'
         self.name = 'flip-by-time'
         self.url = self.name
     
