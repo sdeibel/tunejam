@@ -648,7 +648,7 @@ def doprint(format=None, bookname=None):
     book = sessbook.CSessionBook(session)
     target, up_to_date = book._GetCacheFile('.pdf')
     fn = os.path.join(utils.kSessionsLoc, session.name+'.ses')
-    if utils.IsFileNewer(fn, target):
+    if utils.IsFileNewer(fn, target) and os.path.exists(target):
       os.unlink(target)
     pdf = book.GeneratePDF(type_in_header=False, include_index=True, generate=True)
     return send_file(pdf, mimetype='application/pdf')
