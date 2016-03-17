@@ -1,13 +1,10 @@
 * Website Phase One
   * Ability to create live-updating session page to sync devices
-    * Get it working when there is only a local router and no internet (need all'
-      Javascript local)
     * Per-session passwords to prevent edit/deletion by others + on set creation
       require entering the set password + some sort of captcha
-    * Allow printing session pages or the whole session
     * A way to sort sets in the session
-    * A way to name sets
-    * A way to indicate a missing song (not in database)
+    - A way to name sets
+    - A way to indicate a missing song (not in database)
   * Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
   * Clean up
     * Remove old saved sets impl

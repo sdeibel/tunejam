@@ -577,6 +577,7 @@ def get_all_books():
 @app.route('/print/<format>')
 @app.route('/print/<format>/<bookname>')
 def doprint(format=None, bookname=None):
+  
   refresh = None
   parts = []
   if format is None:
@@ -638,6 +639,18 @@ def doprint(format=None, bookname=None):
     import flipbook
     book = flipbook.CFlipBookByTime()
     pdf = book.GeneratePDF(type_in_header=False, include_index=True)
+    return send_file(pdf, mimetype='application/pdf')
+  
+  elif format == 'session':
+    import sessbook
+    session = utils.CSession(bookname)
+    session.ReadSession()
+    book = sessbook.CSessionBook(session)
+    target, up_to_date = book._GetCacheFile('.pdf')
+    fn = os.path.join(utils.kSessionsLoc, session.name+'.ses')
+    if utils.IsFileNewer(fn, target):
+      os.unlink(target)
+    pdf = book.GeneratePDF(type_in_header=False, include_index=True, generate=True)
     return send_file(pdf, mimetype='application/pdf')
   
   else:
@@ -1080,6 +1093,8 @@ def session(sid=None, add=None, delete=None, curr=None, old=None):
         CText("Chords", href=url+'&pagetype=chords&session=%s' % sid), 
         CNBSP(), 
         CText("Both", href=url+'&session=%s' % sid),
+        CNBSP(), 
+        CText("Print", href=url+'&session=%s&print=1' % sid),
         CNBSP(2), 
         CSpan(titles), 
       ])
@@ -1101,6 +1116,9 @@ def session(sid=None, add=None, delete=None, curr=None, old=None):
     ], action='/sets/sid/%s' % sid, method='GET', id="add-set-form"))
   
   parts.extend([
+    CBreak(), 
+    CText('Print this session', href='/print/session/%s' % sid),
+    CText('(this may take a while)'), 
     CBreak(), 
     CText('Return to session list', href='/sessions'),
     CBreak(), 
