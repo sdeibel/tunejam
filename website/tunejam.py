@@ -219,7 +219,9 @@ def sets(spec=None, sid=None):
 <script>
 $(function() {
   $( "#alltunes, #selectedtunes" ).sortable({
-    connectWith: ".connectedSortable"
+    connectWith: ".connectedSortable",
+    containment: ".list-area",
+    scrollSpeed: 100,
   }).disableSelection();
 });
 function SubmitTunes(sid, old_set) {
