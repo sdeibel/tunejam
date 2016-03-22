@@ -354,13 +354,48 @@ vertical-align:top;
 }
 div.scroll {
 float:left;
-height:400px;
+height:300px;
 width:350px;
 overflow-y:scroll;
 overflow-x:hidden;
 border: 1px solid #666666;
-padding: 8px;
+padding: 0px;
 -webkit-overflow-scrolling:touch;
+}
+div.list-area {
+position:relative;
+display:inline;
+overflow:auto;
+}
+div.list-title {
+font-weight:bold;
+position:absolute;
+top:0px;
+left:0px;
+}
+div.list-left {
+position:relative;
+top:0px;
+left:0px;
+overflow:auto;
+}
+div.list-right {
+position:absolute;
+top:0px;
+left:370px;
+overflow:auto;
+}
+@media only screen and (max-width:600px) {
+div.list-right {
+left:0px;
+top:345px;
+}
+div.list-left {
+height:670px;
+}
+div.scroll {
+width:87vw;
+}
 }
 p {
 padding-left:0px;
@@ -439,10 +474,11 @@ padding-bottom:0.5em;
   tunes_list = CDiv(CList(all_tunes, id='alltunes', hclass='connectedSortable'), hclass='scroll')
   selected_list = CDiv(CList([selected_tunes], id='selectedtunes', hclass='connectedSortable'), hclass='scroll')
   
-  parts.append(CTable([
-    CTR([CText("Available:"), CText("Selected:")]), 
-    CTR([tunes_list, selected_list])
-  ]))
+  parts.append(CDiv([
+    CDiv([CDiv(CText("Available:"), hclass='list-title'), CBreak(), tunes_list], hclass='list-left'),
+    CDiv([CDiv(CText("Selected:"), hclass='list-title'), CBreak(), selected_list], hclass='list-right'), 
+  ], hclass='list-area'))
+  parts.append(CBreak())
   parts.append(CParagraph("On mobile devices, scroll with two fingers, or by dragging an item down, or by entering a text filter to shorten the list.", hclass="clear"))
   
   # Creating set outside of session
