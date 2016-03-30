@@ -35,6 +35,7 @@
   evenings_and_weekends (eventually replace this recording)
   morrisons_jig
   wedding_on_the_hill
+  reel_st_antoine
 * Missing recordings
   star_of_the_county_down
   belle_meres_waltz
