@@ -7,6 +7,7 @@
     * A way to sort sets in the session
     - A way to name sets
     - A way to indicate a missing song (not in database)
+  * A way to get chords-only or notes-only page from index list
   * Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
   * Clean up
     * Remove old saved sets impl
@@ -21,6 +22,7 @@
   * A way to play set recordings in order one after the other and/or w/ repeat?
   * A way to play recordings slowed down (record speed in DB so can show
     approx beats/minute)
+  * A way to add a tune and edit tune notes and chords via the website
 * Find notebooks/bindings/printing options for flip books
 * Missing notes and/or chords
   oak_leaf_reel
@@ -30,7 +32,6 @@
   luna_moth
   braes_of_breadalbane
   valentines_day
-  devils_dance
   fishers_hornpipe
   evenings_and_weekends (eventually replace this recording)
   morrisons_jig
