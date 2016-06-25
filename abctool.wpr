@@ -38,13 +38,16 @@ debug.named-entry-points = (1,
          'loc': loc('setsheets.py')})})
 proj.debug-sub-processes = True
 proj.directory-list = [{'dirloc': loc('.'),
-                        'excludes': [],
-                        'filter': '*',
+                        'excludes': (),
+                        'filter': u'*',
                         'include_hidden': False,
                         'recursive': True,
                         'watch_for_changes': True}]
 proj.file-type = 'shared'
 proj.launch-config = {loc('setsheets.py'): ('project',
         (u'--ring --book drafts',
-         ''))}
+         '')),
+                      loc('website/tunejam.py'): ('project',
+        (u'',
+         'launch-vHtwUB7hQCEcCd87'))}
 proj.main-file = loc('website/tunejam.py')

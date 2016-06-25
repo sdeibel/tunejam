@@ -39,6 +39,7 @@
   reel_st_antoine
   6_8_du_petit_sarny
   belknaps_march
+  chorus_jig
 * Missing recordings
   star_of_the_county_down
   belle_meres_waltz
