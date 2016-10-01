@@ -31,6 +31,7 @@
   murphys_hornpipe
   luna_moth
   braes_of_breadalbane
+  unknown_strathspey
   valentines_day
   fishers_hornpipe
   evenings_and_weekends (eventually replace this recording)
@@ -40,6 +41,7 @@
   6_8_du_petit_sarny
   belknaps_march
   chorus_jig
+  possum_in_woodchuck_trap  
 * Missing recordings
   star_of_the_county_down
   belle_meres_waltz
