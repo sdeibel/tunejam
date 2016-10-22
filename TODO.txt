@@ -42,6 +42,8 @@
   belknaps_march
   chorus_jig
   possum_in_woodchuck_trap  
+  rambling_pitchfork
+  swinging_on_a_gate
 * Missing recordings
   star_of_the_county_down
   belle_meres_waltz
