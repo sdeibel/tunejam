@@ -44,6 +44,9 @@
   possum_in_woodchuck_trap  
   rambling_pitchfork
   swinging_on_a_gate
+  my_darlings_asleep
+  mrs_mcgee
+  ocoee_waltz
 * Missing recordings
   star_of_the_county_down
   belle_meres_waltz
