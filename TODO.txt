@@ -1,9 +1,23 @@
-* Website Phase One
+* Website Phase Two
+  ** Add to sessions ability to say "playing this now" and to get at dates played
+     for each set and sort by date last played + show counts for number of times played; 
+     want to store dates played for each tune so set date is last date played together
+  ** Add suggest feature to sessions
+    ** Randomly select tunes into sets (of selected type or same type randomly or any 
+       type) -- want algorithm that mixes well-known and less recently played to
+       always bring back past tunes
+    ** Randomly select sets -- same algorithm base on set times
+    ** Allow specifying sets or all of site as the basis for suggestions
+    ** Generate sets and set current as for existing functionality but don't
+       store the sets permanently in the session; just store list of times played
+  ** Try to fix so it works better on devices
+  ** Set up Tune Jam session with our common sets
+* Website Phase Three+
   * Ability to create live-updating session page to sync devices
     * Per-session passwords to prevent edit/deletion by others + on set creation
       require entering the set password + some sort of captcha -- if not pw entered,
       generate one
-    * A way to rename the session
+    * A way to rename or duplicate the session
     * A way to sort sets in the session
     - A way to name sets
     - A way to indicate a missing song (not in database)
@@ -12,7 +26,6 @@
   * Clean up
     * Remove old saved sets impl
     * Remove old unused doc generation code
-* Website Phase Two+
   * A way to clone a session
   * Allow setting session expiration date (default to 1 month)
   * A way to select tunes by length in measures
