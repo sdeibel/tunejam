@@ -5,6 +5,7 @@ import time
 from html import *
 import tempfile
 import datetime
+import random
 
 if sys.platform == 'darwin':
   sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -1022,7 +1023,9 @@ def sessions(delete=None, undelete=None):
 @app.route('/session/<sid>/add/<add>/replace/<old>')
 @app.route('/session/<sid>/delete/<delete>')
 @app.route('/session/<sid>/current/<curr>')
-def session(sid=None, add=None, delete=None, curr=None, old=None):
+@app.route('/session/<sid>/status/<status>')
+@app.route('/session/<sid>/select/<selector>')
+def session(sid=None, add=None, delete=None, curr=None, old=None, status=None, selector=None):
 
   editor = CheckPassword()
   
@@ -1060,9 +1063,51 @@ def session(sid=None, add=None, delete=None, curr=None, old=None):
     
   if curr is not None and editor:
     session.current_set = curr
+    if session.on_air:
+      for ptime in session.stats[curr][:]:
+        if ptime > time.time() - 60 * 60:
+          session.stats[curr].remove(ptime)
+      session.stats[curr].append(time.time())
+    session.WriteSession()
+    return redirect('/session/%s' % sid, code=303)
+
+  if status is not None and editor:
+    if status == 'on-air':
+      session.on_air = 1
+    else:
+      session.on_air = 0
     session.WriteSession()
     return redirect('/session/%s' % sid, code=303)
     
+  if selector is not None and editor:
+    if selector == 'random':
+      if len(session.sets) == 0:
+        new_set = None
+      elif len(session.sets) == 1:
+        new_set = session.sets[0]
+      else:
+        choice = random.randint(0, len(session.sets))
+        while session.sets[choice] == session.current_set:
+          choice = random.randint(0, len(session.sets))
+        new_set = session.sets[choice]
+    else:
+      times = []
+      for s in session.sets:
+        if s in session.stats:
+          ptime = sorted(session.stats[s])[-1]
+        else:
+          ptime = 0.0
+        times.append((ptime, s))
+      if times:
+        new_set = sorted(times)[0][1]
+      else:
+        new_set = None
+      
+    if new_set:
+      return redirect('/session/%s/current/%s' % (sid, new_set), code=303)
+    else:
+      return redirect('/session/%s' % sid, code=303)      
+  
   if session.title:
     title = session.title
   else:
@@ -1101,14 +1146,46 @@ def session(sid=None, add=None, delete=None, curr=None, old=None):
     CBreak(), 
   ])
   
+  if session.on_air:
+    img = '/image/slider-on.png'
+    status = "In Session: Recording active set statistics."
+    status_url = '/session/%s/status/off-air' % sid
+  else:
+    img = '/image/slider-off.png'
+    status = "Off The Air"
+    status_url = '/session/%s/status/on-air' % sid
+
+  if editor:
+    status_img = CImage(src=img, href=status_url)
+  else:
+    status_img = CImage(src=img)
+    
+  parts.extend(
+    [
+      CBreak(),
+      CText("Status:", bold=1),
+      CNBSP(), 
+      status_img, 
+      CNBSP(),
+      CText(status)
+    ])
+  
   parts.append(CH("Available Sets:", 2))
   if not session.sets:
     parts.append(CText("No sets have been defined for this session", italic=1))
   else:
     if editor:
       parts.append(CParagraph("Click on a red dot change the current set.  View a set with "
-                              "melody reminders, chords, or both.  To delete a set, view it "
-                              "and use the link at the bottom of its page."))
+                              "melody reminders, chords, or both."))
+      if session.on_air:
+        parts.extend([
+          CText("Select Set:"),
+          CNBSP(),
+          CText("Random", href='/session/%s/select/random' % sid), 
+          CNBSP(),
+          CText("Least Recent", href='/session/%s/select/oldest' % sid),
+          CBreak(2), 
+        ])
     else:
       parts.append(CParagraph("View a particular set with melody reminders, chords, or both:"))
 
@@ -1136,6 +1213,20 @@ def session(sid=None, add=None, delete=None, curr=None, old=None):
         CNBSP(2), 
         CSpan(titles), 
       ])
+      
+      if session.stats[s]:
+        ptime = sorted(session.stats[s])[-1]
+        ltime = time.localtime(ptime)
+        now = time.localtime(time.time())
+        yr = time.strftime('%Y', ltime)
+        if int(yr) != int(time.strftime('%Y', now)):
+          lplayed = time.strftime('%b %d %Y', ltime)
+        else:
+          lplayed = time.strftime('%b %d', ltime)
+        parts.extend([
+          CText(' - '),
+          CText('Played %ix last on %s' % (len(session.stats[s]), lplayed)), 
+        ])
       
       if editor:
         parts.extend([
