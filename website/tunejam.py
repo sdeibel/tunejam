@@ -1175,7 +1175,7 @@ def session(sid=None, add=None, delete=None, curr=None, old=None, status=None, s
     parts.append(CText("No sets have been defined for this session", italic=1))
   else:
     if editor:
-      parts.append(CParagraph("Click on a red dot change the current set.  View a set with "
+      parts.append(CParagraph("Click on a red dot to change the current set.  View a set with "
                               "melody reminders, chords, or both."))
       if session.on_air:
         parts.extend([
