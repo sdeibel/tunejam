@@ -1,15 +1,13 @@
 * Website Phase Two
-  ** Add to sessions ability to say "playing this now" and to get at dates played
-     for each set and sort by date last played + show counts for number of times played; 
-     want to store dates played for each tune so set date is last date played together
-  ** Add suggest feature to sessions
-    ** Randomly select tunes into sets (of selected type or same type randomly or any 
-       type) -- want algorithm that mixes well-known and less recently played to
-       always bring back past tunes
-    ** Randomly select sets -- same algorithm base on set times
-    ** Allow specifying sets or all of site as the basis for suggestions
-    ** Generate sets and set current as for existing functionality but don't
-       store the sets permanently in the session; just store list of times played
+  ** May want to have random/least-recent set selection be provisional and
+     only record stats if user confirms it
+  ** Statistics guided set creation
+    ** Also remember times played for each tune
+    ** Randomly select tunes based on time played -- mix well-known and less known
+    ** Allow specifying existing sets or all of site as the basis for random sets
+    ** Load set as provisional and only mark as played if save to session
+       (but still mark the individual tunes as played)
+    ** Avoid generating sets identical to existing (ignoring order of tunes)
   ** Try to fix so it works better on devices
   ** Set up Tune Jam session with our common sets
 * Website Phase Three+

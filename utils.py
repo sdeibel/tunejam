@@ -4,6 +4,7 @@ import setsheets
 import tempfile
 import sys
 import time
+import collections
 
 # Configuration
 kFontSize = 18
@@ -1221,6 +1222,8 @@ class CSession:
         self.title = ''
         self.sets = []
         self.current_set = ''
+        self.on_air = 0
+        self.stats = collections.defaultdict(list)
         
     def ReadSession(self, deleted=False):
         if deleted:
@@ -1239,14 +1242,30 @@ class CSession:
         lines = lines.split('\n')
         self.title = lines[0]
         self.current_set = lines[1]
-        self.sets = [l.strip() for l in lines[2:]]
+        self.on_air = int(lines[2])
+        
+        self.sets = []
+        curr_set = None
+        for l in lines[3:]:
+            if l == l.lstrip() and l.strip():
+                self.sets.append(l)
+                curr_set = l
+            elif l.strip():
+                assert curr_set is not None
+                self.stats[curr_set].append(float(l.strip()))
         
     def WriteSession(self):
         fn = os.path.join(kSessionsLoc, self.name+'.ses')
         lines = [
             self.title,
-            self.current_set
-        ] + self.sets
+            self.current_set, 
+            str(self.on_air), 
+        ]
+        for sid in self.sets:
+            lines.append(sid)
+            for ptime in self.stats[sid]:
+                lines.append('  ' + str(ptime))
+                
         f = open(fn, 'w')
         f.write('\n'.join(lines))
         f.close()
