@@ -41,30 +41,20 @@
   rileys_reel (S)
   murphys_hornpipe (S)
   luna_moth (S)
-  braes_of_breadalbane
-  unknown_strathspey
   valentines_day
-  fishers_hornpipe
-  evenings_and_weekends (eventually replace this recording) (S)
+  fishers_hornpipe (no chords)
+  evenings_and_weekends (S)
   morrisons_jig
-  wedding_on_the_hill
-  reel_st_antoine
-  6_8_du_petit_sarny
-  belknaps_march
-  chorus_jig
   possum_in_woodchuck_trap (S)
   rambling_pitchfork
-  swinging_on_a_gate
   my_darlings_asleep
   mrs_mcgee
-  ocoee_waltz
+  rights_of_man (S)
+  battenkill_ramble (no chords)
 * Missing recordings
   star_of_the_county_down
   belle_meres_waltz
   metsakukkia
   the_good_doctor
-  scolleys_reel (should redo the recording?)
 * Missing everything
   january_waltz
-  battenkill_ramble (slip jig by Caz)
-  rights_of_man (S)
