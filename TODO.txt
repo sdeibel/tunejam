@@ -35,21 +35,17 @@
     approx beats/minute)
   * A way to add a tune and edit tune notes and chords via the website
 * Find notebooks/bindings/printing options for flip books
-* Missing notes and/or chords [(S) = Stephan; rest Bliss will do]
+* Missing notes and/or chords [Bliss will do, except as marked]
   oak_leaf_reel
   st_patricks_day
-  rileys_reel (S)
-  murphys_hornpipe (S)
-  luna_moth (S)
+  rileys_reel (liz?)
+  luna_moth (no chords)
   valentines_day
-  fishers_hornpipe (no chords)
-  evenings_and_weekends (S)
   morrisons_jig
-  possum_in_woodchuck_trap (S)
+  possum_in_woodchuck_trap (caz)
   rambling_pitchfork
   my_darlings_asleep
   mrs_mcgee
-  rights_of_man (S)
   battenkill_ramble (no chords)
 * Missing recordings
   star_of_the_county_down
@@ -58,3 +54,4 @@
   the_good_doctor
 * Missing everything
   january_waltz
+

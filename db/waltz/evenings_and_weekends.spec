@@ -1,6 +1,16 @@
 T:Evenings and Weekends
-K:?
-L:1/4
+K:C
+L:1/8
 M:3/4
 --
+c3B Ac|B2A2G2|(E6|E6)|
+c3B cd|e2d2c2|e6|A6|
 --
+| C  | C   | CC   | G7  |
+  Dm | EbC | D7   | G7  |
+  C  | C   | C    | G7  |
+  Dm | EbC | D7   | E7  |
+| Am | Am  | Dm   | Dm  |
+  E7 | Am  | D7   | GG7 | 
+  C  | C   | C    | G7  | 
+  Dm | Em  | D7G7 | C   |

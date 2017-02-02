@@ -1,6 +1,6 @@
 T:Riley's Reel
-K:?
-L:1/4
+K:G
+L:1/8
 M:4/4
 --
 --
