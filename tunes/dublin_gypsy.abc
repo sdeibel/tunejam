@@ -1,16 +1,5 @@
-X:0K:DmM:4/4L:1/8
-P:IntroABABAvar1Avar2ABCDCDET:Dublin GypsyT:Copyright 2010, Stephan R.A. DeibelT:Structure: Intro AB AB Avar1 Avar2 AB CD CD E
-T:-
-P:Intro - slowly ad. lib."Dm"vAdef2!fermata!a3|"A"uaad e-!fermata!e4|"Dm"Ade(v!1!f2u!1!!fermata!a3)|"Csup9"d'd'^c' =c'-!fermata!=c'3a|"C7"abc'2!fermata!c'4|"Gm"c'ba (u!2!b!2!g)-!fermata!g3|"Dm"Adef2!fermata!a3|"A"aa^c"Dm"ud-!fermata!d3|
-P:A - briskly(!fermata!d2|:"Dm"d) ef2 efg2|fg"A"a2 aba2|gf"Dm"e2 ef"A"a2|[1"Dm"f2e4e2:|[2"Dm"^c2d4d2||
-P:B
-!1!a2|:"Dm"!3!d'4d'2a2|"Gm"d'4d'2a2|"Dm"b3c'd'2b2|"A"a4a4|"Dm"!2!g2!2!g!3!ab2g2|"A"f2fga2f2|"Gm"e3fe2^c2|[1"Dm"d4d2a2:|[2"Dm"d4d4||P:Avar1
-!3!vd'ud'!3!v^c'uc'!3!v=c'2z2|=bb_bba2z2|a2efg2f2|e4e4|!3!f'f'!3!e'e'^d'2z2|d'd'^c'c'=c'2z2|a2efg2^c2|d4d4|
-P:Avar2
-!3!ve'ue'!3!v^d'ud' !3!v=d'ud'!3!v^c'uc'|=c'c'=bb _bbaa|!3!a2efg2f2|e4e4|
-f'f'e'e' ^d'd'=d'd'|^c'c' =c'c'=bb_bb|!3!a2efg2^c2|d4d4|
-P:C
-|:d2dd2ddd|^c2cc2ccc|=c2cc2ccc|=B2BB2BBB|
-_B2BB2BBB|B2BB2BBB|A2AA2AAA|A2AA2AAA:|
-P:D
-P:E
+X:0K:DmM:4/4L:1/8P:IntroABABAvar1Avar2ABCDCDET:Dublin GypsyT:Copyright 2010, Stephan R.A. DeibelT:Structure: Intro AB AB Avar1 Avar2 AB CD CD ET:-P:Intro - largo 58 ad. lib."Dm"vAdef2!fermata!a3|"A"uaad e-!fermata!e4|"Dm"Ade(v!1!f2u!1!!fermata!a3)|"Csup9"d'd'^c' =c'-!fermata!=c'3a|"C7"abc'2!fermata!c'4|"Gm"c'ba (u!2!b!2!g)-!fermata!g3|"Dm"Adef2!fermata!a3|"A"aa^c"Dm"ud-!fermata!d3|P:A - andante 92(!fermata!d2|:"Dm"d) e!accent!f2 ef!accent!g2|fg"A"!accent!a2 aba2|gf"Dm"e2 ef"A"a2|[1"Dm"f2e4e2:|[2"Dm"^c2d4d2||P:B - andante 92!1!a2|:"Dm"!3!d'4d'2a2|"Gm"d'4d'2a2|"Dm"b3c'd'2b2|"A"a4a4|"Dm"!2!g2!2!g!3!ab2g2|"A"f2fga2f2|"Gm"e3fe2^c2|[1"Dm"d4d2a2:|[2"Dm"d4d4||P:Avar1 - andante 92!3!vd'ud'!3!v^c'uc'!3!v=c'2z2|=bb_bba2z2|a2efg2f2|e4e4|!3!f'f'!3!e'e'^d'2z2|d'd'^c'c'=c'2z2|a2efg2^c2|d4d4|P:Avar2 - andante 92!3!ve'ue'!3!v^d'ud' !3!v=d'ud'!3!v^c'uc'|=c'c'=bb _bbaa|!3!a2efg2f2|e4e4|f'f'e'e' ^d'd'=d'd'|^c'c' =c'c'=bb_bb|!3!a2efg2^c2|d4d4|P:C - andante 92|:d2dd2ddd|^c2cc2ccc|=c2cc2ccc|=B2BB2BBB|_B2BB2BBB|B2BB2BBB|A2AA2AAA|A2AA2AAA:|P:D - andante 92
+A|:de"Dm"f2e2d2|f2e2"A"AA2A|de"Dm"f2e2d2|fe2"A"aaaa A|de"Dm"f2e2d2|f2e2"A"AA2A|AA"Dm"B2A2G2|[1:B2A2DD2 A:|[2:B2A2DD3||P:E - largo 56
+M:6/8z"Dm"a2^g2a2|"Gm"f2e2f2|"Dm"d2^c2d2|A4A2|"Gm"G4GG|G2A2B2|"Dm"A6|A4A2|
+"Gm"G4GG|G2A2B2|"Dm"A2G2F2|[1:D4D2|"Gm"E4E2|F4E2|"Dm"D6|D6:|
+[2:D2E2F2|"A"A2B2d2|"Gm"e2f2!1!a2|"Dm"!4!(d'6|d'6)||
