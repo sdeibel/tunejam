@@ -1,8 +1,3 @@
-X:0
-K:Dm
-M:4/4
-L:1/8
-T:Dublin Gypsy
-T:Copyright 2010, Stephan R.A. Deibel
-T:-
-"Dm"vAdef2a3|"A"uaad e-e4|"Dm"Ade(v!1!f2u!1!a3)|"Csup9"d'd'^c' =c'-=c'4|"C7"abc'2c'4|"Gm"c'ba (u!2!b!2!g)-g3|"Dm"Adef2a3|"A"aa^c"Dm"ud-d3|
+X:0K:DmM:4/4L:1/8T:Dublin GypsyT:Copyright 2010, Stephan R.A. DeibelT:-"Dm"vAdef2!fermata!a3|"A"uaad e-!fermata!e4|"Dm"Ade(v!1!f2u!1!!fermata!a3)|"Csup9"d'd'^c' =c'-!fermata!=c'3a|"C7"abc'2!fermata!c'4|"Gm"c'ba (u!2!b!2!g)-!fermata!g3|"Dm"Adef2!fermata!a3|"A"aa^c"Dm"ud-!fermata!d3|(d|:"Dm"d) ef2 efg2|fg"A"a2 aba2|gf"Dm"e2 ef"A"a2|[1"Dm"f2e4e2:|[2"Dm"^c2d4d2||!1!a2|:"Dm"!3!d'4d'2a2|"Gm"d'4d'2a2|"Dm"b3c'd'2b2|"A"a4a4|"Dm"!2!g2!2!g!3!ab2g2|"A"f2fga2f2|"Gm"e3fe2^c2|[1"Dm"d4d2a2:|[2"Dm"d4d4||d'd'^c'^c'=c'2z2|=b=b_b_ba2z2|a2efg2f2|e4e4|f'f'e'e'^d'2z2|d'd'^c'^c'=c'2z2|a2efg2^c2|d4d4|
+e'e'^d'^d' =d'=d'^c'^c'|'=c'=c'=b=b _b_baa|a2efg2f2|e4e4|
+f'f'e'e' ^d'^d'=d'=d'|^c'^c' =c'=c'=b=b_b_b|a2efg2^c2|d4d4|
