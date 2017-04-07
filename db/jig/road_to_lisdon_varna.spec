@@ -9,4 +9,4 @@ e2f gfe|d2B B^cd|
 |: Em | Em | D   | Bm  | 
    Em | Em | DBm | Em :|
 |: Em | D  | A   | Bm  |  
-   E  | D  | A   | Em :|
+   Em | D  | A   | Em :|
