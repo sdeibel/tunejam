@@ -1,4 +1,4 @@
-T:Dublin Gypsy f:ABCs:BCDEBCf:Fs:Gf:Fs:Gf:H (by S Deibel)
+T:Dublin Gypsy f:ABCs:BCDEBCf:Fs:GFGf:H (by S Deibel)
 K:Dm
 L:1/8
 M:4/4
