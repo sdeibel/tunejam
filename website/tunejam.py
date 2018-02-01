@@ -1677,6 +1677,8 @@ if __name__ == '__main__':
   from os import environ
   if 'WINGDB_ACTIVE' in environ:
     app.debug = False
+  else:
+    app.debug = True
   if sys.platform == 'darwin':
     host = '0.0.0.0'
   else:
