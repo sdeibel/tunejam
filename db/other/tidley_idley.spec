@@ -1,5 +1,5 @@
 T:The Tidley-Idley (by Stephan Deibel)
-K:?
+K:Am
 L:1/8
 M:6/8
 --
