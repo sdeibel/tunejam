@@ -7,6 +7,11 @@ import tempfile
 import datetime
 import random
 
+try:
+  import wingdbstub
+except:
+  pass
+
 if sys.platform == 'darwin':
   sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 else:
