@@ -6,7 +6,7 @@ M:4/4
 |gedB G2AB|cABG AGEG|
 |gfga bagf|gfed B2 AG|
 --
-|: G | Am | G  | D    |
-   G | Am | Am | DG  :|
-|: G | Em | Am | AmD  |
-   G | Em | Am | DG  :|
+|: G | Am | G   | D    |
+   G | Am | Am  | DG  :|
+|: G | Em | Am  | AmD  |
+   G | Em | CAm | DG  :|
