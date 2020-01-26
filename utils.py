@@ -52,6 +52,7 @@ kSections = [
     ('march', 'Marches'),
     ('waltz', 'Waltzes'),
     ('polka', 'Polkas'),
+    ('polska', 'Polskas'),
     ('hornpipe', 'Hornpipes'),
     ('strathspey', 'Strathspeys'), 
     ('other', 'Other'),
@@ -64,7 +65,7 @@ kTimeSignatures = [
     ('2/4 and 4/4', ('reel', 'rag', 'march', 'hornpipe', 'polka', 'strathspey')),
     ('6/8', ('jig',)),
     ('9/8', ('slip', )), 
-    ('3/4', ('waltz',)),
+    ('3/4', ('waltz', 'polska', )),
     ('Other Tunes', ('other', )), 
 ]
 
