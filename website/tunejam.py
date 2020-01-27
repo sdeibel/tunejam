@@ -839,6 +839,12 @@ white-space:nowrap;
 font-size:2.5vw;
 color:#000000;
 }
+span.tune-type {
+font-size:70%;
+position:absolute;
+right:50px;
+margin-top:5px;
+}
 h2 {
 padding-top:0.7em;
 padding-bottom:0.5em;
@@ -857,9 +863,8 @@ height:20px;
 }
 img.play-tune {
 position:absolute;
-right:0in;
-padding-right:20px;
-margin-top:5px;
+right:10px;
+margin-top:8px;
 max-width:5vw;
 }
 img.notes {
@@ -1511,6 +1516,11 @@ def CreateTuneHTML(name, pagetype='both'):
 
   key_str = obj.GetKeyString()
 
+  if obj.type:
+    klass = CText(utils.kSectionClasses[obj.type], italic=True, hclass='tune-type')
+  else:
+    klass = ''
+    
   recording, mimetype, filename = obj.GetRecording()
   if recording is not None:
     play = CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
@@ -1554,11 +1564,52 @@ def CreateTuneHTML(name, pagetype='both'):
   else:
     tclass = 'tune-title'
     
+  if obj.author:
+    author = CDiv([CText('Author: {}'.format(obj.author), italic=True)])
+  else:
+    author = ''
+    
+  if obj.structure:
+    structure = CDiv([CText('Structure: {}'.format(obj.structure), italic=True)])
+  else:
+    structure = ''
+
+  if obj.origin:
+    origin = CDiv([CText('Origin: {}'.format(obj.origin), italic=True)])
+  else:
+    origin = ''
+    
+  if obj.history:
+    history = CParagraph(obj.history)
+  else:
+    history = ''
+    
+  if obj.url:
+    urls = []
+    url_list = obj.url.split('\n')
+    for i, url in enumerate(url_list):
+      if not urls:
+        urls.append('Details: ')
+      elif i == len(url_list) - 1:
+        urls.append(' and ')
+      else:
+        urls.append(', ')
+      urls.append(CText(url, href=url))
+    urls = CParagraph(''.join([str(u) for u in urls]))
+  else:
+    urls = ''
+    
   tune = CDiv([
     CH([
-      title + ' - ' + obj.type.capitalize() + ' - ' + key_str,
+      title + ' - ' + key_str,
+      klass, 
       play, 
-    ], 1, hclass=tclass), 
+    ], 1, hclass=tclass),
+    structure, 
+    author,
+    origin,
+    history,
+    urls, 
     notes,
     chords,
   ], hclass='tune')

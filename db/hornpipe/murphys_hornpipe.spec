@@ -1,4 +1,5 @@
 T:Murphy's Hornpipe
+C:hornpipe
 K:G
 L:1/8
 M:C

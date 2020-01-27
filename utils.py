@@ -45,21 +45,22 @@ from reportlab import rl_config
 rl_config.warnOnMissingFontGlyphs = 0
 
 kSections = [
-    ('reel', 'Reels'),
-    ('jig', 'Jigs'),
-    ('slip', 'Slip Jigs'), 
-    ('rag', 'Rags'),
-    ('march', 'Marches'),
-    ('waltz', 'Waltzes'),
-    ('polka', 'Polkas'),
-    ('polska', 'Polskas'),
-    ('hornpipe', 'Hornpipes'),
-    ('strathspey', 'Strathspeys'), 
-    ('other', 'Other'),
-    ('incomplete', 'Incomplete Listings'), 
+    ('reel', 'Reels', 'Reel'),
+    ('jig', 'Jigs', 'Jig'),
+    ('slip', 'Slip Jigs', 'Slip Jig'), 
+    ('rag', 'Rags', 'Rag'),
+    ('march', 'Marches', 'March'),
+    ('waltz', 'Waltzes', 'Waltz'),
+    ('polka', 'Polkas', 'Polka'),
+    ('polska', 'Polskas', 'Polska'),
+    ('hornpipe', 'Hornpipes', 'Hornpipe'),
+    ('strathspey', 'Strathspeys', 'Strathspey'), 
+    ('other', 'Other', ''),
+    ('incomplete', 'Incomplete Listings', ''), 
 ]
 
-kSectionTitles = {name: title for name, title in kSections}
+kSectionTitles = {name: title for name, title, class_name in kSections}
+kSectionClasses = {name: class_name for name, title, class_name in kSections}
 
 kTimeSignatures = [
     ('2/4 and 4/4', ('reel', 'rag', 'march', 'hornpipe', 'polka', 'strathspey')),
@@ -74,9 +75,15 @@ class CTune:
         self.type = None
         self.name = name
         self.title = None
+        self.structure = None
+        self.author = None
+        self.klass = None
+        self.origin = None
+        self.history = None
+        self.url = None
         self.key = None
-        self.unit = '1/4'
-        self.meter = '4/4'
+        self.unit = ''
+        self.meter = ''
         self.notes = ''
         self.chords = ''
         
@@ -96,9 +103,15 @@ class CTune:
     
         kFieldMap = {
             'T': 'title',
+            'A': 'author',
+            'C': 'klass',
+            'O': 'origin',
+            'H': 'history',
+            'U': 'url',
             'K': 'key',
             'L': 'unit',
             'M': 'meter',
+            'S': 'structure',
         }
         
         kPartMap = {
@@ -126,7 +139,12 @@ class CTune:
                 found = False
                 for key, field in kFieldMap.items():
                     if line.startswith('%s:'%key):
-                        setattr(self, field, line[2:].strip())
+                        existing = getattr(self, field, None)
+                        if existing:
+                            value = existing + '\n' + line[len(key)+1:].strip()
+                        else:
+                            value = line[len(key)+1:].strip()
+                        setattr(self, field, value)
                         found = True
                         break
                 if not found:
@@ -144,10 +162,10 @@ class CTune:
             elif part == 2:
                 self.chords += line.rstrip() + '\n'
     
-            if line.startswith('T:'):
-                self.title = line[2:].strip()
-            elif line.startswith('K:'):
-                self.key = line[2:].strip()
+            #if line.startswith('T:'):
+                #self.title = line[2:].strip()
+            #elif line.startswith('K:'):
+                #self.key = line[2:].strip()
     
         if part != 2:
             error("Missing one or more parts: %s" % fullpath)
@@ -1367,7 +1385,7 @@ def GetTuneIndex(include_incomplete):
     idx = {}
 
     incomplete_tunes = []
-    for section, section_name in kSections:
+    for section, section_name, class_name in kSections:
         if section == 'incomplete':
             continue
         try:

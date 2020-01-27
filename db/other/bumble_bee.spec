@@ -1,4 +1,10 @@
-T:The Bumblebee (by Stephan Deibel)
+T:The Bumblebee
+A:Stephan Deibel
+C:reel
+O:Cambridge NY
+H:This was written in early summer 2015 on a day when the air was heavy
+H:with bumblebees.  It was inspired by other tunes that imitate the 
+H:sound of an animal as part of their melody.
 K:G
 L:1/8
 M:2/4

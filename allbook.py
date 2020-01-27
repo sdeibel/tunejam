@@ -18,7 +18,7 @@ class CAllBookBySection(utils.CBook):
         self.url = self.name
     
         self.pages = []
-        for section, section_name in utils.kSections:
+        for section, section_name, class_name in utils.kSections:
             if section == 'incomplete':
                 continue
             try:
@@ -120,7 +120,7 @@ class CAllBook(utils.CBook):
         self.url = self.name
 
         tunes = []
-        for section, section_name in utils.kSections:
+        for section, section_name, class_name in utils.kSections:
             if section == 'incomplete':
                 continue
             try:

@@ -17,7 +17,7 @@ class CFlipBook(utils.CBook):
         self.url = self.name
     
         self.pages = []
-        for section, section_name in utils.kSections:
+        for section, section_name, class_name in utils.kSections:
             if section == 'incomplete':
                 continue
             try:

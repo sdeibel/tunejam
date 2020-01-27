@@ -1,4 +1,9 @@
-T:Dublin Gypsy f:ABCs:BCDEBCf:Fs:GFGf:H (by S Deibel)
+T:Dublin Gypsy 
+S:f:ABCs:BCDEBCf:Fs:GFGf:H
+A:Stephan Deibel
+O:Cambridge NY
+H:This tune, inspired by Gypsy fiddle music, was written over several years
+H:from about 2008-2010.
 K:Dm
 L:1/8
 M:4/4

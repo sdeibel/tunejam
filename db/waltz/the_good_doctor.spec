@@ -1,4 +1,7 @@
-T:The Good Doctor (by Stephan Deibel)
+T:The Good Doctor
+A:Stephan Deibel
+O:Cambridge NY
+H:This tune was written in honor of my father, who passed away in 2012.
 K:A
 L:1/4
 M:3/4

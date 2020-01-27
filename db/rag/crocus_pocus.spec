@@ -1,4 +1,8 @@
-T:Crocus Pocus (by Stephan Deibel)
+T:Crocus Pocus
+A:Stephan Deibel
+O:Cambridge NY
+H:This was written on a warm Spring day around 2009, when there were
+H:many crocuses growing in the yard.
 K:G
 L:1/4
 M:4/4

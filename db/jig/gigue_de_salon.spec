@@ -1,4 +1,4 @@
-T:Jigue de Salon
+T:Gigue de Salon
 K:A
 L:1/8
 M:6/8

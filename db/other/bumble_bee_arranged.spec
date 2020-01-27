@@ -1,4 +1,10 @@
-T:Bumblebee Arrangement AABBAABBCCCCCCAABB (by S Deibel)
+T:Bumblebee Arrangement 
+S:AABBAABBCCCCCCAABB
+A:Stephan Deibel
+C:reel
+O:Cambridge NY
+H:This is an arrangement of the original Bumblebee, with an added
+H:part.
 K:G
 L:1/8
 M:2/4
