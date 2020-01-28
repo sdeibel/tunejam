@@ -1,10 +1,11 @@
 T:The Blue Jay
 A:Stephan Deibel
 O:Cambridge NY
-H:This tune was written in September 2015, during a visit to Prince 
-H:Edward Island.  I was out in a field in the beautiful country side,
-H:practicing the fiddle, when I began to imitate the call of some 
-H:bluejays.  This became the basis for a simple melody.
+H:This tune was written in September 2015, during a visit to Prince Edward Island, where
+H:we stayed for two weeks in a house in New Caledonia.  This house came with a square 
+H:mile of land and trails.  One sunny day, I was out in a field in the beautiful country 
+H:side, practicing the fiddle, when I began to mimic the call of some nearby bluejays.  
+H:This imitation became the basis for a simple melody.
 K:Dm
 L:1/8
 M:6/8

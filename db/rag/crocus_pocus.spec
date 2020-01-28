@@ -1,8 +1,8 @@
 T:Crocus Pocus
 A:Stephan Deibel
 O:Cambridge NY
-H:This was written on a warm Spring day around 2009, when there were
-H:many crocuses growing in the yard.
+H:I wrote this tune on a beautiful warm Spring day around 2009, when the 1000+ crocuses 
+H:I had planted into the lawn the previous Fall were blooming in profusion.
 K:G
 L:1/4
 M:4/4

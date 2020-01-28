@@ -3,8 +3,11 @@ S:AABBAABBCCCCCCAABB
 A:Stephan Deibel
 C:reel
 O:Cambridge NY
-H:This is an arrangement of the original Bumblebee, with an added
-H:part.
+H:This was written on my back porch in early summer 2015, on a warm day when the air was 
+H:heavy with bumblebees.  It was my first imitative tune, inspired by traditional tunes 
+H:that mimic the sound of an animal as part of their melody, for example <i>The Yowe Cam 
+H:to Wir Door Yarmin</i> from Shetland.  This arrangement was developed a few years
+H:later, with an added C part.
 K:G
 L:1/8
 M:2/4
