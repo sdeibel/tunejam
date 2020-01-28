@@ -845,7 +845,7 @@ def doprint(format=None, bookname=None):
     event.ReadEvent()
     book = sessbook.CEventBook(event)
     target, up_to_date = book._GetCacheFile('.pdf')
-    fn = os.path.join(utils.kEventsLoc, event.name+'.ses')
+    fn = os.path.join(utils.kEventsLoc, event.name+'.evt')
     if utils.IsFileNewer(fn, target) and os.path.exists(target):
       os.unlink(target)
     pdf = book.GeneratePDF(type_in_header=False, include_index=True, generate=True)

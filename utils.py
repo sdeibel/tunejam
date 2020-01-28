@@ -34,7 +34,7 @@ kImageDir = os.path.join(os.path.dirname(__file__), 'images')
 kRecordingsDir = os.path.join(os.path.dirname(__file__), 'recordings')
 kCacheLoc = os.path.join(os.path.dirname(__file__), 'website', 'cache')
 kSaveLoc = os.path.join(os.path.dirname(__file__), 'website', 'saved-sets')
-kEventsLoc = os.path.join(os.path.dirname(__file__), 'website', 'sessions')
+kEventsLoc = os.path.join(os.path.dirname(__file__), 'website', 'events')
 kEventArchiveLoc = os.path.join(kEventsLoc, 'archive')
 kJSDir = os.path.join(os.path.dirname(__file__), 'website', 'js')
 
@@ -1257,7 +1257,7 @@ class CEvent:
         else:
             dirname = kEventsLoc
             
-        fn = os.path.join(dirname, self.name+'.ses')
+        fn = os.path.join(dirname, self.name+'.evt')
         if not os.path.exists(fn):
             return
         
@@ -1281,7 +1281,7 @@ class CEvent:
                 self.stats[curr_set].append(float(l.strip()))
         
     def WriteEvent(self):
-        fn = os.path.join(kEventsLoc, self.name+'.ses')
+        fn = os.path.join(kEventsLoc, self.name+'.evt')
         lines = [
             self.title,
             self.current_set, 
@@ -1298,7 +1298,7 @@ class CEvent:
         
     def GetExpiration(self):
         
-        fn = os.path.join(kEventArchiveLoc, self.name+'.ses')
+        fn = os.path.join(kEventArchiveLoc, self.name+'.evt')
         if not os.path.exists(fn):
             return None
         
@@ -1316,8 +1316,8 @@ def ReadEvents(deleted=False):
 
     events = []
     for fn in files:
-        if fn.endswith('.ses'):
-            event = CEvent(fn[:-len('.ses')])
+        if fn.endswith('.evt'):
+            event = CEvent(fn[:-len('.evt')])
             event.ReadEvent(deleted=deleted)
             events.append(event)
             
@@ -1328,11 +1328,11 @@ def CreateEvent(title):
     parts = title.split()
     first = [p[0] for p in parts]
     name = ''.join(first)
-    event_file = os.path.join(kEventsLoc, name+'.ses')
+    event_file = os.path.join(kEventsLoc, name+'.evt')
     i = 0
     while os.path.exists(event_file):
         i += 1
-        event_file = os.path.join(kEventsLoc, name + ('-%i' % i) +'.ses')
+        event_file = os.path.join(kEventsLoc, name + ('-%i' % i) +'.evt')
     if i:
         name = name + '-%i' % i
         
@@ -1346,8 +1346,8 @@ def CreateEvent(title):
         
 def DeleteEvent(sid, undelete=False):
     
-    event_fn = os.path.join(kEventsLoc, sid+'.ses')
-    archive_fn = os.path.join(kEventArchiveLoc, sid+'.ses')
+    event_fn = os.path.join(kEventsLoc, sid+'.evt')
+    archive_fn = os.path.join(kEventArchiveLoc, sid+'.evt')
 
     if not undelete:
         fn1 = event_fn
@@ -1374,7 +1374,7 @@ def PurgeDeletedEvents():
     
     events = os.listdir(kEventArchiveLoc)
     for event in events:
-        if not event.endswith('.ses'):
+        if not event.endswith('.evt'):
             continue
         fn = os.path.join(kEventArchiveLoc, event)
         mod_time = os.stat(fn)[stat.ST_MTIME]

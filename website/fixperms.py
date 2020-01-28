@@ -10,7 +10,7 @@ cmds = [
 
 fp = os.path.abspath(__file__)
 cache_dir = os.path.join(os.path.dirname(fp), 'cache')
-events_dir = os.path.join(os.path.dirname(fp), 'sessions')
+events_dir = os.path.join(os.path.dirname(fp), 'events')
 
 all_dirs = [
   cache_dir,
