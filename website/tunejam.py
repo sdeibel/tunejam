@@ -31,8 +31,8 @@ kMenu = [
   ('Index by Time', '/bytime', 'bytime'),
   ('Sets', '/sets', 'sets'),
   ('Events', '/events', 'event'),
-  ('Sessions', '/sessions', 'session'),
   ('Printing', '/print', 'print'),
+  ('Sessions', '/sessions', 'session'),
   ('Dev', '/dev', 'dev')
 ]
 
