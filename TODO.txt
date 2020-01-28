@@ -1,13 +1,11 @@
 * Website Phase Two
   ** Reorganization
-    ** Add index both by tune class and time signature
     ** Edit all tunes to add new A, O, C, H, U, and S data where appropriate
     ** Review category for all tunes; move them all to db and use
        only C: tune class attrib; allow multiple classes comma-separated
        for example 'reel,hornpipe'
     ** Arranged bumblebee is missing C part in notes
     ** Review/improve H attribs for my own tunes
-    ** Add list of tunes missing recordings at end of index page
     ** Host full written tunes on site when in tunes dir and link 
        automatically from tune page
   ** May want to have random/least-recent set selection be provisional and
