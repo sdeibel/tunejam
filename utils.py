@@ -34,12 +34,12 @@ kImageDir = os.path.join(os.path.dirname(__file__), 'images')
 kRecordingsDir = os.path.join(os.path.dirname(__file__), 'recordings')
 kCacheLoc = os.path.join(os.path.dirname(__file__), 'website', 'cache')
 kSaveLoc = os.path.join(os.path.dirname(__file__), 'website', 'saved-sets')
-kSessionsLoc = os.path.join(os.path.dirname(__file__), 'website', 'sessions')
-kSessionArchiveLoc = os.path.join(kSessionsLoc, 'archive')
+kEventsLoc = os.path.join(os.path.dirname(__file__), 'website', 'sessions')
+kEventArchiveLoc = os.path.join(kEventsLoc, 'archive')
 kJSDir = os.path.join(os.path.dirname(__file__), 'website', 'js')
 
-if not os.path.exists(kSessionArchiveLoc):
-    os.mkdir(kSessionArchiveLoc)
+if not os.path.exists(kEventArchiveLoc):
+    os.mkdir(kEventArchiveLoc)
         
 from reportlab import rl_config
 rl_config.warnOnMissingFontGlyphs = 0
@@ -1241,7 +1241,7 @@ class CSetBook(CBook):
         if page:
             append_page(page, setnum)
 
-class CSession:
+class CEvent:
     
     def __init__(self, name):
         self.name = name
@@ -1251,11 +1251,11 @@ class CSession:
         self.on_air = 0
         self.stats = collections.defaultdict(list)
         
-    def ReadSession(self, deleted=False):
+    def ReadEvent(self, deleted=False):
         if deleted:
-            dirname = kSessionArchiveLoc
+            dirname = kEventArchiveLoc
         else:
-            dirname = kSessionsLoc
+            dirname = kEventsLoc
             
         fn = os.path.join(dirname, self.name+'.ses')
         if not os.path.exists(fn):
@@ -1280,8 +1280,8 @@ class CSession:
                 assert curr_set is not None
                 self.stats[curr_set].append(float(l.strip()))
         
-    def WriteSession(self):
-        fn = os.path.join(kSessionsLoc, self.name+'.ses')
+    def WriteEvent(self):
+        fn = os.path.join(kEventsLoc, self.name+'.ses')
         lines = [
             self.title,
             self.current_set, 
@@ -1298,63 +1298,63 @@ class CSession:
         
     def GetExpiration(self):
         
-        fn = os.path.join(kSessionArchiveLoc, self.name+'.ses')
+        fn = os.path.join(kEventArchiveLoc, self.name+'.ses')
         if not os.path.exists(fn):
             return None
         
         mod_time = os.stat(fn)[stat.ST_MTIME]
-        return mod_time + kSessionExpiration        
+        return mod_time + kEventExpiration        
 
-def ReadSessions(deleted=False):
+def ReadEvents(deleted=False):
 
     if deleted:
-        dirname = kSessionArchiveLoc
+        dirname = kEventArchiveLoc
     else:
-        dirname = kSessionsLoc
+        dirname = kEventsLoc
         
     files = os.listdir(dirname)
 
-    sessions = []
+    events = []
     for fn in files:
         if fn.endswith('.ses'):
-            session = CSession(fn[:-len('.ses')])
-            session.ReadSession(deleted=deleted)
-            sessions.append(session)
+            event = CEvent(fn[:-len('.ses')])
+            event.ReadEvent(deleted=deleted)
+            events.append(event)
             
-    return sessions
+    return events
 
-def CreateSession(title):
+def CreateEvent(title):
     
     parts = title.split()
     first = [p[0] for p in parts]
     name = ''.join(first)
-    session_file = os.path.join(kSessionsLoc, name+'.ses')
+    event_file = os.path.join(kEventsLoc, name+'.ses')
     i = 0
-    while os.path.exists(session_file):
+    while os.path.exists(event_file):
         i += 1
-        session_file = os.path.join(kSessionsLoc, name + ('-%i' % i) +'.ses')
+        event_file = os.path.join(kEventsLoc, name + ('-%i' % i) +'.ses')
     if i:
         name = name + '-%i' % i
         
     name = name.lower()
     
-    session = CSession(name)
-    session.title = title
-    session.WriteSession()
+    event = CEvent(name)
+    event.title = title
+    event.WriteEvent()
     
     return name
         
-def DeleteSession(sid, undelete=False):
+def DeleteEvent(sid, undelete=False):
     
-    session_fn = os.path.join(kSessionsLoc, sid+'.ses')
-    archive_fn = os.path.join(kSessionArchiveLoc, sid+'.ses')
+    event_fn = os.path.join(kEventsLoc, sid+'.ses')
+    archive_fn = os.path.join(kEventArchiveLoc, sid+'.ses')
 
     if not undelete:
-        fn1 = session_fn
+        fn1 = event_fn
         fn2 = archive_fn
     else:
         fn1 = archive_fn
-        fn2 = session_fn
+        fn2 = event_fn
         
     if not os.path.exists(fn1):
         return
@@ -1369,16 +1369,16 @@ def DeleteSession(sid, undelete=False):
     
     os.unlink(fn1)
     
-kSessionExpiration = 7 * 24 * 60 * 60
-def PurgeDeletedSessions():
+kEventExpiration = 7 * 24 * 60 * 60
+def PurgeDeletedEvents():
     
-    sessions = os.listdir(kSessionArchiveLoc)
-    for session in sessions:
-        if not session.endswith('.ses'):
+    events = os.listdir(kEventArchiveLoc)
+    for event in events:
+        if not event.endswith('.ses'):
             continue
-        fn = os.path.join(kSessionArchiveLoc, session)
+        fn = os.path.join(kEventArchiveLoc, event)
         mod_time = os.stat(fn)[stat.ST_MTIME]
-        if mod_time < time.time() - kSessionExpiration:
+        if mod_time < time.time() - kEventExpiration:
             os.unlink(fn)
         
 def GetTuneIndex(include_incomplete):

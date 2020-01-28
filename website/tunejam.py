@@ -6,6 +6,7 @@ from html import *
 import tempfile
 import datetime
 import random
+import collections
 
 try:
   import wingdbstub
@@ -26,44 +27,49 @@ app.config['SESSION_TYPE'] = 'filesystem'
 
 kMenu = [
   ('Home', '/', 'home'), 
-  ('Index', '/index', 'index'),
+  ('Index by Type', '/index', 'index'),
+  ('Index by Time', '/bytime', 'bytime'),
   ('Sets', '/sets', 'sets'),
+  ('Events', '/events', 'event'),
   ('Sessions', '/sessions', 'session'),
   ('Printing', '/print', 'print'),
+  ('Dev', '/dev', 'dev')
 ]
 
 @app.route('/')
 def home():
   parts = []
   
+  total_tunes = TuneCount(include_incomplete=True)
+  total_complete = TuneCount(include_incomplete=False)
+  total_incomplete = total_tunes - total_complete
+  
   parts.extend([
-    CH("Hubbard Hall Tune Jam", 1),
+    CH("Cambridge NY Traditional Music", 1),
     CParagraph("Welcome!"),
-    CParagraph("This website hosts a collection of tunes "
-               "played by the Hubbard Hall Tune Jam Band, an informal group of musicians "
-               "from the Cambridge NY area.  We meet every Tuesday from 5:30pm to 7:30pm "
-               "in the Beacon Feed (aka Studio) building behind <a href='http://www.hubbardhall.org/'>"
-               "Hubbard Hall</a> to play traditional and modern Irish, Scottish, Shetland, "
-               "Quebecois, New England, and locally written music by ear.  The sessions are "
-               "open to all levels of skill and all instruments, and are followed by a "
-               "pot luck dinner."),
-    CParagraph("The focus of the site is to facilitate learning tunes by ear, and playing "
-               "them together at contra dances and other events.  For each "
+    CParagraph("This website hosts a collection of traditional tunes played by musicians "
+               "around Cambridge NY. The focus of the site is to facilitate learning tunes by ear, and playing "
+               "them together at sessions, contra dances, fund-raisers, and other events.  For each "
                "tune, we have collected a short recording, a chord chart, and a written "
                "melody reminder containing the first few measures of each part."),
-    CParagraph("There are currently a total of %i tunes on the site." % TuneCount()), 
+    CParagraph("There are currently a total of %i completed tunes on the site.  In addition, %i " % (total_complete, total_incomplete) +
+               "partial listings have been entered."), 
     CH("The following resources are available:", 2),
     CList([
-      CItem([CText("Tune Index", href='/index'), CNBSP(),
-             CText(" -- A list of all the available tunes, organized by type.")]), 
+      CItem([CText("Tune Index by Type", href='/index'), CNBSP(),
+             CText(" -- A list of all the tunes, organized by type.")]), 
+      CItem([CText("Tune Index by Time Signature", href='/bytime'), CNBSP(),
+             CText(" -- A list of all the tunes, organized by time signature.")]), 
       CItem([CText("Set Sheets", href='/sets'), CNBSP(),
              CText(" -- Create your own sets of tunes, for screen display or printing.")]), 
-      CItem([CText("Sessions", href='/sessions'), CNBSP(),
+      CItem([CText("Events", href='/events'), CNBSP(),
              CText(" -- Sharable set lists that auto-update on each participating device.")]),
       CItem([CText("Printable Books", href='/print'), CNBSP(),
              CText(" -- Premade books in several formats, with index.")]), 
-      CItem([CText("Email List", href='http://cambridgeny.net/mailman/listinfo/tunejam'), CNBSP(),
-             CText(" -- The Hubbard Hall Tune Jam email list.")]),
+      CItem([CText("Sessions", href='/sessions'), CNBSP(),
+             CText(" -- A listing of area traditional music sessions.")]),
+      CItem([CText("Development Page", href='/dev'), CNBSP(),
+             CText(" -- The incomplete tune listings that need work.")]), 
     ]),
     CBreak(), 
     CParagraph("This website was designed and built by Stephan Deibel, with content "
@@ -72,28 +78,83 @@ def home():
       
   return PageWrapper(parts, 'home')
 
+@app.route('/sessions')
+def sessions():
+  parts = []
+    
+  parts.extend([
+    CH("Cambridge NY Area Sessions", 1),
+    CParagraph("This is a list of the regularly occurring traditional music sessions within about "
+               "45 minutes of Cambridge NY that share significant overlap with the tune "
+               "repertoire hosted on this website:"), 
+    CList([
+      CItem([CText("Hubbard Hall Tune Jam", href='/'), CNBSP(), CText('--'), CNBSP(), 
+             CText("Every Tuesday 5:30pm-7:30pm in the Beacon Feed (aka Studio) building "
+                   "behind <a href='http://www.hubbardhall.org/'>Hubbard Hall</a> in Cambridge NY.  The "
+                   "group focuses on learning traditional and modern Irish, Scottish, Shetland, "
+                   "Quebecois, New England, and locally written music by ear (this website was created "
+                   "for this purpose).  Open to all levels of skill and all instruments, and each meeting is followed "
+                   "by a pot luck dinner.  Join the <a href='http://cambridgeny.net/mailman/listinfo/tunejam'>"
+                   "email list</a> for more information and announcements."),
+             CBreak(2), 
+             ]), 
+      CItem([CText("Cambridge NY Pan-Celtic Session", href='https://www.facebook.com/groups/cambridgesession'), CNBSP(), CText('--'), CNBSP(),
+             CText("Every Thursday 5pm-8pm in the Argyle Brewery's Cambridge NY location, "
+                   "in the old passenger railway station on Broad Street, across from "
+                   "the Cambridge Hotel. This is mostly a fast-paced session for moderately "
+                   "advanced players.  The session features tunes and songs from (at least) "
+                   "Ireland, Shetland, Cape Breton, Quebec, and New England, with a "
+                   "smattering of Swedish, English, Eastern European, Appalachian, and "
+                   "locally written tunes, as well as some others.  Tip money is collected "
+                   "to benefit local non-profits."), 
+             CBreak(2), 
+             ]), 
+      CItem([CText("Saratoga Pan-Celtic Session", href='https://www.facebook.com/Saratoga-Pan-Celtic-Session-135466146471469/'), CNBSP(), CText('--'), CNBSP(),
+             CText("Almost every Wednesday 7pm-11pm at The Parting Glass in Saratoga NY. "
+                    "This is a fun, open group of mostly amateur musicians that enjoy playing "
+                    "Quebecois, Scottish and Cape Breton, as well as Irish fiddle tunes."), 
+             CBreak(2), 
+             ]), 
+      CItem([CText("Wayside Country Store Session", href='https://www.facebook.com/events/1596240033844443'), CNBSP(), CText('--'), CNBSP(),
+             CText("The first Friday of each month from 6:30pm to 8:30 pm at the Wayside Country Store in "
+                   "West Arlington, VT.  Gigue-a-Bit and Friends play traditional contra/other dance tunes for "
+                   "hostess and store owner Nancy Tschorn and her customers. Tip money collected is "
+                   "contributed to the Arlington Vermont Food Shelf."), 
+             CBreak(2), 
+             ]), 
+      CItem([CText("North Adams Session", href='https://thesession.org/sessions/3549'), CNBSP(), CText('--'), CNBSP(),
+             CText("Every Saturday 10:30am until 2 or 3pm at the Lickety Split Coffee Shop "
+                   "inside Mass MoCA. They play mostly Contra and New England fiddle music. "
+                   "Sheet music is OK. Beginners may find it challenging but all are welcome."), 
+             CBreak(2), 
+             ]), 
+    ]),
+    CParagraph("See also <a href='https://thesession.org/sessions'>thesession.org</a>")
+  ])
+      
+  return PageWrapper(parts, 'home')
+
+
 @app.route('/index')
 def music():
+  tunes = utils.GetTuneIndex(False)
+
   parts = []
-  parts.append(CH("Tune Index", 1))
-  parts.append(CParagraph("This lists all the %i tunes in the database so far.  If there is a recording, " % TuneCount() + 
+  parts.append(CH("Index by Type", 1))
+  parts.append(CParagraph("This lists the %i completed tunes in the database so far, sorted by type of tune.  "
+                          "If there is a recording, " % TuneCount(False) + 
                           "you can click on the speaker icon to hear it.  Click on the tune name "
                           "to view the chords and melody reminders."))
-  tunes = utils.GetTuneIndex(True)
 
   sections = tunes.keys()
   sections.sort()
-  if 'incomplete'in sections:
-    sections.remove('incomplete')
-    sections.append('incomplete')
   for section in sections:
     parts.append(CH(utils.kSectionTitles[section], 2))
-    if section == 'incomplete':
-      parts.append(CParagraph("The tunes in this section do not yet have completed chords and/or "
-                              "melody reminders."))
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
+      if obj.author:
+        title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.GetKeyString()
       recording, mimetype, filename = obj.GetRecording()
       play = []
@@ -105,9 +166,102 @@ def music():
       parts.append(CText(title, href="/tune/%s" % tune))
       parts.extend(play)
       parts.append(CBreak())
-      
+        
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index')
+
+@app.route('/dev')
+def dev():
+  parts = []
+  parts.append(CH("Listings that Need Work", 1))
+  parts.append(CParagraph("This lists the tunes that are missing notes, chords, and/or a recording."))
+  tunes = utils.GetTuneIndex(True)
+
+  sections = tunes.keys()
+  sections.sort()
+  no_recording = []
+  if 'incomplete'in sections:
+    sections.remove('incomplete')
+    sections.append('incomplete')
+  for section in sections:
+    if section == 'incomplete':
+      parts.append(CH(utils.kSectionTitles[section], 2))
+    for title, tune in tunes[section]:
+      obj = utils.CTune(tune)
+      obj.ReadDatabase()
+      if obj.author:
+        title += ' (by {})'.format(obj.author)
+      title += ' - ' + obj.GetKeyString()
+      recording, mimetype, filename = obj.GetRecording()
+      play = []
+      if recording is not None:
+        play = [
+          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
+                 href='/recording/%s' % tune, width=16, height=16),
+        ]
+      tune_title = []
+      tune_title.append(CText(title, href="/tune/%s" % tune))
+      tune_title.extend(play)
+      tune_title.append(CBreak())
+      if section == 'incomplete':
+        parts.extend(tune_title)
+      if not recording:
+        no_recording.append(tune_title)
+
+  if no_recording:
+    parts.append(CH("Tunes with No Recording", 2))
+    for item in no_recording:
+      for part in item:
+        parts.append(part)
+        
+  parts.append(CBreak(2))
+  return PageWrapper(parts, 'dev')
+
+@app.route('/bytime')
+def bytime():
+  parts = []
+  parts.append(CH("Index by Time Signature", 1))
+  parts.append(CParagraph("This lists the %i completed tunes in the database so far by time signature.  "
+                          "If there is a recording, " % TuneCount(False) + 
+                          "you can click on the speaker icon to hear it.  Click on the tune name "
+                          "to view the chords and melody reminders."))
+  tunes = utils.GetTuneIndex(False)
+
+  sections = tunes.keys()
+  time_sigs = collections.defaultdict(list)
+  for section in sections:
+    for title, tune in tunes[section]:
+      obj = utils.CTune(tune)
+      obj.ReadDatabase()
+      if obj.author:
+        title += ' (by {})'.format(obj.author)
+      title += ' - ' + obj.GetKeyString()
+      recording, mimetype, filename = obj.GetRecording()
+      play = []
+      if recording is not None:
+        play = [
+          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
+                 href='/recording/%s' % tune, width=16, height=16),
+        ]
+      title_html = []
+      title_html.append(CText(title, href="/tune/%s" % tune))
+      title_html.extend(play)
+      title_html.append(CBreak())
+      meter = obj.meter
+      if meter in ('2/4', '4/4', 'C'):
+        meter = "C, 2/4, and 4/4"
+      time_sigs[meter].append((title, title_html))
+      
+  times = time_sigs.keys()
+  times.sort()
+  for t in time_sigs:
+    parts.append(CH(t, 2))
+    tunes = time_sigs[t]
+    for title, title_html in sorted(tunes):
+      parts.extend(title_html)
+    
+  parts.append(CBreak(2))
+  return PageWrapper(parts, 'bytime')
 
 @app.route('/sets', methods=['GET', 'POST'])
 @app.route('/sets/')
@@ -122,8 +276,8 @@ def sets(spec=None, sid=None):
   preload_tunes = []
 
   if sid is not None:
-    s = utils.CSession(sid)
-    s.ReadSession()
+    s = utils.CEvent(sid)
+    s.ReadEvent()
     
   if spec is not None:
     args = spec.split('&')
@@ -147,10 +301,10 @@ def sets(spec=None, sid=None):
         subtitle = arg[len('subtitle='):].strip()
       elif arg.startswith('pagetype='):
         pagetype = arg[len('pagetype='):].strip()
-      elif arg.startswith('session='):
-        sid = arg[len('session='):].strip()
-        s = utils.CSession(sid)
-        s.ReadSession()
+      elif arg.startswith('event='):
+        sid = arg[len('event='):].strip()
+        s = utils.CEvent(sid)
+        s.ReadEvent()
       elif arg:
         tunes.append(arg)
     
@@ -193,14 +347,14 @@ def sets(spec=None, sid=None):
         parts = CreateTuneSetHTML(tunes, pagetype)
 
         if sid is not None:
-          parts.insert(0, CText("Set from Session: %s" % s.title, bold=1))
+          parts.insert(0, CText("Set from Event: %s" % s.title, bold=1))
           parts.extend([
             CBreak(2),
-            CText("Return to session %s" % s.title, href='/session/%s' % sid, hclass='bottom-menu-left'),
+            CText("Return to event %s" % s.title, href='/event/%s' % sid, hclass='bottom-menu-left'),
           ])
           if editor:
             parts.extend([
-              CText("Delete this set", href='/session/%s/delete/%s' % (sid, '&'.join(tunes)), hclass='bottom-menu-right'),
+              CText("Delete this set", href='/event/%s/delete/%s' % (sid, '&'.join(tunes)), hclass='bottom-menu-right'),
             ])
           parts.append(CBreak(2))
           
@@ -257,9 +411,9 @@ function SubmitTunes(sid, old_set) {
   if (sid == "") {
     window.location.href= "/sets/" + tunes;
   } else if (old_set == "") {
-    window.location.href= "/session/" + sid + "/add/" + tunes;
+    window.location.href= "/event/" + sid + "/add/" + tunes;
   } else {
-    window.location.href= "/session/" + sid + "/add/" + tunes + "/replace/" + old_set;
+    window.location.href= "/event/" + sid + "/add/" + tunes + "/replace/" + old_set;
   }
 }
 function FilterTunes() {
@@ -431,7 +585,7 @@ padding-bottom:0.5em;
   keys.sort()
   for key in keys:
     if key == 'ax4':
-      title = "All 2/4 and 4/4 Time"
+      title = "All 2/4, 4/4, and C Time"
     else:
       title = utils.kSectionTitles[key]
     section_options.append((key, title))
@@ -489,7 +643,7 @@ padding-bottom:0.5em;
   parts.append(CBreak())
   parts.append(CParagraph("On mobile devices, scroll with two fingers, or by dragging an item down, or by entering a text filter to shorten the list.", hclass="clear"))
   
-  # Creating set outside of session
+  # Creating set outside of event
   if sid is None:
     parts.append(CForm([
       CInput(type='checkbox', name="print", value="1", checked="", id="print-checkbox"),
@@ -522,19 +676,19 @@ padding-bottom:0.5em;
       CInput(type='button', value="Clear Selected", onclick='ClearTunes();'), 
     ], id='tunesform'))
     
-  # Adding a spec to a session
+  # Adding a spec to a event
   elif spec is None:
     parts.append(CForm([
       CInput(type='button', value="Add Set", onclick="SubmitTunes('%s', '');" % sid),
       CInput(type='button', value="Clear Selected", onclick='ClearTunes();'), 
-    ], id='sessionsetform'))
+    ], id='eventsetform'))
   
-  # Editing a spec in a session
+  # Editing a spec in a event
   else:
     parts.append(CForm([
       CInput(type='button', value="Update Set", onclick="SubmitTunes('%s', '%s');" % (sid, spec)),
       CInput(type='button', value="Clear Selected", onclick='ClearTunes();'), 
-    ], id='sessionsetform'))
+    ], id='eventsetform'))
     
   saved = []
   for fn in os.listdir(utils.kSaveLoc):
@@ -569,10 +723,10 @@ padding-bottom:0.5em;
   if sid is not None:
     parts.extend([
       CBreak(2),
-      CText("Return to session %s" % s.title, href='/session/%s' % sid), 
+      CText("Return to event %s" % s.title, href='/event/%s' % sid), 
       CBreak(2)
     ])
-    section = 'session'
+    section = 'event'
   else:
     section = 'sets'
     
@@ -581,7 +735,7 @@ padding-bottom:0.5em;
 @app.route('/tune/<tune>')
 def tune(tune):
   parts = []
-  parts.extend(CreateTuneHTML(tune))
+  parts.extend(CreateTuneHTML(tune, metadata=True))
   return PageWrapper(parts)
 
 @app.route('/png/<tune>')
@@ -685,13 +839,13 @@ def doprint(format=None, bookname=None):
     pdf = book.GeneratePDF(type_in_header=False, include_index=True)
     return send_file(pdf, mimetype='application/pdf')
   
-  elif format == 'session':
+  elif format == 'event':
     import sessbook
-    session = utils.CSession(bookname)
-    session.ReadSession()
-    book = sessbook.CSessionBook(session)
+    event = utils.CEvent(bookname)
+    event.ReadEvent()
+    book = sessbook.CEventBook(event)
     target, up_to_date = book._GetCacheFile('.pdf')
-    fn = os.path.join(utils.kSessionsLoc, session.name+'.ses')
+    fn = os.path.join(utils.kEventsLoc, event.name+'.ses')
     if utils.IsFileNewer(fn, target) and os.path.exists(target):
       os.unlink(target)
     pdf = book.GeneratePDF(type_in_header=False, include_index=True, generate=True)
@@ -957,85 +1111,85 @@ display:none;
     """
   return Response(css, mimetype='text/css')
 
-@app.route('/sessions')
-@app.route('/sessions/delete/<delete>')
-@app.route('/sessions/undelete/<undelete>')
-def sessions(delete=None, undelete=None):
+@app.route('/events')
+@app.route('/events/delete/<delete>')
+@app.route('/events/undelete/<undelete>')
+def events(delete=None, undelete=None):
   
   editor = CheckPassword()
    
   if delete and editor:
-    utils.DeleteSession(delete)
-    return redirect('/sessions', code=303)
+    utils.DeleteEvent(delete)
+    return redirect('/events', code=303)
   if undelete and editor:
-    utils.DeleteSession(undelete, undelete=True)
-    return redirect('/sessions', code=303)
+    utils.DeleteEvent(undelete, undelete=True)
+    return redirect('/events', code=303)
   
-  utils.PurgeDeletedSessions()
+  utils.PurgeDeletedEvents()
   
   parts = []
-  parts.append(CH("Sessions", 1))
+  parts.append(CH("Events", 1))
   
-  parts.append("Sessions make it easier to play together as a group.  The group "
-               "leader creates the session, adds sets to it, and specifies which set "
-               "is currently being played.  Other musicians can watch the session "
+  parts.append("Events make it easier to play together as a group.  The group "
+               "leader creates the event, adds sets to it, and specifies which set "
+               "is currently being played.  Other musicians can watch the event "
                "and all the participating devices (ipads, phones, laptops, etc) will update "
-               "as the session changes.")
+               "as the event changes.")
 
-  sessions = utils.ReadSessions()
-  sessions.sort(key=lambda s:s.title)
+  events = utils.ReadEvents()
+  events.sort(key=lambda s:s.title)
 
-  parts.append(CParagraph(CText("The following sessions are active:", bold=1)))
+  parts.append(CParagraph(CText("The following events are active:", bold=1)))
 
-  if sessions:
-    for session in sessions:
+  if events:
+    for event in events:
       parts.extend([
-        CText(session.title, href='/session/%s' % session.name), 
+        CText(event.title, href='/event/%s' % event.name), 
         CBreak(), 
       ])
   else:
-    parts.append(CParagraph(CText("There are no active sessions right now.", italic=1)))
+    parts.append(CParagraph(CText("There are no active events right now.", italic=1)))
     
   if not editor:
-    parts.append(LoginButton('/sessions'))
-    return PageWrapper(parts, 'session')
+    parts.append(LoginButton('/events'))
+    return PageWrapper(parts, 'event')
 
   parts.append(CForm([
     CBreak(), 
-    CText("Create a New Session:", bold=1),
+    CText("Create a New Event:", bold=1),
     CBreak(1),
-    CText("Title:"), CInput(type='TEXT', name='title', id='session-title', size=100, maxlength=200), 
+    CText("Title:"), CInput(type='TEXT', name='title', id='event-title', size=100, maxlength=200), 
     CBreak(2),
     CInput(type='SUBMIT', value='Create'), 
-  ], action='/session', method='POST', id="session-form"))
+  ], action='/event', method='POST', id="event-form"))
   
   parts.append(CBreak())
   
-  inactive = utils.ReadSessions(deleted=True)
+  inactive = utils.ReadEvents(deleted=True)
   if inactive:
-    parts.append(CParagraph(CText("Recently deleted sessions:", bold=1)))
-    for session in inactive:
-      expires = time.strftime('%x %X', time.localtime(session.GetExpiration()))
+    parts.append(CParagraph(CText("Recently deleted events:", bold=1)))
+    for event in inactive:
+      expires = time.strftime('%x %X', time.localtime(event.GetExpiration()))
       parts.extend([
-        CSpan(session.title+' - Expires '+expires+' - '),
-        CText("Undelete", href='/sessions/undelete/%s' % session.name),
+        CSpan(event.title+' - Expires '+expires+' - '),
+        CText("Undelete", href='/event/undelete/%s' % event.name),
         CBreak(), 
       ])
   
-  parts.append(LogoutButton('/sessions'))
+  parts.append(LogoutButton('/event'))
   parts.append(CBreak())
   
-  return PageWrapper(parts, 'session')
+  return PageWrapper(parts, 'event')
 
-@app.route('/session', methods=['POST'])
-@app.route('/session/<sid>')
-@app.route('/session/<sid>/add/<add>')
-@app.route('/session/<sid>/add/<add>/replace/<old>')
-@app.route('/session/<sid>/delete/<delete>')
-@app.route('/session/<sid>/current/<curr>')
-@app.route('/session/<sid>/status/<status>')
-@app.route('/session/<sid>/select/<selector>')
-def session(sid=None, add=None, delete=None, curr=None, old=None, status=None, selector=None):
+@app.route('/event', methods=['POST'])
+@app.route('/event/<sid>')
+@app.route('/event/<sid>/add/<add>')
+@app.route('/event/<sid>/add/<add>/replace/<old>')
+@app.route('/event/<sid>/delete/<delete>')
+@app.route('/event/<sid>/current/<curr>')
+@app.route('/event/<sid>/status/<status>')
+@app.route('/event/<sid>/select/<selector>')
+def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, selector=None):
 
   editor = CheckPassword()
   
@@ -1050,61 +1204,61 @@ def session(sid=None, add=None, delete=None, curr=None, old=None, status=None, s
   
   if request.environ['REQUEST_METHOD'] == 'POST':
     title = request.form['title']
-    sid = utils.CreateSession(title)
+    sid = utils.CreateEvent(title)
     
-  session = utils.CSession(sid)
-  session.ReadSession()
+  event = utils.CEvent(sid)
+  event.ReadEvent()
   
   if add is not None and editor:
     if old is not None:
-      pos = session.sets.index(old)
-      session.sets[pos] = add
+      pos = event.sets.index(old)
+      event.sets[pos] = add
     else:
-      session.sets.append(add)
-    session.WriteSession()
-    return redirect('/session/%s' % sid, code=303)
+      event.sets.append(add)
+    event.WriteEvent()
+    return redirect('/event/%s' % sid, code=303)
   
   if delete is not None and editor:
-    session.sets.remove(delete)
-    if session.current_set == delete:
-      session.current_set = ''
-    session.WriteSession()
-    return redirect('/session/%s' % sid, code=303)
+    event.sets.remove(delete)
+    if event.current_set == delete:
+      event.current_set = ''
+    event.WriteEvent()
+    return redirect('/event/%s' % sid, code=303)
     
   if curr is not None and editor:
-    session.current_set = curr
-    if session.on_air:
-      for ptime in session.stats[curr][:]:
+    event.current_set = curr
+    if event.on_air:
+      for ptime in event.stats[curr][:]:
         if ptime > time.time() - 60 * 60:
-          session.stats[curr].remove(ptime)
-      session.stats[curr].append(time.time())
-    session.WriteSession()
-    return redirect('/session/%s' % sid, code=303)
+          event.stats[curr].remove(ptime)
+      event.stats[curr].append(time.time())
+    event.WriteEvent()
+    return redirect('/event/%s' % sid, code=303)
 
   if status is not None and editor:
     if status == 'on-air':
-      session.on_air = 1
+      event.on_air = 1
     else:
-      session.on_air = 0
-    session.WriteSession()
-    return redirect('/session/%s' % sid, code=303)
+      event.on_air = 0
+    event.WriteEvent()
+    return redirect('/event/%s' % sid, code=303)
     
   if selector is not None and editor:
     if selector == 'random':
-      if len(session.sets) == 0:
+      if len(event.sets) == 0:
         new_set = None
-      elif len(session.sets) == 1:
-        new_set = session.sets[0]
+      elif len(event.sets) == 1:
+        new_set = event.sets[0]
       else:
-        choice = random.randint(0, len(session.sets))
-        while session.sets[choice] == session.current_set:
-          choice = random.randint(0, len(session.sets))
-        new_set = session.sets[choice]
+        choice = random.randint(0, len(event.sets))
+        while event.sets[choice] == event.current_set:
+          choice = random.randint(0, len(event.sets))
+        new_set = event.sets[choice]
     else:
       times = []
-      for s in session.sets:
-        if s in session.stats:
-          ptime = sorted(session.stats[s])[-1]
+      for s in event.sets:
+        if s in event.stats:
+          ptime = sorted(event.stats[s])[-1]
         else:
           ptime = 0.0
         times.append((ptime, s))
@@ -1114,39 +1268,39 @@ def session(sid=None, add=None, delete=None, curr=None, old=None, status=None, s
         new_set = None
       
     if new_set:
-      return redirect('/session/%s/current/%s' % (sid, new_set), code=303)
+      return redirect('/event/%s/current/%s' % (sid, new_set), code=303)
     else:
-      return redirect('/session/%s' % sid, code=303)      
+      return redirect('/event/%s' % sid, code=303)      
   
-  if session.title:
-    title = session.title
+  if event.title:
+    title = event.title
   else:
     title = "Deleted"
     
   parts = []
-  parts.append(CH("Session: %s" % session.title, 1))
+  parts.append(CH("Event: %s" % event.title, 1))
   parts.append(CParagraph(""))
   
-  if not session.title:
+  if not event.title:
     parts.extend([
-      CParagraph("This session has been deleted"),
+      CParagraph("This event has been deleted"),
       CBreak(2), 
-      CText('Return to session list', href='/sessions'),
+      CText('Return to event list', href='/events'),
     ])
-    return PageWrapper(parts, 'session')
+    return PageWrapper(parts, 'event')
     
-  parts.extend(SessionReloader(sid))
+  parts.extend(EventReloader(sid))
   
-  if not session.current_set:
+  if not event.current_set:
     c = 'None'
   else:
-    c = get_set_title(session.current_set)
+    c = get_set_title(event.current_set)
 
   parts.extend([
     CText("Now Playing: ", bold=1), 
     CSpan(c),
     CBreak(), 
-    CText("Follow This Session:", bold=1),
+    CText("Follow This Event:", bold=1),
     CNBSP(),
     CText("Notes", href='/watch/notes/%s' % sid), 
     CNBSP(), 
@@ -1156,14 +1310,14 @@ def session(sid=None, add=None, delete=None, curr=None, old=None, status=None, s
     CBreak(), 
   ])
   
-  if session.on_air:
+  if event.on_air:
     img = '/image/slider-on.png'
-    status = "In Session: Recording active set statistics."
-    status_url = '/session/%s/status/off-air' % sid
+    status = "On the Air: Recording active set statistics."
+    status_url = '/event/%s/status/off-air' % sid
   else:
     img = '/image/slider-off.png'
     status = "Off The Air"
-    status_url = '/session/%s/status/on-air' % sid
+    status_url = '/event/%s/status/on-air' % sid
 
   if editor:
     status_img = CImage(src=img, href=status_url)
@@ -1181,51 +1335,51 @@ def session(sid=None, add=None, delete=None, curr=None, old=None, status=None, s
     ])
   
   parts.append(CH("Available Sets:", 2))
-  if not session.sets:
-    parts.append(CText("No sets have been defined for this session", italic=1))
+  if not event.sets:
+    parts.append(CText("No sets have been defined for this event", italic=1))
   else:
     if editor:
       parts.append(CParagraph("Click on a red dot to change the current set.  View a set with "
                               "melody reminders, chords, or both."))
-      if session.on_air:
+      if event.on_air:
         parts.extend([
           CText("Select Set:"),
           CNBSP(),
-          CText("Random", href='/session/%s/select/random' % sid), 
+          CText("Random", href='/event/%s/select/random' % sid), 
           CNBSP(),
-          CText("Least Recent", href='/session/%s/select/oldest' % sid),
+          CText("Least Recent", href='/event/%s/select/oldest' % sid),
           CBreak(2), 
         ])
     else:
       parts.append(CParagraph("View a particular set with melody reminders, chords, or both:"))
 
-    for s in session.sets:
+    for s in event.sets:
       titles = get_set_title(s)
       
       url = '/sets/%s' % s
-      if s == session.current_set:
+      if s == event.current_set:
         parts.append(CImage(src='/image/check-mark.png', style="height:1.0em"))
       elif editor:
-        parts.append(CImage(src='/image/red-square.png', href="/session/%s/current/%s" % (sid, s),
+        parts.append(CImage(src='/image/red-square.png', href="/event/%s/current/%s" % (sid, s),
                             style="height:1.0em"))
       else:
         parts.append(CImage(src='/image/red-square.png', style="height:1.0em"))
         
       parts.extend([
         CNBSP(2), 
-        CText("Notes", href=url+'&pagetype=notes&session=%s' % sid), 
+        CText("Notes", href=url+'&pagetype=notes&event=%s' % sid), 
         CNBSP(), 
-        CText("Chords", href=url+'&pagetype=chords&session=%s' % sid), 
+        CText("Chords", href=url+'&pagetype=chords&event=%s' % sid), 
         CNBSP(), 
-        CText("Both", href=url+'&session=%s' % sid),
+        CText("Both", href=url+'&event=%s' % sid),
         CNBSP(), 
-        CText("Print", href=url+'&session=%s&print=1' % sid),
+        CText("Print", href=url+'&event=%s&print=1' % sid),
         CNBSP(2), 
         CSpan(titles), 
       ])
       
-      if session.stats[s]:
-        ptime = sorted(session.stats[s])[-1]
+      if event.stats[s]:
+        ptime = sorted(event.stats[s])[-1]
         ltime = time.localtime(ptime)
         now = time.localtime(time.time())
         yr = time.strftime('%Y', ltime)
@@ -1235,7 +1389,7 @@ def session(sid=None, add=None, delete=None, curr=None, old=None, status=None, s
           lplayed = time.strftime('%b %d', ltime)
         parts.extend([
           CText(' - '),
-          CText('Played %ix last on %s' % (len(session.stats[s]), lplayed)), 
+          CText('Played %ix last on %s' % (len(event.stats[s]), lplayed)), 
         ])
       
       if editor:
@@ -1243,7 +1397,7 @@ def session(sid=None, add=None, delete=None, curr=None, old=None, status=None, s
           CText(' - '),
           CText("Edit", href='/sets/sid/%s/edit/%s' % (sid, s)),
           CText(' - '), 
-          CText("Delete", href='/session/%s/delete/%s' % (sid, s)),
+          CText("Delete", href='/event/%s/delete/%s' % (sid, s)),
         ])
       
       parts.append(CBreak())
@@ -1256,23 +1410,23 @@ def session(sid=None, add=None, delete=None, curr=None, old=None, status=None, s
   
   parts.extend([
     CBreak(), 
-    CText('Print this session', href='/print/session/%s' % sid),
+    CText('Print this event', href='/print/event/%s' % sid),
     CText('(this may take a while)'), 
     CBreak(), 
-    CText('Return to session list', href='/sessions'),
+    CText('Return to event list', href='/events'),
     CBreak(), 
   ])
   if editor:
     parts.extend([
       CBreak(), 
-      CText('Delete this session', href='/sessions/delete/%s' % session.name),
-      LogoutButton('/session/%s' % session.name),
+      CText('Delete this event', href='/events/delete/%s' % event.name),
+      LogoutButton('/event/%s' % event.name),
     ])
   else:
     parts.append(CBreak())
-    parts.append(LoginButton('/session/%s' % session.name))
+    parts.append(LoginButton('/event/%s' % event.name))
 
-  return PageWrapper(parts, 'session')
+  return PageWrapper(parts, 'event')
 
 @app.route('/watch/<sid>')
 @app.route('/watch/<type>/<sid>')
@@ -1281,27 +1435,27 @@ def watch(sid, type=None):
   if type is None:
     type = 'both'
     
-  session = utils.CSession(sid)
-  session.ReadSession()
+  event = utils.CEvent(sid)
+  event.ReadEvent()
 
-  if session.title:
-    title = session.title
+  if event.title:
+    title = event.title
   else:
     title = "Deleted"
     
   parts = []
   
-  parts.extend(SessionReloader(sid))
+  parts.extend(EventReloader(sid))
   
-  parts.append(CText("Watching Session: %s" % title, bold=1))
+  parts.append(CText("Watching Event: %s" % title, bold=1))
   parts.append(CBreak(2))
   
-  if not session.title:
-    parts.append(CText("This session has been deleted", italic=1))
-  elif not session.current_set:
+  if not event.title:
+    parts.append(CText("This event has been deleted", italic=1))
+  elif not event.current_set:
     parts.append(CText("Please wait for a current set to be established", italic=1))
   else:
-    tunes = session.current_set.split('&')
+    tunes = event.current_set.split('&')
     
     import hashlib
     md5sum = hashlib.md5()
@@ -1311,12 +1465,12 @@ def watch(sid, type=None):
     
     parts.extend(CreateTuneSetHTML(tunes, type))
   
-  if not session.title:
+  if not event.title:
     parts.append(CBreak(2))
-    parts.append(CText("Return to session list", href="/sessions"))
+    parts.append(CText("Return to event list", href="/events"))
   else:
     parts.append(CBreak(2))
-    parts.append(CText("Return to set list", href="/session/%s" % sid))
+    parts.append(CText("Return to set list", href="/event/%s" % sid))
   parts.append(CBreak())
   
   return PageWrapper(parts)
@@ -1342,7 +1496,7 @@ def authorize(target):
     ], action='/login', method='POST'), 
   ])
   
-  return PageWrapper(parts, 'session')
+  return PageWrapper(parts, 'event')
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -1354,7 +1508,7 @@ def login():
   
   if 'tune'not in pw or 'jam' not in pw:
     parts = CheckPassword()
-    return PageWrapper(parts, 'session')
+    return PageWrapper(parts, 'event')
   
   session['password'] = pw
   
@@ -1365,10 +1519,10 @@ def logout(target):
   Logout()
   return redirect('/'+target, code=303)
 
-@app.route('/ajax/session/<sid>/current')
-def ajax_session_current(sid):
-  s = utils.CSession(sid)
-  s.ReadSession()
+@app.route('/ajax/event/<sid>/current')
+def ajax_event_current(sid):
+  s = utils.CEvent(sid)
+  s.ReadEvent()
   return s.current_set + '&' + str(len(s.sets))
 
 def CheckPassword():
@@ -1386,10 +1540,10 @@ def Logout():
   if 'password' in session:
     del session['password']
   
-def SessionReloader(sid):
+def EventReloader(sid):
 
-  s = utils.CSession(sid)
-  s.ReadSession()
+  e = utils.CEvent(sid)
+  e.ReadEvent()
   
   parts = []
   
@@ -1400,9 +1554,9 @@ def SessionReloader(sid):
   
   parts.extend([
     """<script>
-function CheckSession() {
+function CheckEvent() {
   $.ajax({
-    url: "/ajax/session/%s/current",
+    url: "/ajax/event/%s/current",
     cache: false,
     success: function(txt){
       if (txt.trim() != "%s") {
@@ -1412,9 +1566,9 @@ function CheckSession() {
   });
 }
 $(document).ready(function() {
-   setInterval(CheckSession, 5000);
+   setInterval(CheckEvent, 5000);
 });
-</script>""" % (sid, s.current_set + '&' + str(len(s.sets)))
+</script>""" % (sid, e.current_set + '&' + str(len(e.sets)))
              
   ])
   
@@ -1424,7 +1578,7 @@ def LoginButton(target):
   
   return CForm([
       CBreak(),
-      CText("Log in to create or edit sessions", bold=1),
+      CText("Log in to create or edit events", bold=1),
       CBreak(2), 
       CInput(type='SUBMIT', value="Login"),
       CBreak(2), 
@@ -1464,7 +1618,7 @@ def PageWrapper(body, section=None, refresh=None):
       else:
         iclass = 'menu-item'
       items.append(CText(title, href=url, hclass=iclass))
-      items.append(CNBSP())
+      items.append(CNBSP(3))
   
     body = [
       CDiv([CImage(src='/image/header.jpg')], id='header'), 
@@ -1482,7 +1636,7 @@ def PageWrapper(body, section=None, refresh=None):
   
   return html
   
-def CreateTuneSetHTML(tunes, pagetype='both'):
+def CreateTuneSetHTML(tunes, pagetype='both', metadata=False):
   
   parts = []
   
@@ -1491,11 +1645,10 @@ def CreateTuneSetHTML(tunes, pagetype='both'):
 margin-top:0px;
 }  
 </style>""")
-  printing = False
   for i, tune in enumerate(tunes):
     if i > 0:
       parts.append(CDiv(hclass='tune-break'))
-    parts.extend(CreateTuneHTML(tune, pagetype))
+    parts.extend(CreateTuneHTML(tune, pagetype, metadata))
   parts.append(CDiv(hclass='tune-break'))
   
   return parts
@@ -1505,7 +1658,7 @@ def CreateTuneSetPDF(name, title, subtitle, tunes):
   pdf = book.GeneratePDF(include_index=False, generate=True)
   return send_file(pdf, mimetype='application/pdf')
   
-def CreateTuneHTML(name, pagetype='both'):
+def CreateTuneHTML(name, pagetype='both', metadata=False):
   
   obj = utils.CTune(name)
   try:
@@ -1564,7 +1717,7 @@ def CreateTuneHTML(name, pagetype='both'):
   else:
     tclass = 'tune-title'
     
-  if obj.author:
+  if obj.author and metadata:
     author = CDiv([CText('Author: {}'.format(obj.author), italic=True)])
   else:
     author = ''
@@ -1574,17 +1727,17 @@ def CreateTuneHTML(name, pagetype='both'):
   else:
     structure = ''
 
-  if obj.origin:
+  if obj.origin and metadata:
     origin = CDiv([CText('Origin: {}'.format(obj.origin), italic=True)])
   else:
     origin = ''
     
-  if obj.history:
+  if obj.history and metadata:
     history = CParagraph(obj.history)
   else:
     history = ''
     
-  if obj.url:
+  if obj.url and metadata:
     urls = []
     url_list = obj.url.split('\n')
     for i, url in enumerate(url_list):
@@ -1665,18 +1818,18 @@ def ChordsToHTML(chords, tclass='chords'):
     
     return html
   
-gTuneCountCache = [0]
-def TuneCount():
+gTuneCountCache = {}
+def TuneCount(include_incomplete):
 
-  if gTuneCountCache[0] != 0:
-    return gTuneCountCache[0]
+  if include_incomplete in gTuneCountCache:
+    return gTuneCountCache[include_incomplete]
   
-  tunes = utils.GetTuneIndex(True)
+  tunes = utils.GetTuneIndex(include_incomplete)
   tune_count = 0
   for section in tunes:
     tune_count += len(tunes[section])
 
-  gTuneCountCache[0] = tune_count
+  gTuneCountCache[include_incomplete] = tune_count
   return tune_count
 
 TuneCount._cache_count = None

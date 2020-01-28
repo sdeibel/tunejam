@@ -4,22 +4,22 @@ import time
 from setsheets import *
 import utils
 
-class CSessionBook(utils.CBook):
+class CEventBook(utils.CBook):
 
-  def __init__(self, session):
+  def __init__(self, event):
 
-    assert isinstance(session, utils.CSession)
+    assert isinstance(event, utils.CEvent)
     
-    self.title = session.title
+    self.title = event.title
     self.subtitle = ''
     self.type_in_header = False
     self.date = time.strftime("%d %B %Y", time.localtime())
-    self.contact = 'http://music.cambridgeny.net/session/%s' % session.name
-    self.name = 'session-%s' % session.name
-    self.url = 'session/%s' % session.name
+    self.contact = 'http://music.cambridgeny.net/event/%s' % event.name
+    self.name = 'event-%s' % event.name
+    self.url = 'event/%s' % event.name
 
     self.pages = []
-    for tunes in session.sets:
+    for tunes in event.sets:
       page_tunes = tunes.split('&')
       title = [self.title, self.date]
       title = [t.strip() for t in title]

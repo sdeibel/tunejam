@@ -10,11 +10,11 @@ cmds = [
 
 fp = os.path.abspath(__file__)
 cache_dir = os.path.join(os.path.dirname(fp), 'cache')
-sessions_dir = os.path.join(os.path.dirname(fp), 'sessions')
+events_dir = os.path.join(os.path.dirname(fp), 'sessions')
 
 all_dirs = [
   cache_dir,
-  sessions_dir
+  events_dir
 ]
 
 def fix():

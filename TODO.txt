@@ -1,7 +1,5 @@
 * Website Phase Two
   ** Reorganization
-    ** Fix set pages to not include O, H, U attribs (or add option)
-    ** Add author again in index view
     ** Add index both by tune class and time signature
     ** Edit all tunes to add new A, O, C, H, U, and S data where appropriate
     ** Review category for all tunes; move them all to db and use

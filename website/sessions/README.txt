@@ -1,1 +1,1 @@
-This contains active sessions
+This contains active events
