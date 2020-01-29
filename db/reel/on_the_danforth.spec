@@ -1,4 +1,5 @@
-T:On the Danforth (by Keith Murphy)
+T:On the Danforth
+A:Keith Murphy
 K:A
 L:1/8
 M:4/4

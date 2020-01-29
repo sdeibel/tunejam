@@ -1,4 +1,6 @@
-T:Unicycle (by Caz Lewis)
+T:Unicycle
+A:Caz Lewis
+O:Cambridge NY
 K:G
 L:1/4
 M:2/4

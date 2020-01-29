@@ -1,4 +1,6 @@
-T:Tim Tam (by Bliss McIntosh)
+T:Tim Tam
+A:Bliss McIntosh
+O:Cambridge NY
 K:G
 L:1/8
 M:6/8

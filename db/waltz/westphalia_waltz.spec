@@ -1,4 +1,5 @@
-T:Westphalia Waltz (by Cotton Collins)
+T:Westphalia Waltz
+A:Cotton Collins
 K:G
 L:1/8
 M:3/4

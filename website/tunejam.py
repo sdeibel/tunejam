@@ -27,8 +27,7 @@ app.config['SESSION_TYPE'] = 'filesystem'
 
 kMenu = [
   ('Home', '/', 'home'), 
-  ('Index by Type', '/index', 'index'),
-  ('Index by Time', '/bytime', 'bytime'),
+  ('Index', '/index', 'index'),
   ('Sets', '/sets', 'sets'),
   ('Events', '/events', 'event'),
   ('Printing', '/print', 'print'),
@@ -56,10 +55,10 @@ def home():
                "partial listings have been entered."), 
     CH("The following resources are available:", 2),
     CList([
-      CItem([CText("Tune Index by Type", href='/index'), CNBSP(),
-             CText(" -- A list of all the tunes, organized by type.")]), 
-      CItem([CText("Tune Index by Time Signature", href='/bytime'), CNBSP(),
-             CText(" -- A list of all the tunes, organized by time signature.")]), 
+      CItem([CText("Tune Index", href='/index'), CNBSP(),
+             CText(" -- A list of all the tunes, sortable by <a href='/index'>type<a>, "
+                   "<a href='/index/meter'>time signature<a>, <a href='/index/title'>title<a>, "
+                   "<a href='/index/author'>author<a>, and <a href='/index/origin'>origin<a>.")]), 
       CItem([CText("Set Sheets", href='/sets'), CNBSP(),
              CText(" -- Create your own sets of tunes, for screen display or printing.")]), 
       CItem([CText("Events", href='/events'), CNBSP(),
@@ -134,17 +133,48 @@ def sessions():
       
   return PageWrapper(parts, 'home')
 
+def _index_header(itype):
+  
+  parts = []
 
+  parts.append(CText('Sort Index By:', bold=1))
+  parts.append(CNBSP())
+  parts.append(CText('Type', href='/index', bold=itype=='type'))
+  parts.append(CNBSP())
+  parts.append(CText('Time Signature', href='/index/meter', bold=itype=='meter'))
+  parts.append(CNBSP())
+  parts.append(CText('Title', href='/index/title', bold=itype=='title'))
+  parts.append(CNBSP())
+  parts.append(CText('Author', href='/index/author', bold=itype=='author'))
+  parts.append(CNBSP())
+  parts.append(CText('Origin', href='/index/origin', bold=itype=='origin'))
+  parts.append(CBreak(2))
+  
+  sorting = itype
+  if itype == 'meter':
+    parts.append(CH("Index by Time Signature", 1))
+    sorting = 'time signature'
+  elif itype == 'author':
+    parts.append(CH("Index by Author", 1))
+  elif itype == 'title':
+    parts.append(CH("Index by Title", 1))
+  elif itype == 'origin':
+    parts.append(CH("Index by Origin", 1))
+  else:
+      parts.append(CH("Index by Type", 1))
+    
+  parts.append(CParagraph("This lists the %i completed tunes in the database so far, sorted by %s. "
+                          "If there is a recording, you can click on the speaker icon to hear it. "
+                          "Click on the tune name to view the chords and melody reminders." % (TuneCount(False), sorting)))
+
+  return parts
+  
 @app.route('/index')
-def music():
+@app.route('/index/type')
+def index_type():
   tunes = utils.GetTuneIndex(False)
 
-  parts = []
-  parts.append(CH("Index by Type", 1))
-  parts.append(CParagraph("This lists the %i completed tunes in the database so far, sorted by type of tune.  "
-                          "If there is a recording, " % TuneCount(False) + 
-                          "you can click on the speaker icon to hear it.  Click on the tune name "
-                          "to view the chords and melody reminders."))
+  parts = _index_header('type')
 
   sections = tunes.keys()
   sections.sort()
@@ -170,7 +200,168 @@ def music():
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index')
 
-@app.route('/dev')
+@app.route('/index/meter')
+def index_meter():
+  
+  parts = _index_header('meter')
+
+  tunes = utils.GetTuneIndex(False)
+
+  sections = tunes.keys()
+  time_sigs = collections.defaultdict(list)
+  for section in sections:
+    for title, tune in tunes[section]:
+      obj = utils.CTune(tune)
+      obj.ReadDatabase()
+      if obj.author:
+        title += ' (by {})'.format(obj.author)
+      title += ' - ' + obj.GetKeyString()
+      recording, mimetype, filename = obj.GetRecording()
+      play = []
+      if recording is not None:
+        play = [
+          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
+                 href='/recording/%s' % tune, width=16, height=16),
+        ]
+      title_html = []
+      title_html.append(CText(title, href="/tune/%s" % tune))
+      title_html.extend(play)
+      title_html.append(CBreak())
+      meter = obj.meter
+      if meter in ('2/4', '4/4', 'C'):
+        meter = "C, 2/4, and 4/4"
+      time_sigs[meter].append((title, title_html))
+      
+  times = time_sigs.keys()
+  times.sort()
+  for t in time_sigs:
+    parts.append(CH(t, 2))
+    tunes = time_sigs[t]
+    for title, title_html in sorted(tunes):
+      parts.extend(title_html)
+    
+  parts.append(CBreak(2))
+  return PageWrapper(parts, 'index')
+
+@app.route('/index/origin')
+def index_origin():
+  
+  parts = _index_header('origin')
+
+  tunes = utils.GetTuneIndex(False)
+
+  sections = tunes.keys()
+  origins = collections.defaultdict(list)
+  for section in sections:
+    for title, tune in tunes[section]:
+      obj = utils.CTune(tune)
+      obj.ReadDatabase()
+      if obj.author:
+        title += ' (by {})'.format(obj.author)
+      title += ' - ' + obj.GetKeyString()
+      recording, mimetype, filename = obj.GetRecording()
+      play = []
+      if recording is not None:
+        play = [
+          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
+                 href='/recording/%s' % tune, width=16, height=16),
+        ]
+      title_html = []
+      title_html.append(CText(title, href="/tune/%s" % tune))
+      title_html.extend(play)
+      title_html.append(CBreak())
+      origin = obj.origin
+      if not origin:
+        origin = 'Unknown / TBD'
+      origins[origin].append((title, title_html))
+      
+  for origin in sorted(origins):
+    parts.append(CH(origin, 2))
+    for title, title_html in sorted(origins[origin]):
+      parts.extend(title_html)
+    
+  parts.append(CBreak(2))
+  return PageWrapper(parts, 'index')
+
+@app.route('/index/title')
+def index_title():
+  
+  parts = _index_header('title')
+
+  tunes = utils.GetTuneIndex(False)
+
+  titles = []
+  sections = tunes.keys()
+  for section in sections:
+    for title, tune in tunes[section]:
+      obj = utils.CTune(tune)
+      obj.ReadDatabase()
+      if obj.author:
+        title += ' (by {})'.format(obj.author)
+      title += ' - ' + obj.GetKeyString()
+      recording, mimetype, filename = obj.GetRecording()
+      play = []
+      if recording is not None:
+        play = [
+          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
+                 href='/recording/%s' % tune, width=16, height=16),
+        ]
+      title_html = []
+      title_html.append(CText(title, href="/tune/%s" % tune))
+      title_html.extend(play)
+      title_html.append(CBreak())
+      titles.append((title, title_html))
+      
+  titles.sort()
+  for title, title_html in titles:
+    parts.extend(title_html)
+    
+  parts.append(CBreak(2))
+  return PageWrapper(parts, 'index')
+
+@app.route('/index/author')
+def index_author():
+  
+  parts = _index_header('author')
+
+  tunes = utils.GetTuneIndex(False)
+
+  authors = collections.defaultdict(list)
+  sections = tunes.keys()
+  for section in sections:
+    for title, tune in tunes[section]:
+      obj = utils.CTune(tune)
+      obj.ReadDatabase()
+      author = obj.author
+      if not author:
+        author = "Unknown / TBD"
+      else:
+        aparts = author.split()
+        author = aparts[-1]
+        if len(aparts) >= 2:
+          author += ', ' + ' '.join(aparts[:-1])
+      title += ' - ' + obj.GetKeyString()
+      recording, mimetype, filename = obj.GetRecording()
+      play = []
+      if recording is not None:
+        play = [
+          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
+                 href='/recording/%s' % tune, width=16, height=16),
+        ]
+      title_html = []
+      title_html.append(CText(title, href="/tune/%s" % tune))
+      title_html.extend(play)
+      title_html.append(CBreak())
+      authors[author].append((title, title_html))
+      
+  for author in sorted(authors):
+    parts.append(CH(author, 2))
+    for title, title_html in sorted(authors[author]):
+      parts.extend(title_html)
+    
+  parts.append(CBreak(2))
+  return PageWrapper(parts, 'index')
+
 def dev():
   parts = []
   parts.append(CH("Listings that Need Work", 1))
@@ -216,52 +407,6 @@ def dev():
         
   parts.append(CBreak(2))
   return PageWrapper(parts, 'dev')
-
-@app.route('/bytime')
-def bytime():
-  parts = []
-  parts.append(CH("Index by Time Signature", 1))
-  parts.append(CParagraph("This lists the %i completed tunes in the database so far by time signature.  "
-                          "If there is a recording, " % TuneCount(False) + 
-                          "you can click on the speaker icon to hear it.  Click on the tune name "
-                          "to view the chords and melody reminders."))
-  tunes = utils.GetTuneIndex(False)
-
-  sections = tunes.keys()
-  time_sigs = collections.defaultdict(list)
-  for section in sections:
-    for title, tune in tunes[section]:
-      obj = utils.CTune(tune)
-      obj.ReadDatabase()
-      if obj.author:
-        title += ' (by {})'.format(obj.author)
-      title += ' - ' + obj.GetKeyString()
-      recording, mimetype, filename = obj.GetRecording()
-      play = []
-      if recording is not None:
-        play = [
-          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
-                 href='/recording/%s' % tune, width=16, height=16),
-        ]
-      title_html = []
-      title_html.append(CText(title, href="/tune/%s" % tune))
-      title_html.extend(play)
-      title_html.append(CBreak())
-      meter = obj.meter
-      if meter in ('2/4', '4/4', 'C'):
-        meter = "C, 2/4, and 4/4"
-      time_sigs[meter].append((title, title_html))
-      
-  times = time_sigs.keys()
-  times.sort()
-  for t in time_sigs:
-    parts.append(CH(t, 2))
-    tunes = time_sigs[t]
-    for title, title_html in sorted(tunes):
-      parts.extend(title_html)
-    
-  parts.append(CBreak(2))
-  return PageWrapper(parts, 'bytime')
 
 @app.route('/sets', methods=['GET', 'POST'])
 @app.route('/sets/')

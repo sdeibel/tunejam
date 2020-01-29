@@ -1,4 +1,5 @@
-T:Far Away (by Pete Jung)
+T:Far Away
+A:Pete Jung
 K:Bm
 L:1/8
 M:3/4

@@ -1,4 +1,5 @@
-T:Round the Horn (by Jay Ungar)
+T:Round the Horn
+A:Jay Ungar
 K:G
 L:1/8
 M:2/4

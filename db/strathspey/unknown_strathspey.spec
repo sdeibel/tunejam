@@ -1,4 +1,5 @@
-T:MacKenzie Hay by J.S. Skinner (prev. Unknown)
+T:MacKenzie Hay
+A:J.S. Skinner
 K:D
 L:1/8
 M:4/4

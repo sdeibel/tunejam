@@ -1,4 +1,6 @@
-T:Arkansas Summer (by Caz Lewis)
+T:Arkansas Summer
+A:Caz Lewis
+O:Cambridge NY
 K:Em
 L:1/4
 M:4/4

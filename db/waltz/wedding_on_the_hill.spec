@@ -1,4 +1,6 @@
-T:Wedding on the Hill (by Bonnie Epstein)
+T:Wedding on the Hill
+A:Bonnie Epstein
+O:Cambridge NY
 K:G
 L:1/8
 M:3/4

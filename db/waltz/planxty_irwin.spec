@@ -1,4 +1,6 @@
-T:Planxty Irwin (by O’Carolan)
+T:Planxty Irwin
+A:Turlough O'Carolan
+O:Ireland
 K:D
 L:1/4
 M:3/4

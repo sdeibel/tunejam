@@ -1,4 +1,5 @@
-T:Belle Mere's Waltz (by Phil Cunningham)
+T:Belle Mere's Waltz
+A:Phil Cunningham
 K:F
 L:1/8
 M:3/4

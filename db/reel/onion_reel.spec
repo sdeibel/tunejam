@@ -1,4 +1,5 @@
-T:Onion Reel (by Joseph Allard)
+T:Onion Reel
+A:Joseph Allard
 K:G
 L:1/8
 M:4/4

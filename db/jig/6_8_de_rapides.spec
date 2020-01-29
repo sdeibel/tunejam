@@ -1,4 +1,5 @@
-T:6/8 De Rapides (by Sabin Jacques)
+T:6/8 De Rapides
+A:Sabin Jacques
 K:G
 L:1/8
 M:6/8

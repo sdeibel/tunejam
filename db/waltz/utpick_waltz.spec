@@ -1,4 +1,5 @@
-T:Utpick Waltz (by Frankie Rodgers)
+T:Utpick Waltz
+A:Frankie Rodgers
 K:G
 L:1/4
 M:3/4

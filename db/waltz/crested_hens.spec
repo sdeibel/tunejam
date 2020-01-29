@@ -1,4 +1,5 @@
-T:Crested Hens (by Gilles Chabenat)
+T:Crested Hens
+A:Gilles Chabenat
 K:Em
 L:1/8
 M:3/4

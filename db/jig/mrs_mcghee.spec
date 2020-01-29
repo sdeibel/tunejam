@@ -1,4 +1,5 @@
-T:Mrs. McGhee (by John Riddell)
+T:Mrs. McGhee
+A:John Riddell
 K:G
 L:1/8
 M:6/8

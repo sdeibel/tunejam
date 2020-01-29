@@ -1,4 +1,6 @@
-T:Kiss and Make Up (by Mark Simos; play: AA BB CC BB)
+T:Kiss and Make Up
+A:Mark Simos
+S:AABBCCBB
 K:G
 L:1/8
 M:6/8

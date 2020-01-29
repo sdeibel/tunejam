@@ -1,4 +1,5 @@
-T:Marche au Camp (by Jean-Paul Loyer)
+T:Marche au Camp
+A:Jean-Paul Loyer
 K:G
 L:1/8
 M:6/8

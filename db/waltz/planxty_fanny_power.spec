@@ -1,4 +1,6 @@
-T:Planxty Fanny Power (by O’Carolan)
+T:Planxty Fanny Power
+A:Turlough O'Carolan
+O:Ireland
 K:G
 L:1/8
 M:3/4

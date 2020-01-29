@@ -1,4 +1,6 @@
-T:Creaky Joints (by Caz Lewis)
+T:Creaky Joints
+A:Caz Lewis
+O:Cambridge NY
 K:D
 L:1/8
 M:2/4

@@ -1,4 +1,6 @@
-T:Eric's Waltz (by Eric Margan)
+T:Eric's Waltz
+A:Eric Margan
+O:Cambridge NY
 K:G
 L:1/8
 M:3/4

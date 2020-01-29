@@ -1,4 +1,5 @@
-T:Morpeth Rant (by Wm. Sheild)
+T:Morpeth Rant
+A:William Sheild
 K:D
 L:1/8
 M:4/4

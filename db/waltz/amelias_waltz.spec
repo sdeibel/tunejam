@@ -1,4 +1,5 @@
-T:Amelia's Waltz (by Bob McQuillen)
+T:Amelia's Waltz
+A:Bob McQuillen
 K:D
 L:1/8
 M:3/4

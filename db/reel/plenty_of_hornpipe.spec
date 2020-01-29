@@ -1,4 +1,5 @@
-T:Plenty of Hornpipe (by Stan Rogers)
+T:Plenty of Hornpipe
+A:Stan Rogers
 C:hornpipe
 K:Am
 L:1/8

@@ -1,4 +1,5 @@
-T:Walk On (by Jody Kruskal)
+T:Walk On
+A:Jody Kruskal
 K:Em
 L:1/8
 M:4/4

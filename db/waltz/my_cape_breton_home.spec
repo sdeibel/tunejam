@@ -1,4 +1,5 @@
-T:My Cape Breton Home (by Jerry Holland)
+T:My Cape Breton Home
+A:Jerry Holland
 K:G
 L:1/8
 M:3/4

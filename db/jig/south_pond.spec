@@ -1,4 +1,6 @@
-T:South Pond (by Bliss McIntosh)
+T:South Pond
+A:Bliss McIntosh
+O:Cambridge NY
 K:Am
 L:1/8
 M:6/8

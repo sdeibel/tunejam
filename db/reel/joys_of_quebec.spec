@@ -1,4 +1,5 @@
-T:Joys of Quebec (by Fortunat Malouin)
+T:Joys of Quebec
+A:Fortunat Malouin
 K:A
 M:4/4
 L:1/4

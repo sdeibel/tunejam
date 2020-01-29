@@ -1,4 +1,6 @@
-T:Twelfth Night (by Bliss McIntosh)
+T:Twelfth Night
+A:Bliss McIntosh
+O:Cambridge NY
 K:D
 L:1/4
 M:3/4

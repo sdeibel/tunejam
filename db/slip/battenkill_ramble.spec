@@ -1,4 +1,6 @@
-T:Battenkill Ramble (by Caz Lewis)
+T:Battenkill Ramble
+A:Caz Lewis
+O:Cambridge NY
 K:G
 L:1/8
 M:9/8

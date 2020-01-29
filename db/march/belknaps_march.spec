@@ -1,4 +1,5 @@
-T:Belknap's March (by Bill Wellington)
+T:Belknap's March
+A:Bill Wellington
 K:G
 L:1/8
 M:4/4

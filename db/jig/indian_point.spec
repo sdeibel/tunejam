@@ -1,4 +1,5 @@
-T:Indian Point (by Rick Mohr)
+T:Indian Point
+A:Rick Mohr
 K:Em
 L:1/8
 M:6/8

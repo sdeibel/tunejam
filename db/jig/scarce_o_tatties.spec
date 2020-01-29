@@ -1,4 +1,5 @@
-T:Scarce O Tatties (by Norman Maclean)
+T:Scarce O Tatties
+A:Norman Maclean
 K:Am
 L:1/8
 M:6/8

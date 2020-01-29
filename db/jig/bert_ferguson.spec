@@ -1,4 +1,5 @@
-T:Bert Ferguson (by Samuel Ian Rothmar Burns)
+T:Bert Ferguson
+A:Samuel Ian Rothmar Burns
 K:A
 L:1/8
 M:6/8

@@ -1,4 +1,5 @@
-T:6/8 du Petit Sarny (by Eric Favreau)
+T:6/8 du Petit Sarny
+A:Eric Favreau
 K:G
 L:1/8
 M:6/8

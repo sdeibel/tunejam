@@ -1,4 +1,5 @@
-T:The Snowy Path (by Mark Kelly)
+T:The Snowy Path
+A:Mark Kelly
 K:D
 L:1/8
 M:9/8

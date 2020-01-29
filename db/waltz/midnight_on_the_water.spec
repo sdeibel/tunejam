@@ -1,4 +1,5 @@
-T:Midnight on the Water (by Luke Thomasson)
+T:Midnight on the Water
+A:Luke Thomasson
 K:D
 L:1/8
 M:3/4

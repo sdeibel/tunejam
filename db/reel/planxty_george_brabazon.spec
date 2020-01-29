@@ -1,4 +1,6 @@
-T:Planxty George Brabazon (by O'Carolan)
+T:Planxty George Brabazon
+A:Turlough O'Carolan
+O:Ireland
 K:G
 L:1/8
 M:4/4

@@ -1,4 +1,5 @@
-T:Father Kelly's  (Rossmore Jetty) (by Father PJ Kelly)
+T:Father Kelly's  (Rossmore Jetty)
+A:Father PJ Kelly
 K:G
 L:1/8
 M:4/4

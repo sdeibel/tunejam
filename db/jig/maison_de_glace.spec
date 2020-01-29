@@ -1,4 +1,5 @@
-T:Maison de Glace (by Réjean Brunet)
+T:Maison de Glace
+A:Réjean Brunet
 K:D
 L:1/8
 M:6/8

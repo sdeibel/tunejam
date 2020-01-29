@@ -1,4 +1,6 @@
-T:Sweet Potato Rag (by Caz Lewis)
+T:Sweet Potato Rag
+A:Caz Lewis
+O:Cambridge NY
 K:G
 L:1/8
 M:4/4

@@ -1,4 +1,6 @@
-T:Driving the Turkeys to Boston (by Caz Lewis)
+T:Driving the Turkeys to Boston
+A:Caz Lewis
+O:Cambridge NY
 K:Am
 L:1/8
 M:4/4

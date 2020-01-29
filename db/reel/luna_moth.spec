@@ -1,4 +1,6 @@
-T:Luna Moth (by Caz Lewis)
+T:Luna Moth
+A:Caz Lewis
+O:Cambridge NY
 K:Em/Am
 L:1/8
 M:4/4

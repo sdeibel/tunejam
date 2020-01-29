@@ -1,4 +1,5 @@
-T:Spootiskerry (by S.I.R. Burns)
+T:Spootiskerry
+A:Samuel Ian Rothmar Burns
 K:G
 L:1/8
 M:4/4

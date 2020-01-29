@@ -1,4 +1,6 @@
-T:The X Tune (by Caz Lewis)
+T:The X Tune
+A:Caz Lewis
+O:Cambridge NY
 K:Em
 L:1/8
 M:C

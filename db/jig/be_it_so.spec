@@ -1,4 +1,5 @@
-T:Be It So (by Jody Kruskal)
+T:Be It So
+A:Jody Kruskal
 K:D
 L:1/8
 M:6/8
