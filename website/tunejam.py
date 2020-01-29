@@ -362,6 +362,7 @@ def index_author():
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index')
 
+@app.route('/dev')
 def dev():
   parts = []
   parts.append(CH("Listings that Need Work", 1))
