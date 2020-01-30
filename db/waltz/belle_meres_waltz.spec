@@ -1,5 +1,8 @@
 T:Belle Mere's Waltz
+C:waltz
 A:Phil Cunningham
+O:Scotland
+U:https://thesession.org/tunes/12763
 K:F
 L:1/8
 M:3/4

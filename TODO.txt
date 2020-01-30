@@ -1,6 +1,7 @@
 * Website Phase Two
   ** Reorganization
-    ** Edit all tunes to add new A, O, C, H, U, and S data where appropriate
+    ** Edit all tunes to add new A, O, C, #, H, U, and S data where appropriate
+       To do: C+
     ** Review category for all tunes; move them all to db and use
        only C: tune class attrib; allow multiple classes comma-separated
        for example 'reel,hornpipe'
@@ -9,6 +10,7 @@
     ** Add the rest of my own tunes
     ** Host full written tunes on site when in tunes dir and link automatically from tune page
     ** Option to include meta data in sets, events, and books
+  ** Authoring of tunes on the dev page
   ** May want to have random/least-recent set selection be provisional and
      only record stats if user confirms it
   ** Statistics guided set creation
@@ -29,8 +31,9 @@
     * A way to sort sets in the session
     - A way to name sets
     - A way to indicate a missing song (not in database)
-  * A way to get chords-only or notes-only page from index list
   * Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
+  * Add authors page w/ info on the authors + links from author name on tune page
+    and list of tunes w/ links
   * Clean up
     * Remove old saved sets impl
     * Remove old unused doc generation code

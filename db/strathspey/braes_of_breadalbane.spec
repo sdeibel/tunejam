@@ -1,5 +1,8 @@
 T:The Braes of Breadalbane
+C:strathspey
 K:Am
+O:Scotland
+U:https://thesession.org/tunes/8091
 L:1/8
 M:4/4
 --

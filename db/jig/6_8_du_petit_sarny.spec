@@ -1,5 +1,12 @@
 T:6/8 du Petit Sarny
-A:Eric Favreau
+C:jig
+A:Éric Favreau
+O:Quebec
+H:Petit Sarny means something "little bit" as in a bit of money or possibly a sandwich.  
+H:According to Éric Favreau the tune "is dedicated to two good friends: Tracy Pettit 
+H:and Dominique Sarny".
+U:https://thesession.org/discussions/21818
+U:https://thesession.org/tunes/11754
 K:G
 L:1/8
 M:6/8

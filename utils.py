@@ -80,7 +80,9 @@ class CTune:
         self.klass = None
         self.origin = None
         self.history = None
+        self.comment = None
         self.url = None
+        self.ref = None
         self.key = None
         self.unit = ''
         self.meter = ''
@@ -107,7 +109,9 @@ class CTune:
             'C': 'klass',
             'O': 'origin',
             'H': 'history',
+            '#': 'comment',
             'U': 'url',
+            'R': 'ref',
             'K': 'key',
             'L': 'unit',
             'M': 'meter',
@@ -161,11 +165,6 @@ class CTune:
     
             elif part == 2:
                 self.chords += line.rstrip() + '\n'
-    
-            #if line.startswith('T:'):
-                #self.title = line[2:].strip()
-            #elif line.startswith('K:'):
-                #self.key = line[2:].strip()
     
         if part != 2:
             error("Missing one or more parts: %s" % fullpath)

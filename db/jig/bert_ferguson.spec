@@ -1,5 +1,8 @@
 T:Bert Ferguson
+C:jig
 A:Samuel Ian Rothmar Burns
+O:Shetland
+U:https://thesession.org/tunes/15604
 K:A
 L:1/8
 M:6/8

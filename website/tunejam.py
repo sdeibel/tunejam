@@ -183,7 +183,7 @@ def index_type():
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
-      if obj.author:
+      if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.GetKeyString()
       recording, mimetype, filename = obj.GetRecording()
@@ -213,7 +213,7 @@ def index_meter():
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
-      if obj.author:
+      if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.GetKeyString()
       recording, mimetype, filename = obj.GetRecording()
@@ -256,7 +256,7 @@ def index_origin():
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
-      if obj.author:
+      if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.GetKeyString()
       recording, mimetype, filename = obj.GetRecording()
@@ -272,7 +272,7 @@ def index_origin():
       title_html.append(CBreak())
       origin = obj.origin
       if not origin:
-        origin = 'Unknown / TBD'
+        origin = 'To Be Determined'
       origins[origin].append((title, title_html))
       
   for origin in sorted(origins):
@@ -296,7 +296,7 @@ def index_title():
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
-      if obj.author:
+      if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.GetKeyString()
       recording, mimetype, filename = obj.GetRecording()
@@ -334,7 +334,7 @@ def index_author():
       obj.ReadDatabase()
       author = obj.author
       if not author:
-        author = "Unknown / TBD"
+        author = "To Be Determined"
       else:
         aparts = author.split()
         author = aparts[-1]
@@ -372,6 +372,7 @@ def dev():
   sections = tunes.keys()
   sections.sort()
   no_recording = []
+  no_history = []
   if 'incomplete'in sections:
     sections.remove('incomplete')
     sections.append('incomplete')
@@ -381,7 +382,7 @@ def dev():
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
-      if obj.author:
+      if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.GetKeyString()
       recording, mimetype, filename = obj.GetRecording()
@@ -399,10 +400,18 @@ def dev():
         parts.extend(tune_title)
       if not recording:
         no_recording.append(tune_title)
+      if not obj.history or not obj.origin:
+        no_history.append(tune_title)
 
   if no_recording:
     parts.append(CH("Tunes with No Recording", 2))
     for item in no_recording:
+      for part in item:
+        parts.append(part)
+        
+  if no_history:
+    parts.append(CH("Tunes with No Origin and/or History", 2))
+    for item in no_history:
       for part in item:
         parts.append(part)
         
@@ -1887,16 +1896,23 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
     urls = []
     url_list = obj.url.split('\n')
     for i, url in enumerate(url_list):
-      if not urls:
-        urls.append('Details: ')
-      elif i == len(url_list) - 1:
-        urls.append(' and ')
-      else:
-        urls.append(', ')
+      urls.append(CText('Ref: '))
       urls.append(CText(url, href=url))
+      urls.append(CBreak())
     urls = CParagraph(''.join([str(u) for u in urls]))
   else:
     urls = ''
+    
+  if obj.ref and metadata:
+    refs = []
+    ref_list = obj.ref.split('\n')
+    for i, ref in enumerate(ref_list):
+      refs.append(CText('Ref: '))
+      refs.append(CText(ref))
+      refs.append(CBreak())
+    refs = CParagraph(''.join([str(r) for r in refs]))
+  else:
+    refs = ''
     
   tune = CDiv([
     CH([
@@ -1908,7 +1924,8 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
     author,
     origin,
     history,
-    urls, 
+    urls,
+    refs, 
     notes,
     chords,
   ], hclass='tune')

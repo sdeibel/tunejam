@@ -1,5 +1,10 @@
 T:Spootiskerry
+C:reel
 A:Samuel Ian Rothmar Burns
+O:Shetland
+H:This tune as titled after the name of a Shetland Islands farm that is in the 
+H:author's family.
+U:https://www.folktunefinder.com/tunes/12762
 K:G
 L:1/8
 M:4/4

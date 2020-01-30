@@ -1,4 +1,9 @@
 T:All The Way To Galway
+C:reel
+O:Ireland
+#:This tune is not on thesession.org and where it does appear the A and B parts are 
+#:reversed.
+U:https://www.folktunefinder.com/tunes/107627
 K:D
 L:1/4
 M:4/4

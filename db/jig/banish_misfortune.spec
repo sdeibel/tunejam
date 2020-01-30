@@ -1,5 +1,11 @@
 T:Banish Misfortune
+C:jig
 K:Dmix
+A:Traditional
+O:Ireland
+H:Very little is known about the origins of this three-part
+H:jig. It was first published in in 1873 in P.W. Joyce’s Ancient Irish Music, under the
+H:title "The Bag of Meal". It may have been played to ward off evil or misfortune.
 L:1/8
 M:6/8
 --
