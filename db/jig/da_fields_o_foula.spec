@@ -1,4 +1,14 @@
-T:Da Fields o' Foula
+T:Da Fields o' Foula (Flowers of May)
+C:jig
+O:Shetland
+A:Traditional
+H:Although it is a jig, this tune is often played as part of a set to dance The Foula Reel,
+H:which of course is also a jig.  Aly Bain allegedly commented that the Shetlanders didn’t 
+H:know the difference, but it is also possible they use an older meaning to "reel," namely
+H:as a general term for "dance."
+U:https://thesession.org/tunes/1834
+U:https://thesession.org/tunes/2203
+U:https://tunearch.org/wiki/Fields_o%27_Foula_(Da)
 K:D
 L:1/8
 M:6/8

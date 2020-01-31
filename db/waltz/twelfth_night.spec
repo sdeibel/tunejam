@@ -1,6 +1,9 @@
 T:Twelfth Night
+C:waltz
 A:Bliss McIntosh
 O:Cambridge NY
+H:According to Bliss, this tune was written on January 6th, which is also known as Twelfth Night,
+H:the last night of the twelve days of Christmas.
 K:D
 L:1/4
 M:3/4

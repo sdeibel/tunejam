@@ -1,6 +1,9 @@
 T:South Pond
+C:jig
 A:Bliss McIntosh
 O:Cambridge NY
+H:According to Bliss, this tune was named for the feeling of skating on a neighbor's pond
+H:on a cold January afternoon.
 K:Am
 L:1/8
 M:6/8
