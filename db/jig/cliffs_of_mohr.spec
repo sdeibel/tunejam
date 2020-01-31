@@ -1,5 +1,8 @@
-T:Cliffs of Mohr
-A:Luke Brady
+T:Cliffs of Moher
+C:jig
+A:Traditional
+O:Ireland
+U:https://thesession.org/tunes/12
 K:Am
 L:1/8
 M:6/8

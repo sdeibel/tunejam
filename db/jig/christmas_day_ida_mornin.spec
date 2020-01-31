@@ -1,4 +1,12 @@
-T:Christmas Day Ida Mornin' (by Fredamann Stickle)
+T:Christmas Day Ida Moarnin'
+C:jig
+A:Fredamann Stickle
+O:Shetland
+H:The author lived in the 19th century adn used to play this tune to the laird every 
+H:Christmas.  According to Bliss McIntosh, who studied in the Shetland Islands in the 
+H:1970's, this tune would be played for the laird at Christmas and whoever played it 
+H:the best would win a free year's rent for their tenant farm.
+U:https://thesession.org/tunes/773
 K:D/Em
 L:1/8
 M:6/8

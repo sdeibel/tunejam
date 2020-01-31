@@ -1,5 +1,7 @@
 T:Canna Get My Mare Tamed
+C:reel
 K:G
+O:Shetland
 L:1/8
 M:4/4
 --
