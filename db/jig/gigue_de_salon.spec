@@ -1,4 +1,9 @@
 T:Gigue de Salon
+C:jig
+O:Quebec
+A:Pascal Gemme
+H:This tune was written recorded by the author's band Genticorum, on their CD Malins Plaisirs.
+U:https://thesession.org/tunes/11486
 K:A
 L:1/8
 M:6/8

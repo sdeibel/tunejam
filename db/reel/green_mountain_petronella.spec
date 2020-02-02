@@ -1,4 +1,13 @@
 T:Green Mountain Petronella
+C:reel
+O:United States
+A:Traditional
+H:Canterbury New Hampshire caller and musician Dudley Laufman has been credited with 
+H:finding and disseminating this tune.  It is often played together with Petronella,
+H:typically as the second tune and returning to Petronella one time to signal that
+H:the dance is ending.
+U:https://tunearch.org/wiki/Annotation:Green_Mountain_Petronella
+U:https://thesession.org/tunes/4695
 K:G
 L:1/8
 M:4/4
