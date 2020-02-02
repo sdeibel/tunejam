@@ -4,6 +4,7 @@ A:Traditional
 O:Ireland
 H:This tune is associated with Connaught (or Connacht), a province of Ireland that was
 H:named for the ancient tribe who lived there, the Connachta.
+U:https://tunearch.org/wiki/Annotation:Connaughtman%27s_Rambles_(1)_(The)
 U:https://www.flutetunes.com/tunes.php?id=3516
 U:https://thesession.org/tunes/19
 K:D/Bm

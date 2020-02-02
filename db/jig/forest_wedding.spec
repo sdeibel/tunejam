@@ -2,7 +2,7 @@ T:Forest Wedding
 C:jig
 O:Northwest
 A:Todd Silverstein
-H:This tune is from Portland, Oregon and is on the CD named Buzz Cuts by the bad Wild Hair.
+H:This tune is from Portland, Oregon and is on the CD named Buzz Cuts by the band Wild Hair.
 U:https://store.cdbaby.com/cd/WildHair
 K:Dm
 L:1/8

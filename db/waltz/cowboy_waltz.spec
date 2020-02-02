@@ -1,4 +1,10 @@
 T:Cowboy Waltz
+C:waltz
+A:Traditional
+O:American
+H:There are several distinct tunes with this name.
+U:https://thesession.org/tunes/6780
+U:https://www.folktunefinder.com/tunes/117075
 K:D
 L:1/8
 M:3/4

@@ -1,7 +1,5 @@
 * Website Phase Two
   ** Reorganization
-    ** Go through all tunes again and check https://tunearch.org/wiki/TTA search
-       with click on title, and add info/urls where relevant (from Canna Get+)
     ** Edit all tunes to add new A, O, C, #, H, U, and S data where appropriate
        To do: G+
     ** Review category for all tunes; move them all to db and use

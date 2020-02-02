@@ -3,6 +3,7 @@ C:jig
 A:Traditional
 O:Ireland
 U:https://thesession.org/tunes/4450
+U:https://tunearch.org/wiki/Annotation:Devlin%27s
 K:Bm
 L:1/8
 M:6/8

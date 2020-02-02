@@ -4,6 +4,7 @@ A:Traditional
 O:Ireland
 H:This is usually played as a slow flowing reel.
 U:https://thesession.org/tunes/2624
+U:https://tunearch.org/wiki/Annotation:Dimmers_(The)
 K:G
 L:1/8
 M:4/4

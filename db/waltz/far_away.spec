@@ -8,6 +8,7 @@ H:for a particular woman who has an enchanting but elusive quality — that was 
 H:was trying to convey."
 U:https://thesession.org/tunes/187
 U:https://mudcat.org/thread.cfm?threadid=155790
+U:https://tunearch.org/wiki/Annotation:Far_Away
 K:Bm
 L:1/8
 M:3/4
