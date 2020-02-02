@@ -2,12 +2,13 @@ T:Amelia's Waltz
 C:waltz
 A:Bob McQuillen
 O:New England
-H:This tune is named for Amelia Stiles, who was born in a large packing crate that carried
+H:This 1981 tune was named for 3 1/2 year old Amelia Stiles, who was born in a large packing crate that carried
 H:Lindbergh’s airplane back to the US from Europe, after his famous transatlantic flight
 H:in 1927. Fittingly, Amelia was named after Amelia Earhart. At the time of Amelia's birth, 
 H:Lindbergh’s crate was beside the Blackwater River in Maine.  It is now the center of 
 H:The Lindbergh Crate Museum, in Canaan, Maine. 
 U:https://thesession.org/tunes/6939
+U:https://tunearch.org/wiki/Annotation:Amelia%27s_Waltz_(1)
 K:D
 L:1/8
 M:3/4

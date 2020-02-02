@@ -10,6 +10,7 @@ H:been written by John Parry, a Welsh harpist. The confusion may stem from the f
 H:both Parry and O'Carolan were blind harpists living in the first part of the 18th century.
 H:The tune may in fact be much older, since it also resembles a tune called Constant Billy
 H:that was published in Playford's Dancing Master in 1665.
+U:https://tunearch.org/wiki/Annotation:Ash_Grove_(The)
 U:https://thesession.org/tunes/997
 U:https://en.wikipedia.org/wiki/The_Ash_Grove
 U:https://en.wikipedia.org/wiki/Turlough_O%27Carolan

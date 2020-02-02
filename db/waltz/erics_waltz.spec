@@ -1,6 +1,9 @@
 T:Eric's Waltz
+C:waltz
 A:Eric Margan
 O:Cambridge NY
+H:This waltz was written about 2008 during a time when Eric was living in Cambridge NY
+H:and working on his band The Red Lions.
 K:G
 L:1/8
 M:3/4

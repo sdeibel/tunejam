@@ -1,4 +1,6 @@
 T:Fee de Dent
+C:jig
+O:Quebec
 A:André Brunet
 K:G
 L:1/8

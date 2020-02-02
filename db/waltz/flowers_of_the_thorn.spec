@@ -1,4 +1,10 @@
 T:Flowers of the Thorn
+C:waltz
+O:Wales
+A:Traditional
+H:This tune may be played as a waltz, but was originally a slow air or lament.
+U:https://thesession.org/tunes/3197
+U:https://tunearch.org/wiki/Annotation:Flowers_of_the_Thorn
 K:Am
 L:1/8
 M:3/4

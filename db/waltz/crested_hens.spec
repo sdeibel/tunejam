@@ -4,7 +4,7 @@ A:Gilles Chabenat
 O:France
 H:Although this tune is often mistakenly thought to be an ancient Breton tune, it was 
 H:actually written by Gilles Chabenat in 1983.  He wrote it on a hurdy gurdy as
-H:a bourree (3/8 time), and thus was originally played much faster than most people play it now.  
+H:a "bourrée à trois temps" (3/8 time), and thus was originally played much faster than most people play it now.  
 H:Gilles explained the title as follows: "I was 15 and couldn’t decide on a title.  One 
 H:day we were playing at oxymorons and my friend said "Poulles Huppées" we all laughed 
 H:at that for a long time, so I decided to name the tune that. I know it’s a dumb title, 

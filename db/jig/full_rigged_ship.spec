@@ -1,4 +1,10 @@
-T:Full Rigged Ship
+T:Da Full Rigged Ship
+C:jig
+O:Shetland
+A:Traditional
+H:Although now usually played as a jig, traditionally this tune was played with a free 
+H:rhythm imitating the motion of a ship at sea.
+U:https://thesession.org/tunes/878
 K:Am
 L:1/8
 M:6/8

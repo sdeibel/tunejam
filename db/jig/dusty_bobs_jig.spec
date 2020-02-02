@@ -1,4 +1,8 @@
 T:Dusty Bob's Jig
+C:jig
+A:Traditional
+O:England
+U:https://thesession.org/tunes/13885
 K:G
 L:1/8
 M:6/8

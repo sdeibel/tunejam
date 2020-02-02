@@ -1,8 +1,10 @@
 T:All The Way To Galway
 C:reel
 O:Ireland
-#:This tune is not on thesession.org and where it does appear the A and B parts are 
-#:reversed.
+A:Traditional
+H:This tune dates from a Jacobite era (early 18th century) song and was the precursor to 
+H:"Yankee Doodle."  It sometimes appears with the A and B parts reversed.
+U:https://tunearch.org/wiki/Annotation:All_the_Way_to_Galway_(1)
 U:https://www.folktunefinder.com/tunes/107627
 K:D
 L:1/4

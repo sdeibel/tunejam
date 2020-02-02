@@ -4,8 +4,8 @@ K:Am
 A:Traditional
 O:Ireland
 H:This tune is known locally as the first Ballydesmond Polka but in fact it is more
-H:widely known as The Ballydesmond Polka No. 2.  The first polka in the three-part
-H:series is not often played in the Cambridge NY area.
+H:widely known as The Ballydesmond Polka No. 2.
+U:https://tunearch.org/wiki/Annotation:Ballydesmond_Polka_(2)
 U:https://thesession.org/tunes/238
 L:1/8
 M:2/4

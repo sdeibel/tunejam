@@ -1,4 +1,8 @@
 T:A Fig for A Kiss
+C:slip
+O:Ireland
+A:Traditional
+U:https://thesession.org/tunes/750
 K:Em
 L:1/8
 M:9/8

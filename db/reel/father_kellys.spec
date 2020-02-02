@@ -1,5 +1,11 @@
 T:Father Kelly's  (Rossmore Jetty)
+C:reel
+O:Ireland
 A:Father PJ Kelly
+H:Although this tune is most often referred to as Father Kelly's, the author named it The
+H:Rossmore Jetty, after the pier on the river Shannon near his hometown Woodford, in East
+H:Galway. Rossmore is a most beautiful and peaceful spot.
+U:https://thesession.org/tunes/791
 K:G
 L:1/8
 M:4/4

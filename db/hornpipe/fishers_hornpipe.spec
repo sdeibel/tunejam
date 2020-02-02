@@ -1,5 +1,6 @@
 T:Fisher's Hornpipe
 C:hornpipe
+A:Traditional
 H:This tune dates from the 1700's.  A number of possible authors have been
 H:identified, in Germany and England.  It is often also played as a reel,
 H:for example for dancing the Shetland Reel in the Shetland Islands.  
