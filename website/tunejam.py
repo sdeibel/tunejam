@@ -56,8 +56,8 @@ def home():
     CH("The following resources are available:", 2),
     CList([
       CItem([CText("Tune Index", href='/index'), CNBSP(),
-             CText(" -- A list of all the tunes, sortable by <a href='/index'>type<a>, "
-                   "<a href='/index/meter'>time signature<a>, <a href='/index/title'>title<a>, "
+             CText(" -- A list of all the tunes, sortable by <a href='/index/title'>title<a>, "
+                   "<a href='/index/meter'>time signature<a>, <a href='/index/type'>type<a>, "
                    "<a href='/index/author'>author<a>, and <a href='/index/origin'>origin<a>.")]), 
       CItem([CText("Set Sheets", href='/sets'), CNBSP(),
              CText(" -- Create your own sets of tunes, for screen display or printing.")]), 
@@ -169,7 +169,6 @@ def _index_header(itype):
 
   return parts
   
-@app.route('/index')
 @app.route('/index/type')
 def index_type():
   tunes = utils.GetTuneIndex(False)
@@ -283,6 +282,7 @@ def index_origin():
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index')
 
+@app.route('/index')
 @app.route('/index/title')
 def index_title():
   
