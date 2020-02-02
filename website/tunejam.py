@@ -139,11 +139,11 @@ def _index_header(itype):
 
   parts.append(CText('Sort Index By:', bold=1))
   parts.append(CNBSP())
-  parts.append(CText('Type', href='/index', bold=itype=='type'))
+  parts.append(CText('Title', href='/index/title', bold=itype=='title'))
   parts.append(CNBSP())
   parts.append(CText('Time Signature', href='/index/meter', bold=itype=='meter'))
   parts.append(CNBSP())
-  parts.append(CText('Title', href='/index/title', bold=itype=='title'))
+  parts.append(CText('Type', href='/index/type', bold=itype=='type'))
   parts.append(CNBSP())
   parts.append(CText('Author', href='/index/author', bold=itype=='author'))
   parts.append(CNBSP())
