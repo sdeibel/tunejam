@@ -1,6 +1,6 @@
 T:Da Brig
 C:jig
-A:Friedamann Stickle
+A:Friedemann Stickle
 O:Shetland
 H:This tune is often attributed to John Stickle (1875-1957, but was actually written by his ancestor
 H:Friedemann Stickle (1794-1867).  Pat Shuldham-Shaw recorded this origin as follows:  ""One evening 
