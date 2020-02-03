@@ -1,4 +1,10 @@
 T:Hollow Poplar
+C:reel
+A:Traditional
+O:United States
+H:This tune was popularized in the 1950's by Tennessee fidler Arthur Smith, who had 
+H:played it since the 1930's.
+U:https://tunearch.org/wiki/Annotation:Hollow_Poplar
 K:G
 L:1/4
 M:4/4
