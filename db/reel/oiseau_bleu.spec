@@ -1,4 +1,11 @@
 T:L'Oiseau Bleu
+C:reel
+O:Quebec
+A:Traditional
+H:The title means "blue bird".  Little has been published about its origins, but it
+H:may come from Acadians living in Quebec.
+U:https://tunearch.org/wiki/L%27Oiseau_Bleu
+U:https://tunearch.org/wiki/Annotation:L%27Oiseau_Bleu
 K:D
 L:1/8
 M:4/4

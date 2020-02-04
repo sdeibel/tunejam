@@ -1,5 +1,9 @@
 T:Le Tourment
+C:jig
+O:Quebec
 A:Jean-Paul Loyer
+H:This tune was written for Jean-Paul Loyer's 1995 CD titled Ojnab.
+U:https://thesession.org/tunes/6148
 K:G
 L:1/8
 M:6/8
