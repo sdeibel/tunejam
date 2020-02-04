@@ -1,6 +1,6 @@
 T:The Tidley-Idley
 A:Stephan Deibel
-O:Cambridge NY
+O:USA - Cambridge NY
 H:This tune was inspired by the children's book Burt Dow Deep Water Man, written by 
 H:Robert McClosky.  As a child, I checked this book out of the library so often that they 
 H:eventually just gave it to me.  The Tidley-Idley is Burt's boat, which he and his pet 

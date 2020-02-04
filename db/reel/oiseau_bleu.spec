@@ -1,6 +1,6 @@
 T:L'Oiseau Bleu
 C:reel
-O:Quebec
+O:Canada - Quebec
 A:Traditional
 H:The title means "blue bird".  Little has been published about its origins, but it
 H:may come from Acadians living in Quebec.

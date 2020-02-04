@@ -1,7 +1,7 @@
 T:Creaky Joints
 C:reel
 A:Caz Lewis
-O:Cambridge NY
+O:USA - Cambridge NY
 H:This tune was written by Caz during a time when she was having some joint pain.
 K:D
 L:1/8

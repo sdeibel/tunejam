@@ -4,7 +4,7 @@ K:Am
 A:Traditional
 #:This and Bear Dance #1 are also played locally by making a tune out of the A part
 #:of Bear Dance #2 and the A part of Bear Dance #1.
-O:Brittany
+O:France - Brittany
 L:1/8
 M:4/4
 --

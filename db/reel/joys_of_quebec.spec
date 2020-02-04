@@ -1,6 +1,6 @@
 T:Joys of Quebec
 C:reel
-O:Quebec
+O:Canada - Quebec
 A:Fortunat Malouin
 H:This tune was written in the 1920's by Fortunat Malouin (1870-1935). The original French 
 H:language name is "Les Joyeuses Québécoises," which means "Happy Quebec Women." There is 

@@ -1,7 +1,7 @@
 T:Driving the Turkeys to Boston
 C:reel
 A:Caz Lewis
-O:Cambridge NY
+O:USA - Cambridge NY
 H:This tune was written in 2014, inspired by a Vermont Edition radio show that described the
 H:19th century practice of driving turkeys from Vermont to Boston. Farmers would group
 H:their flocks  together, to drive at least 1000 and often 7000-10000 turkeys at a time. 

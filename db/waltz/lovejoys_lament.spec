@@ -1,6 +1,6 @@
 T:Lovejoy's Lament
 A:Stephan Deibel
-O:Cambridge NY
+O:USA - Cambridge NY
 H:This is the first tune I ever wrote, in 2008, while sitting on my back porch, which
 H:overlooks the Lovejoy Plow Factory in Cambridge NY.  Starting in around 1850, this 
 H:factory produced the Cambridge Steel Plow, which was significant because it opened up 

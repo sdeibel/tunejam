@@ -1,7 +1,7 @@
 T:Amelia's Waltz
 C:waltz
 A:Bob McQuillen
-O:New England
+O:USA - New England
 H:This 1981 tune was named for 3 1/2 year old Amelia Stiles, who was born in a large packing crate that carried
 H:Lindbergh’s airplane back to the US from Europe, after his famous transatlantic flight
 H:in 1927. Fittingly, Amelia was named after Amelia Earhart. At the time of Amelia's birth, 

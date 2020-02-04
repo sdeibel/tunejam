@@ -1,6 +1,6 @@
 T:Sweet Potato Rag
 A:Caz Lewis
-O:Cambridge NY
+O:USA - Cambridge NY
 K:G
 L:1/8
 M:4/4

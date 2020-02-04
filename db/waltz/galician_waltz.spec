@@ -1,6 +1,6 @@
 T:Galician Waltz (Cau'l Chouzano)
 C:waltz
-O:Asturia
+O:Spain - Asturia
 A:Fernando Largo
 H:This tune was written as "Cau'l Chouzano" by Fernando Largo (1960 - 2010), who was a 
 H:musician from San Xuan de Beleño in Asturia.

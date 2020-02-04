@@ -1,6 +1,6 @@
 T:Green Mountain Petronella
 C:reel
-O:United States
+O:USA - New England
 A:Traditional
 H:Canterbury New Hampshire caller and musician Dudley Laufman has been credited with 
 H:finding and disseminating this tune.  It is often played together with Petronella,

@@ -1,7 +1,7 @@
 T:Bachelor Duck
 C:reel
 A:Stephan Deibel
-O:Cambridge NY
+O:USA - Cambridge NY
 H:This tune was inspired by and written for the last two ducks that were left over from a 
 H:larger flock we kept up to around 2012.  Both of these survivors were male, and both
 H:always seemed irrepressibly jolly as they greeted us each day.  A variation starts the 

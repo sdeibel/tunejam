@@ -1,6 +1,6 @@
 T:Our Outboard Motor Died But We Got Saved
 A:Stephan Deibel
-O:Cambridge NY
+O:USA - Cambridge NY
 H:This tune was written around 2010 on a wilderness island in Blue Mountain Lake, NY. While 
 H:I was writing the tune, a boating party in a beautiful old wooden boat happened by.  Suddenly, 
 H:their outboard motor stopped and they were unable to restart it.  There was a moment of 

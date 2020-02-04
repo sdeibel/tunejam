@@ -1,6 +1,6 @@
 T:The Good Doctor
 A:Stephan Deibel
-O:Cambridge NY
+O:USA - Cambridge NY
 H:This tune was written in honor of my father, Rudolf Deibel, who passed away in 2012.
 K:A
 L:1/4

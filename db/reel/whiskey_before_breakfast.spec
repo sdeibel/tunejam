@@ -1,6 +1,6 @@
 T:Whiskey Before Breakfast
 C:reel
-O:Unknown
+O:Canada - Manitoba
 A:Unknown
 H:Although this tune is commonly thought of as Irish, it is actually a Metis tune
 H:that is often credited to mid-twentieth century Manitoba fiddler and composer 

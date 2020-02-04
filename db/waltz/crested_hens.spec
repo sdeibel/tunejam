@@ -1,7 +1,7 @@
 T:Crested Hens (Les Poules Huppées)
 C:waltz
 A:Gilles Chabenat
-O:France
+O:France - Central
 H:Although this tune is often mistakenly thought to be an ancient Breton tune, it was 
 H:actually written by Gilles Chabenat in 1983.  He wrote it on a hurdy gurdy as
 H:a "bourrée à trois temps" (3/8 time), and thus was originally played much faster than 

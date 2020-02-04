@@ -1,6 +1,6 @@
 T:Up and Down the Mountain Ash
 A:Stephan Deibel
-O:Cambridge NY
+O:USA - Cambridge NY
 H:This simple tune was written September 2015 in New Caledonia on Prince Edward Island, 
 H:in the shade of a large mountain ash, while waiting for the rest of my family to get 
 H:ready for an excursion.  The tune goes musically up and down the mountain ash.

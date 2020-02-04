@@ -1,6 +1,6 @@
 T:Glise A Sherbrook
 C:reel
-O:Quebec
+O:Canada - Quebec
 A:Traditional
 H:This tune was known earlier by other names, including Quadrille de Chez Nous (1929), and
 H:it may be based on an 1823 opera tune Home Sweet Home. Glise is not itself a French word

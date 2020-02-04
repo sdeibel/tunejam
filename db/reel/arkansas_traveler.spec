@@ -2,7 +2,7 @@ T:Arkansas Traveler
 C:reel
 K:D
 A:Sanford Faulkner
-O:Midwestern US
+O:USA - Midwest
 H:This tune was either composed or collected and popularized in the 19th century by
 H:Colonel Sanford C. 'Sandy' Faulkner. He claimed that after becoming lost in rural Arkansas
 H:and asking directions at a rustic log home, he received a surly welcome until he was able

@@ -1,6 +1,6 @@
 T:Kiss and Make Up
 C:jig
-O:United States
+O:USA - New England
 A:Mark Simos
 H:This tune was composed by Watertown Massachusetts fiddler Mark Simos.
 U:https://tunearch.org/wiki/Annotation:Kiss_and_Make_Up

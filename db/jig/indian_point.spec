@@ -1,7 +1,7 @@
 T:Indian Point
 C:jig
 A:Rick Mohr
-O:United States
+O:USA - New England
 H:This tune was composed by New England contra-dance fiddler and caller Rich Mohr.
 U:https://tunearch.org/wiki/Annotation:Indian_Point
 U:https://thesession.org/tunes/10935

@@ -1,6 +1,6 @@
 T:Johnny Johnny Don't Get Drunk
 C:reel
-O:America
+O:USA - Missouri
 A:Traditional
 H:Known by a number of similar names, this melody is one of 100 Essential Missouri Tunes 
 H:listed by Missouri fiddler Charlie Walden.  It may be derived from a temperance song.

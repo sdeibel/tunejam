@@ -1,6 +1,6 @@
 T:Luna Moth
 A:Caz Lewis
-O:Cambridge NY
+O:USA - Cambridge NY
 K:Em/Am
 L:1/8
 M:4/4

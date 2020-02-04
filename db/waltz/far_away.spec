@@ -1,6 +1,6 @@
 T:Far Away
 C:waltz
-O:New England
+O:USA - New England
 A:Pete Jung
 H:This tune was written by Pete Jung in 1985. "I wrote this while playing the mandolin, 
 H:on the way back home from a Brattleboro (VT) Dawn Dance, at about 7 A.M. I wrote it 

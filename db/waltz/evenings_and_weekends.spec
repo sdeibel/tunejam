@@ -1,7 +1,7 @@
 T:Evenings and Weekends
 C:waltz
 A:John Goodin
-O:Midwestern US
+O:USA - Midwest
 H:This is a tune off the 2002 Contratopia CD called Ballroom Echoes.
 U:http://www.mandotopia.com/Contratopia/CtheCD.htm
 K:C

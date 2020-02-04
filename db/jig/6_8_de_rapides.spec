@@ -1,7 +1,7 @@
 T:6/8 De Rapides
 C:jig
 A:Sabin Jacques
-O:Quebec
+O:Canada - Quebec
 U:https://thesession.org/tunes/15458
 K:G
 L:1/8

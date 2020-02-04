@@ -1,6 +1,6 @@
 T:Julia Delaney (La Sorcière)
 C:reel
-O:America
+O:USA - Midwest
 A:Traditional
 H:Captain Francis O'Neill wrote and named this tune in honor of his wife's sister Julia, who was
 H:married to uilleann piper Bernard Delaney. Julia was from Feakle in County Clare, Ireland

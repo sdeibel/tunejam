@@ -1,7 +1,7 @@
 T:The Bumblebee
 C:reel
 A:Stephan Deibel
-O:Cambridge NY
+O:USA - Cambridge NY
 H:This was written on my back porch in early summer 2015, on a warm day when the air was 
 H:heavy with bumblebees.  It was my first imitative tune, inspired by traditional tunes 
 H:that mimic the sound of an animal as part of their melody, for example <i>The Yowe Cam 

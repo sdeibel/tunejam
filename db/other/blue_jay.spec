@@ -1,7 +1,7 @@
 T:The Blue Jay
 C:jig
 A:Stephan Deibel
-O:Cambridge NY
+O:USA - Cambridge NY
 H:This tune was written in September 2015, during a visit to Prince Edward Island, where
 H:we stayed for two weeks in a house in New Caledonia.  This house came with a square 
 H:mile of land and trails.  One sunny day, I was out in a field in the beautiful country 

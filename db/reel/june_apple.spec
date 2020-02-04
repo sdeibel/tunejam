@@ -1,7 +1,7 @@
 T:June Apple
 C:reel
-O:United States
-A:Traditional
+O:USA - Southeast
+A:Traditional - Southeast
 H:This is an old timey tune associated with southwestern Virginia and bordering areas of
 H:North Carolina.  It is named for a type of early-ripening apple that matures in Spring
 H:in the southern United States.

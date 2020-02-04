@@ -1,6 +1,6 @@
 T:Maison de Glace
 C:jig
-O:Quebec
+O:Canada - Quebec
 A:Réjean Brunet
 H:This tune was written in 1997 in a building called The Ice House at the Augusta Heritage
 H:festival in Elkins, West Virginia. The tune was created in a class taught by Quebec

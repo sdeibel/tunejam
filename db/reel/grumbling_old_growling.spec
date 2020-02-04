@@ -1,6 +1,6 @@
 T:Grumbling Old Man, Growling Old Woman
 C:reel
-O:Quebec
+O:Canada - Quebec
 A:Traditional
 H:This is a Québec reel popularized by Maritime radio and TV fiddler Don Messer. It was
 H:taken up by revival fiddlers in the early 1970's, became a staple of New England contra

@@ -1,6 +1,6 @@
 T: Golden Slippers
 C:reel
-O:United States
+O:USA
 A:James A. Bland
 H:This tune was composed by prominent black minstrel songwriter and banjo player James
 H:A. Bland in 1870 as "Oh! Dem Golden Slippers."  He died in 1911, poor despite his 

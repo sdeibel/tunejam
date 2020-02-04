@@ -2,7 +2,7 @@ T:Dublin Gypsy
 C:other
 S:f:ABCs:BCDEBCf:Fs:GFGf:H
 A:Stephan Deibel
-O:Cambridge NY
+O:USA - Cambridge NY
 H:This tune, inspired by Gypsy fiddle music, was written over several years from about 
 H:2008-2010.  The notation 'f:' and 's:' in the structure given above indicates whether 
 H:the accompanying guitar is finger-picking or strumming.

@@ -1,7 +1,7 @@
 T:Bonnie At Morn
 C:waltz
 K:Am
-O:Northumberland
+O:England - Northumberland
 U:https://thesession.org/tunes/6388
 L:1/4
 M:3/4

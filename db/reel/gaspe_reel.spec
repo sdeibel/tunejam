@@ -1,7 +1,7 @@
 T:Gaspe Reel
 C:reel
 A:Traditional
-O:Quebec
+O:Canada - Quebec
 H:This tune was named for Québec's Gaspé Peninsula to the south of the mouth
 H:of the St. Lawrence River.  There is also a three-part version of it, with
 H:the C part based on Money Musk.

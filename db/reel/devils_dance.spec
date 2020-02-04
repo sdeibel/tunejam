@@ -1,7 +1,7 @@
 T:Devil's Dance
 A:Stephan Deibel
 C:reel
-O:Cambridge NY
+O:USA - Cambridge NY
 H:This was originally titled "Seals and Sky" and was written September 2015 on 
 H:Janvrin's Island, a place with many seals and much sky that is off Isle 
 H:Madam in the southeast corner of Cape Breton.  The tune was later retitled

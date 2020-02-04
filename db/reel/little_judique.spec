@@ -1,6 +1,6 @@
 T:Little Judique
 C:reel
-O:Canada (Maritime)
+O:Canada - New Brunswick
 A:Unknown
 H:This tune was popularized by Canadian fiddler Don Messer (1909-73) but its origin
 H:is unknown.  It may be associated with Little Judique Harbor on Cape Breton.
