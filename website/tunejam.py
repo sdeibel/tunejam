@@ -48,9 +48,11 @@ def home():
     CParagraph("Welcome!"),
     CParagraph("This website hosts a collection of traditional tunes played by musicians "
                "around Cambridge NY. The focus of the site is to facilitate learning tunes by ear, and playing "
-               "them together at sessions, contra dances, fund-raisers, and other events.  For each "
-               "tune, we have collected a short recording, a chord chart, and a written "
-               "melody reminder containing the first few measures of each part."),
+               "them together at sessions, contra dances, fund-raisers, and other events.  "),
+    CParagraph("For each tune, we have collected a short recording, a chord chart, and a written "
+               "melody reminder containing the first few measures of each part.  Where "
+               "available, we've also listed author, origin, a brief history of the tune, and "
+               "links to additional information."),
     CParagraph("There are currently a total of %i completed tunes on the site.  In addition, %i " % (total_complete, total_incomplete) +
                "partial listings have been entered."), 
     CH("The following resources are available:", 2),
@@ -1294,7 +1296,7 @@ def events(delete=None, undelete=None):
   events = utils.ReadEvents()
   events.sort(key=lambda s:s.title)
 
-  parts.append(CParagraph(CText("The following events are active:", bold=1)))
+  parts.append(CParagraph(CText("The following events have been created:", bold=1)))
 
   if events:
     for event in events:
