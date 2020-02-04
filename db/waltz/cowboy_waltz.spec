@@ -1,7 +1,7 @@
 T:Cowboy Waltz
 C:waltz
 A:Traditional
-O:Unknown
+O:USA
 H:There are several distinct tunes with this name.
 U:https://thesession.org/tunes/6780
 U:https://www.folktunefinder.com/tunes/117075

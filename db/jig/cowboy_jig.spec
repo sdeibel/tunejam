@@ -1,7 +1,7 @@
 T:Cowboy Jig
 C:jig
 A:Traditional
-O:Unknown
+O:USA
 U:https://thesession.org/tunes/794
 K:G
 L:1/8
