@@ -1,7 +1,7 @@
 * Website Phase Two
   ** Reorganization
     ** Edit all tunes to add new A, O, C, #, H, U, and S data where appropriate
-       To do: Manx+
+       To do: Midnight+
     ** Review category for all tunes; move them all to db and use
        only C: tune class attrib; allow multiple classes comma-separated
        for example 'reel,hornpipe'

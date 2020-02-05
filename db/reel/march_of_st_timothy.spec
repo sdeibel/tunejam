@@ -1,5 +1,12 @@
 T:March of Saint Timothy
+C:march
+O:USA - Midwest
 A:Judi Morningstar
+H:This was written on October 2, 1984 by Judi Morningstar in White Lake, Michigan.  The
+H:tune was named for St. Timothy’s Methodist Church, where her band Ruffwater Stringband 
+H:played for over ten years, at a dance sponsored by the Detroit Country Dancers.
+U:https://tunearch.org/wiki/Annotation:March_of_St._Timothy
+U:https://thesession.org/tunes/10095
 K:G
 L:1/2
 M:4/4

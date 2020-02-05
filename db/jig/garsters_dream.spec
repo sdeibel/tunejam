@@ -1,7 +1,7 @@
 T:Garster's Dream
 C:jig
-A:Trowie
-H:This is a Trowie (Fairy) tune from the Shetland Island of Fetlar ('the fat isle'). It
+A:Faeries
+H:This is a Trowie (Faerie) tune from the Shetland Island of Fetlar ('the fat isle'). It
 H:was heard by a man named Garster, coming from a hole in the ground while he was resting by
 H:a Trowie Knoll (Fairy Hill) on his way home from a wedding. He attributed the tune to the
 H:trows, the island’s version of Scandinavian trolls, but others scroff and say he must 
