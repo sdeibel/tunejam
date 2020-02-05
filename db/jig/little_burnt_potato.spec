@@ -2,7 +2,8 @@ T:Little Burnt Potato
 C:jig
 O:Canada - Nova Scotia
 A:Colin J. Boyd
-H:Although often considered Irish, this tune was composed by Nova Scotia fiddler Colin J.
+H:Although often considered Irish, perhaps because it is about a potato, this tune was 
+H:actually composed by Nova Scotia fiddler Colin J.
 H:Boyd. The tune was written in Boston between 1911 and 1916, while the composer was 
 H:studying music there. It was based on an old Scottish jig that reached the author via 
 H:Cape Breton.
