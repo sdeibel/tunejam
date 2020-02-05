@@ -1,5 +1,5 @@
 T:New Rigged Ship
-K:A/Am/A
+K:Amix/A/Am
 L:1/8
 M:4/4
 --

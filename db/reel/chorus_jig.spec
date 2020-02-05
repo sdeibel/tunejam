@@ -4,8 +4,8 @@ C:reel
 A:Traditional
 O:Ireland
 H:Despite the name, this is a reel and not a jig.  It is closely related to The Kelfenora 
-H:Jig (which is actually a jig) and a number of other tunes including Within a Mile of 
-H:Dublin and The Four Courts.  Jigs were originally tunes sung after a play by the clowns. 
+H:Jig (which is actually a jig) and a number of other tunes.  Jigs were originally 
+H:tunes sung after a play by the clowns. 
 H:The word 'jig' applied to a form of rhyme and is of uncertain derivation.
 U:https://thesession.org/tunes/779
 U:https://tunearch.org/wiki/Annotation:Chorus_Jig_(1)
