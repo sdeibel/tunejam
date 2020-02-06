@@ -1,4 +1,13 @@
 T:Pipe on the Hob
+C:jig
+O:Ireland
+A:Traditional
+H:A Piper on the Hob is a house cricket. During the colder nights the presence of a cricket
+H:was said to be a sign of good luck. Confusingly, there is another musically unrelated
+H:Irish jig of the same name (see the last link below).
+U:https://tunearch.org/wiki/Annotation:Pipe_on_the_Hob_(2)
+U:https://thesession.org/tunes/81
+U:https://thesession.org/tunes/1049
 K:D
 L:1/8
 M:6/8

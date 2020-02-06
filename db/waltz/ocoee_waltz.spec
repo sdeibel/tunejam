@@ -1,5 +1,13 @@
 T:Ocoee Waltz
+C:waltz
+O:United States - Vermont
 A:Pete Sutherland
+H:This waltz was written by Pete Sutherland but is sometimes incorrectly credited to 
+H:Julee Glaub, who recorded it on her 2001 CD Fields Faraway.  It was published in the
+H:book The Neighborhood Waltz: Original and Traditional Waltzes by Pete Sutherland, 
+H:and included on the CD Sunday River (A Pete Sutherland Waltz Collection).
+U:https://store.cdbaby.com/cd/petesutherland3
+U:https://www.youtube.com/watch?v=gv-nV-tdgPc
 K:Am
 L:1/8
 M:3/4

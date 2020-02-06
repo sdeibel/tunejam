@@ -1,5 +1,11 @@
 T:On the Danforth
+C:reel
 A:Keith Murphy
+O:USA - Vermont
+H:This tune was written by Keith Murphy, a native of Newfoundland who is now living
+H:in Vermont.
+U:https://abcnotation.com/tunePage?a=roaringjelly.org/music/RJ_AllSets/0533
+U:http://blackislemusic.com/bios-press-kit/keith-murphy
 K:A
 L:1/8
 M:4/4

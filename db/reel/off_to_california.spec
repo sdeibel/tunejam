@@ -1,4 +1,12 @@
 T:Off to California
+C:hornpipe
+O:Ireland
+A:Traditional
+H:The hornpipe probably has an Irish provenance, with first publication date arouhnd 1847.
+H:The melody has been adopted by several genres.  For example, it was the basis for
+H:the old-time tune Possum up the Gum Stump.
+U:https://tunearch.org/wiki/Annotation:Off_to_California_(1)
+U:https://thesession.org/tunes/30
 K:G
 L:1/8
 M:4/4
