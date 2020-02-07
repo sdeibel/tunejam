@@ -1,6 +1,6 @@
 T:Ocoee Waltz
 C:waltz
-O:United States - Vermont
+O:USA - Vermont
 A:Pete Sutherland
 H:This waltz was written by Pete Sutherland but is sometimes incorrectly credited to 
 H:Julee Glaub, who recorded it on her 2001 CD Fields Faraway.  It was published in the

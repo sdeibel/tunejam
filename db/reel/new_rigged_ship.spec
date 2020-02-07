@@ -1,10 +1,10 @@
-T:New Rigged Ship
+T:Da New Rigged Ship
 C:reel
 O:Shetland
 A:Traditional
 H:This is traditional reel from the playing of Peter Fraser (1837 - 1934) of Finnigarth, 
 H:Waas (aka Walls) on Shetland.  The tune celebrates the fitting out of a fishing boat or 
-H:ship with new sails and mast.
+H:ship with new sails and mast.  It is often played after Da Full Rigged Ship
 U:https://tunearch.org/wiki/Annotation:New_Rigged_Ship_(2)_(Da)
 U:https://thesession.org/tunes/880
 U:https://photos.shetlandmuseumandarchives.org.uk/view-item?i=50881&WINID=1580943315289

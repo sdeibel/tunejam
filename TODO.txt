@@ -1,7 +1,7 @@
 * Website Phase Two
   ** Reorganization
     ** Edit all tunes to add new A, O, C, #, H, U, and S data where appropriate
-       To do: My Own+
+       To do: Queen+
     ** Got through all reels and add designation for those that are rants (or all
        tunes + add info on alternative playing styles)
     ** Review category for all tunes; move them all to db and use
@@ -72,5 +72,4 @@
 * Missing everything
   january_waltz
   paddy_on_the_handcart
-  6_8_de_rapides
-  the_dimmers
+  colemans_march
