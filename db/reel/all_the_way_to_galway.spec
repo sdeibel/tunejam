@@ -3,7 +3,8 @@ C:reel
 O:Ireland
 A:Traditional
 H:This tune dates from a Jacobite era (early 18th century) song and was the precursor to 
-H:"Yankee Doodle."  It sometimes appears with the A and B parts reversed.
+H:Yankee Doodle and closely related to the jig Road to Lisdoonvarna.  It also appears 
+H:with the A and B parts reversed.  
 U:https://tunearch.org/wiki/Annotation:All_the_Way_to_Galway_(1)
 U:https://www.folktunefinder.com/tunes/107627
 K:D
