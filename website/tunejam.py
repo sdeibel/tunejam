@@ -379,16 +379,20 @@ def dev():
   ))
   parts.append(CList(
     [
-      CText("Traditional Tune Archive", href="https://tunearch.org/"), 
-      CText("The Session", href="https://thesession.org/"),
-      CText("Folk Tune Finder", href="https://www.folktunefinder.com/")
+      [CText("Traditional Tune Archive", href="https://tunearch.org/"), CNBSP(),
+       CText('offers the most detailed and complete research.')], 
+      [CText("The Session", href="https://thesession.org/"), CNBSP(),
+       CText('generally lists more versions; commentary is only sometimes useful.')], 
+      [CText("Folk Tune Finder", href="https://www.folktunefinder.com/"),CNBSP(),
+       CText('is useful for finding tunes by name or by entering notes, but does not contain history.')], 
+      [CText("EasyABC", href="https://sourceforge.net/projects/easyabc/"), CNBSP(),
+       CText('makes it possible to play audio for the ABC notation found on the above sites.')], 
     ]
   ))
   parts.append(CParagraph(
     "Since tunes are often known under several names, searching each of these (and the "
     "web in general) using all the names often produces results where a single search "
-    "will not.  The Folk Tune Finder also makes it possible to search for tunes by entering "
-    "notes."
+    "will not."
   ))
   tunes = utils.GetTuneIndex(True)
 
