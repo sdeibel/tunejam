@@ -386,7 +386,9 @@ def dev():
       [CText("Folk Tune Finder", href="https://www.folktunefinder.com/"),CNBSP(),
        CText('is useful for finding tunes by name or by entering notes, but does not contain history.')], 
       [CText("EasyABC", href="https://sourceforge.net/projects/easyabc/"), CNBSP(),
-       CText('makes it possible to play audio for the ABC notation found on the above sites.')], 
+       CText('makes it possible to play audio for the ABC notation found on the above sites.')],
+      [CText("Historical Tune Books", href="http://folkopedia.efdss.org/wiki/List_of_historical_tunebooks,_some_of_which_are_available_on_the_internet"), CNBSP(),
+       CText('is a list of historical tune books, some of which are available online.')],
     ]
   ))
   parts.append(CParagraph(
