@@ -1,7 +1,7 @@
 T:Les Fraise at les Framboise
 C:reel
 A:Traditional
-O:Quebec
+O:Canada - Quebec
 H:The title of this tune means "raspberries and strawberries".  It may be of Acadian
 H:origin.  There is a singing call to the dance, with chorus ""Ah, les fraises et les 
 H:framboises / du bon vin j'en ai bu. / Croy-ez-moi, jolies bourgeoises, /

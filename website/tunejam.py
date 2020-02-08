@@ -368,7 +368,28 @@ def index_author():
 def dev():
   parts = []
   parts.append(CH("Listings that Need Work", 1))
-  parts.append(CParagraph("This lists the tunes that are missing notes, chords, and/or a recording."))
+  parts.append(CParagraph("This page provides some useful resources for contributing "
+                          "materials to this site, and also lists the tunes that are "
+                          "missing notes, chords, a recording, or history."))
+  parts.append(CH("Resources", 2))
+  parts.append(CParagraph(
+    "In addition to consulting printed material, interviewing authors, and searching "
+    "the web, the following resources were particularly useful "
+    "in researching the tune histories that are provided on this site:"
+  ))
+  parts.append(CList(
+    [
+      CText("Traditional Tune Archive", href="https://tunearch.org/"), 
+      CText("The Session", href="https://thesession.org/"),
+      CText("Folk Tune Finder", href="https://www.folktunefinder.com/")
+    ]
+  ))
+  parts.append(CParagraph(
+    "Since tunes are often known under several names, searching each of these (and the "
+    "web in general) using all the names often produces results where a single search "
+    "will not.  The Folk Tune Finder also makes it possible to search for tunes by entering "
+    "notes."
+  ))
   tunes = utils.GetTuneIndex(True)
 
   sections = tunes.keys()

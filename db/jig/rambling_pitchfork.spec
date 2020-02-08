@@ -1,4 +1,11 @@
 T:Rambling Pitchfork
+C:jig
+O:Ireland
+A:Traditional
+H:This tune was first published in the mid 19th century.  The title refers to an 
+H:itinerant farm laborer.
+U:https://tunearch.org/wiki/Rambling_Pitchfork_(The)
+U:https://thesession.org/tunes/89
 K:D
 L:1/8
 M:6/8

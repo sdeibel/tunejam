@@ -8,6 +8,7 @@ H:but may derive from glisse, meaning to slide or glide. It may be a reference t
 H:or skating.
 U:https://tunearch.org/wiki/Annotation:Glise_%C3%A0_Sherbrooke
 U:https://thesession.org/tunes/3489
+U:https://jodykruskal.com/tune_of_the_month/february_09.html
 K:G
 L:1/4
 M:C
