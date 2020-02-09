@@ -1406,7 +1406,6 @@ def GetTuneIndex(include_incomplete):
                     title = title[2:]
                 pfx = ''
                 if not tune.chords.strip() or not tune.notes.strip():
-                    title = tune.Type() + ': ' + title
                     incomplete_tunes.append((title, name))
                 else:
                     tunes.append((title, name))

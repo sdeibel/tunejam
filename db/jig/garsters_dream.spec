@@ -1,5 +1,6 @@
 T:Garster's Dream
 C:jig
+O:Shetland
 A:Faeries
 H:This is a Trowie (Faerie) tune from the Shetland Island of Fetlar ('the fat isle'). It
 H:was heard by a man named Garster, coming from a hole in the ground while he was resting by

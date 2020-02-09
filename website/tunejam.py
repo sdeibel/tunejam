@@ -401,6 +401,7 @@ def dev():
   sections = tunes.keys()
   sections.sort()
   no_recording = []
+  no_origin = []
   no_history = []
   if 'incomplete'in sections:
     sections.remove('incomplete')
@@ -408,6 +409,10 @@ def dev():
   for section in sections:
     if section == 'incomplete':
       parts.append(CH(utils.kSectionTitles[section], 2))
+      parts.append(CParagraph("Please help complete these listings by emailing the missing notes (first "
+                              "2-3 measures of each part) or chords to "
+                              "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
+      parts.append(CBreak())
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
@@ -429,17 +434,36 @@ def dev():
         parts.extend(tune_title)
       if not recording:
         no_recording.append(tune_title)
-      if not obj.history or not obj.origin:
+      if not obj.history:
+
         no_history.append(tune_title)
+      if not obj.origin:
+        no_origin.append(tune_title)
 
   if no_recording:
     parts.append(CH("Tunes with No Recording", 2))
+    parts.append(CParagraph("Please help complete these listings by creating a slow and "
+                            "clear recording of the melody, played once or twice, and emailing it to "
+                            "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
+    parts.append(CBreak())
     for item in no_recording:
       for part in item:
         parts.append(part)
         
+  if no_origin:
+    parts.append(CH("Tunes with No Known Origin", 2))
+    parts.append(CParagraph("If you have a documented original provenance for any of these tunes, please email "
+                            "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
+    parts.append(CBreak())
+    for item in no_origin:
+      for part in item:
+        parts.append(part)
+        
   if no_history:
-    parts.append(CH("Tunes with No Origin and/or History", 2))
+    parts.append(CH("Tunes with No Known History", 2))
+    parts.append(CParagraph("If you have documented history for any of these tunes, please email "
+                            "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
+    parts.append(CBreak())
     for item in no_history:
       for part in item:
         parts.append(part)

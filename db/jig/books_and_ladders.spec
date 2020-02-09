@@ -1,6 +1,8 @@
 T:Books and Ladders
 C:jig
+O:USA - Midwest
 A:John Goodin
+U:http://mandotopia.com/
 K:D
 L:1/8
 M:6/8
