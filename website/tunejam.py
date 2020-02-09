@@ -70,7 +70,7 @@ def home():
       CItem([CText("Sessions", href='/sessions'), CNBSP(),
              CText(" -- A listing of area traditional music sessions.")]),
       CItem([CText("Development Page", href='/dev'), CNBSP(),
-             CText(" -- The incomplete tune listings that need work.")]), 
+             CText(" -- How to help improve this site.")]), 
     ]),
     CBreak(), 
     CParagraph("This website was designed and built by Stephan Deibel, with content "
@@ -437,7 +437,7 @@ def dev():
       if not obj.history:
 
         no_history.append(tune_title)
-      if not obj.origin:
+      if not obj.origin or 'unknown' in obj.origin.lower():
         no_origin.append(tune_title)
 
   if no_recording:
