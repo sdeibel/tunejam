@@ -1,7 +1,7 @@
 * Website Phase Two
   ** Reorganization
     ** Edit all tunes to add new A, O, C, #, H, U, and S data where appropriate
-       To do: Sheebeg+
+       To do: Stool+
     ** Got through all reels and add designation for those that are rants (or all
        tunes + add info on alternative playing styles)
     ** Review category for all tunes; move them all to db and use

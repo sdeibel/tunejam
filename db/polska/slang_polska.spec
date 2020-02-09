@@ -1,5 +1,12 @@
-T:Slängpolska (Eklundapolska #3)
+T:Slängpolska (Eklunda Polska #3)
+C:waltz
+O:Sweden
 A:Vikste-Lasse
+H:This tune was written by Vikste-Lasse (Johan Leonard Larsson 1897−1983) who was
+H:a fiddler from Eklunda in Uppland, Sweden.
+U:https://thesession.org/tunes/15784
+U:http://www.folkwiki.se/Musik/96
+U:https://en.wikipedia.org/wiki/Viksta-Lasse
 K:G
 L:1/8
 M:3/4

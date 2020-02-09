@@ -1,4 +1,8 @@
 T:Spider on the Sail
+C:reel
+O:Unknown
+A:Unknown
+U:https://thesession.org/tunes/16732
 K:Em
 L:1/8
 M:4/4

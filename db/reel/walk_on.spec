@@ -1,5 +1,10 @@
 T:Walk On
+C:reel
+O:USA - New York
 A:Jody Kruskal
+H:This tune was written by Jody Kruskal, who lived in Cambridge NY for a time and now
+H:resides in Brooklyn.
+U:https://jodykruskal.com/index.html
 K:Em
 L:1/8
 M:4/4

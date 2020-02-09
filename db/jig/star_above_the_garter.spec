@@ -1,4 +1,8 @@
 T:Star Above The Garter
+C:jig
+O:Ireland
+A:Traditional
+U:https://thesession.org/tunes/1398
 K:G
 L:1/8
 M:6/8

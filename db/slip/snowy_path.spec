@@ -1,5 +1,15 @@
 T:The Snowy Path
+C:slip
+O:Ireland
 A:Mark Kelly
+H:This tune was composed by Mark Kelly of the group Altan for this album Harvest Storm.
+H:It dedicated to Dublin whistle player Donncha O’Brien.
+U:https://tunearch.org/wiki/Annotation:Snowy_Path_(The)
+U:https://thesession.org/tunes/104
+U:https://altan.ie/mark-kelly/
+U:https://altan.ie/harvest-storm/
+U:http://www.irishmusicmagazine.com/2011/05/26/donncha-o-briain-ceol-ar-an-bhfeadog-stain/
+U:https://www.tradschool.com/en/uncategorized/donncha-obriain-2/
 K:D
 L:1/8
 M:9/8
