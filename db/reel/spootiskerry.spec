@@ -7,7 +7,7 @@ H:probably around 1960. Spootiskerry is the name of a farm in the author's famil
 H:tunebook, also called Spootiskerry, he says "Spootiskerry [is] the croft belonging to
 H:my late grand aunts, Bella and Joan Nicolson, situated between the village of Sullom, and
 H:the new town of Brae." A spoot is a razor clam, one of the edible "ebb meats" taken from the
-H:shore at low tide, named because it "spoots" (or spouts) when you disturb it. A "skerry
+H:shore at low tide, named because it "spoots" (or spouts) when you disturb it. A skerry
 H:is a group of rocks which are only sometimes visible at low tide.
 U:https://www.folktunefinder.com/tunes/12762
 U:https://thesession.org/tunes/857
