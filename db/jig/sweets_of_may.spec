@@ -12,7 +12,6 @@ H:Maypole dance in Cambridge NY.
 U:https://tunearch.org/wiki/Annotation:Follow_Me_Down_to_Carlow_(2)
 U:https://thesession.org/tunes/1917
 U:https://en.wikipedia.org/wiki/Battle_of_Glenmalure
-U:
 K:G
 L:1/8
 M:6/8
