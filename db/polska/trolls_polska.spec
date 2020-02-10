@@ -1,4 +1,10 @@
-T:Trolls Polska
+T:Trollpolska
+C:polska
+O:Sweden
+A:Hans Börtas
+H:This is a tune that cames from Hans Börtas from Rättvik in Sweden
+U:https://thesession.org/tunes/7964
+U:https://en.wikipedia.org/wiki/R%C3%A4ttvik
 K:Dm
 L:1/8
 M:3/4

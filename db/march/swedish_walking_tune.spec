@@ -1,4 +1,4 @@
-T:Äppelbo Walking Tune (Äppelbo Gånglåt)
+T:Swedish Walking Tune (Äppelbo Gånglåt)
 C:march
 O:Sweden
 A:Ärtbergs-Kalle
