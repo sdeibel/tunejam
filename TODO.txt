@@ -1,7 +1,7 @@
 * Website Phase Two
   ** Reorganization
     ** Edit all tunes to add new A, O, C, #, H, U, and S data where appropriate
-       To do: Stool+
+       To do: Trolls+
     ** Got through all reels and add designation for those that are rants (or all
        tunes + add info on alternative playing styles)
     ** Review category for all tunes; move them all to db and use
@@ -12,6 +12,7 @@
     ** Add the rest of my own tunes
     ** Host full written tunes on site when in tunes dir and link automatically from tune page
     ** Option to include meta data in sets, events, and books
+    ** Next/previous buttons on session set pages
   ** Authoring of tunes on the dev page
   ** May want to have random/least-recent set selection be provisional and
      only record stats if user confirms it
