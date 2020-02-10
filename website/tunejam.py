@@ -370,7 +370,7 @@ def dev():
   parts.append(CH("Listings that Need Work", 1))
   parts.append(CParagraph("This page provides some useful resources for contributing "
                           "materials to this site, and also lists the tunes that are "
-                          "missing notes, chords, a recording, or history."))
+                          "missing notes, chords, a recording, origin, or history."))
   parts.append(CH("Resources", 2))
   parts.append(CParagraph(
     "In addition to consulting printed material, interviewing authors, and searching "
@@ -413,7 +413,7 @@ def dev():
                               "2-3 measures of each part) or chords to "
                               "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
       parts.append(CBreak())
-    for title, tune in tunes[section]:
+    for title, tune in sorted(tunes[section]):
       obj = utils.CTune(tune)
       obj.ReadDatabase()
       if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
@@ -433,20 +433,24 @@ def dev():
       if section == 'incomplete':
         parts.extend(tune_title)
       if not recording:
-        no_recording.append(tune_title)
+        no_recording.append((title, tune_title))
       if not obj.history:
 
-        no_history.append(tune_title)
+        no_history.append((title, tune_title))
       if not obj.origin or 'unknown' in obj.origin.lower():
-        no_origin.append(tune_title)
+        no_origin.append((title, tune_title))
 
+  no_recording.sort()
+  no_origin.sort()
+  no_history.sort()
+  
   if no_recording:
     parts.append(CH("Tunes with No Recording", 2))
     parts.append(CParagraph("Please help complete these listings by creating a slow and "
                             "clear recording of the melody, played once or twice, and emailing it to "
                             "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
     parts.append(CBreak())
-    for item in no_recording:
+    for title, item in no_recording:
       for part in item:
         parts.append(part)
         
@@ -455,7 +459,7 @@ def dev():
     parts.append(CParagraph("If you have a documented original provenance for any of these tunes, please email "
                             "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
     parts.append(CBreak())
-    for item in no_origin:
+    for title, item in no_origin:
       for part in item:
         parts.append(part)
         
@@ -464,7 +468,7 @@ def dev():
     parts.append(CParagraph("If you have documented history for any of these tunes, please email "
                             "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
     parts.append(CBreak())
-    for item in no_history:
+    for title, item in no_history:
       for part in item:
         parts.append(part)
         
