@@ -1,9 +1,5 @@
 * Website Phase Two
   ** Reorganization
-    ** Edit all tunes to add new A, O, C, #, H, U, and S data where appropriate
-       To do: Trolls+
-    ** Got through all reels and add designation for those that are rants (or all
-       tunes + add info on alternative playing styles)
     ** Review category for all tunes; move them all to db and use
        only C: tune class attrib; allow multiple classes comma-separated
        for example 'reel,hornpipe'
