@@ -8,7 +8,7 @@ H:Shetland fiddler, collector, and teacher Tom Anderson (1910–1991) stated tha
 H:Friedemann had composed the tune on the road from his croft (tenant farm) at Burrafirth to
 H:Buness.  He also remembered that Stickle was called 'Stumpie' because he walked with a
 H:limp, and thought it possible that the tune's rhythm reflects the rhythm of Stickle's walk.
-H:According to Bliss McIntosh, who studied in the Shetland Islands in the 1970's, Friedemann
+H:According to Cambridge NY fiddler Bliss McIntosh, who studied in the Shetland Islands in the 1970's, Friedemann
 H:would receive a free year's rent for his croft in return for being selected to play this 
 H:tune; there were other similar cases as well, where fiddlers earned free rent by being 
 H:selected to play a tune at Christmas.

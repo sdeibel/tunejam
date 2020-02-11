@@ -2,9 +2,12 @@ T:Tim Tam
 C:jig
 A:Bliss McIntosh
 O:USA - Cambridge NY
-H:According to Bliss, this tune was named for her bouncing Australian shepard dog Tim Tam,
+H:This tune was writte by Cambridge NY fiddler Bliss McIntosh.  According to Bliss, the tune 
+H:was named for her bouncing Australian shepherd dog Tim Tam,
 H:who likes to sleep through the Tuesday night Cambridge NY tune jam, in anticipation for
 H:the potluck that follows.
+R:Collected from Author
+U:https://en.wikipedia.org/wiki/Australian_Shepherd
 K:G
 L:1/8
 M:6/8

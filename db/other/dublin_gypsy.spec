@@ -3,9 +3,10 @@ C:other
 S:f:ABCs:BCDEBCf:Fs:GFGf:H
 A:Stephan Deibel
 O:USA - Cambridge NY
-H:This tune, inspired by Gypsy fiddle music, was written over several years from about 
-H:2008-2010.  The notation 'f:' and 's:' in the structure given above indicates whether 
-H:the accompanying guitar is finger-picking or strumming.
+H:This tune was written by Cambridge NY fiddler Stephan Deibel.  It was inspired by Gypsy 
+H:fiddle music, and was written over several years from about 
+H:2008-2010.  The notation 'f:' and 's:' in the structure given above reflects one
+H:arrangement of the tune, indicating whether the accompanying guitar is finger-picking or strumming.
 R:Collected from Author
 K:Dm
 L:1/8

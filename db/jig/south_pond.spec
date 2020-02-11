@@ -2,8 +2,9 @@ T:South Pond
 C:jig
 A:Bliss McIntosh
 O:USA - Cambridge NY
-H:According to Bliss, this tune was named for the feeling of skating on a neighbor's pond
-H:on a cold January afternoon.
+H:This tune was written by Cambridge NY fiddler Bliss McIntosh.  According to Bliss, the tune 
+H:was named for the feeling of skating on a neighbor's pond on a cold January afternoon.
+R:Collected from Author
 K:Am
 L:1/8
 M:6/8

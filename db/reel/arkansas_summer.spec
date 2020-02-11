@@ -2,6 +2,8 @@ T:Arkansas Summer
 C:reel
 A:Caz Lewis
 O:USA - Cambridge NY
+H:Cambridge NY recorder and whistle player Caz Lewis wrote this tune around 2012 while
+H:traveling, on a firefly-intensive Arkansas summer night.
 K:Em
 L:1/4
 M:4/4

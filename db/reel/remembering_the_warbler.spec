@@ -1,9 +1,13 @@
 T:Remembering the Warbler
 A:Stephan Deibel
 O:USA - Cambridge NY
-H:This tune was written in September 2015 on Janvrin's Island off Cape Breton.  The melody 
+H:This tune was written by Cambridge NY fiddler Stephan Deibel in September 2015, on Janvrin's 
+H:Island off Cape Breton.  "The melody 
 H:is based on imitation of the song and behavior of a yellow warbler that was in a bush, 
-H:keeping me company down by the seashore on a beautiful sunny day.
+H:keeping me company down by the seashore on a beautiful sunny day."
+R:Collected from Author
+U:https://en.wikipedia.org/wiki/American_yellow_warbler
+U:https://en.wikipedia.org/wiki/Janvrin_Island
 K:D
 L:1/4
 M:4/4

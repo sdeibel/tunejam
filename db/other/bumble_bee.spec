@@ -2,7 +2,8 @@ T:The Bumblebee
 C:reel
 A:Stephan Deibel
 O:USA - Cambridge NY
-H:This was written on my back porch in early summer 2015, on a warm day when the air was 
+H:This was written by Cambridge NY fiddler Stephan Deibel.  "I was sitting on my back 
+H:porch in early summer 2015, on a warm day when the air was 
 H:heavy with bumblebees.  It was my first imitative tune, inspired by traditional tunes 
 H:that mimic the sound of an animal as part of their melody, for example <i>The Yowe Cam 
 H:to Wir Door Yarmin</i> from Shetland.
