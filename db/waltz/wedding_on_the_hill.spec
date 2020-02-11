@@ -1,6 +1,9 @@
 T:Wedding on the Hill
-A:Bonnie Epstein
+C:waltz
 O:USA - Cambridge NY
+A:Bonnie Epstein
+H:This waltz was written by harpist Bonnie Epstein, to be played at the wedding of a friend.
+H:Bonnie lived in Greenwich NY at the time and now resides in Glens Falls NY.
 K:G
 L:1/8
 M:3/4

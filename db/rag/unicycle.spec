@@ -1,6 +1,9 @@
 T:Unicycle
+C:rag,reel
 A:Caz Lewis
 O:USA - Cambridge NY
+H:Caz Lewis wrote this tune after seeing a mountain biker on a unicyle on a trail
+H:in California.
 K:G
 L:1/4
 M:2/4

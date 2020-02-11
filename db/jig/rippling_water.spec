@@ -1,6 +1,6 @@
 T:Rippling Water
 C:jig
-O:Canada
+O:Canada - New Brunswick
 A:Traditional
 H:Maritime fiddler Don Messer (1909-1973) popularized this tune but probably did not 
 H:compose it and its exact origin is unknown.
