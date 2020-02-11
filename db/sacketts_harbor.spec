@@ -1,7 +1,7 @@
 T:Sackett's Harbor
 C:reel
-A:Traditional - New York
-O:USA
+A:Traditional
+O:USA - New York
 H:This tune is thought to commemorate the successful May 1813 American repulsion of
 H:attacking British naval forces at Sackett's Harbor. Now named Sackets Harbor, the town is
 H:located at the eastern end of Lake Ontario in New York and was important in the buildup of

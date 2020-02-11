@@ -1,6 +1,9 @@
 * Website Phase Two
   ** Reorganization
     ** Move all tuns to top level of db
+    ** Two events don't work:
+      http://music.cambridgeny.net/event/sp2
+      http://music.cambridgeny.net/event/cpcs
     ** Check through all jigs + note which are played as slides (although we have 6/8 and not 12/8 time on them all)
     ** Email all the local authors to check history
     ** Arranged bumblebee is missing C part in notes + both versions need grace notes
