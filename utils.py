@@ -74,7 +74,6 @@ kTimeSignatures = [
 
 class CTune:
     def __init__(self, name):
-        self.type = None
         self.name = name
         self.title = None
         self.structure = None
@@ -175,20 +174,13 @@ class CTune:
             self.klass = 'unknown'        
 
     def _GetSpecFile(self):
-        fn = self.name + '.spec'
         
-        fullpath = None
-        type_dirs = os.listdir(kDatabaseDir)
-        for td in type_dirs:
-            if td.startswith('.'):
-                continue
-            fullpath = os.path.join(kDatabaseDir, td, fn)
-            if os.path.isfile(fullpath):
-                self.type = td
-                break
-            else:
-                fullpath = None
-        return fullpath
+        fn = self.name + '.spec'        
+        fullpath = os.path.join(kDatabaseDir, fn)
+        if os.path.isfile(fullpath):
+            return fullpath
+        else:
+            return None
         
     def AsDict(self):
         d = {}
@@ -200,15 +192,20 @@ class CTune:
                 
         return d
                 
+                
     def Type(self):
-        if self.type == 'waltz':
+        return self.klass.split(',')[0].capitalize()
+    
+    def TypePlural(self):
+        ttype = self.klass.split(',')[0]
+        if ttype == 'waltz':
             return 'Waltzes'
-        elif self.type == 'march':
+        elif ttype == 'march':
             return 'Marches'
-        elif self.type == 'slip':
+        elif ttype == 'slip':
             return 'Slip Jigs'
         else:
-            return self.type.capitalize() + 's'
+            return ttype.capitalize() + 's'
     
     def GetKeyString(self):
         keys = self.key
@@ -448,10 +445,7 @@ M:%(meter)s
         d = self.AsDict().copy()
         d['notes'] = notes
         d['vspacer'] = '\n' * 9
-        if self.type == 'slip':
-            d['tune_type'] = 'Slip Jig'
-        else:
-            d['tune_type'] = self.type.capitalize()
+        d['tune_type'] = self.Type()
 
         return kFormat % d
 
@@ -587,7 +581,7 @@ M:%(meter)s
         
     def _GetCacheFile(self, basename):
         
-        dirname = os.path.join(kCacheLoc, 'tune', self.type)
+        dirname = os.path.join(kCacheLoc, 'tune', self.klass.split(',')[0])
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         
@@ -618,10 +612,14 @@ M:%(meter)s
     
     def GetSortTitle(self):
         title = self.title
-        if title.lower().startswith('the '):
+        if title.lower().startswith(('the ', 'les ')):
             title = title[4:]
-        elif title.lower().startswith('a '):
+        elif title.lower().startswith(('le ', )):
+            title = title[3:]
+        elif title.lower().startswith(('a ', "l'", )):
             title = title[2:]
+        elif title.lower().startswith(("l'", )):
+            title = title[1:]
         return title
     
     def __NotesWithMeterOnEachLine(self):
@@ -651,7 +649,7 @@ class CTuneSet:
         for name in names:
             obj = CTune(name)
             obj.ReadDatabase()
-            types.append(obj.type)
+            types.append(obj.Type())
             self.tunes.append(obj)
             
         if len(set(types)) > 1:
@@ -701,7 +699,7 @@ class CTuneSet:
         return fn, not kDebugBookGeneration
             
     def __SetType(self):
-        stype = self.type
+        stype = self.type()
         if self.setnum:
             stype += ' - ' + self.setnum
         return stype
@@ -829,7 +827,7 @@ class CTuneSet:
         
         for i, tune in enumerate(self.tunes):
 
-            fulltitle = tune.title + ' - ' + tune.type.capitalize() + ' - ' + tune._FullKey()
+            fulltitle = tune.title + ' - ' + tune.Type() + ' - ' + tune._FullKey()
             if len(fulltitle) < 55:
                 title = Paragraph(fulltitle, style["Heading1"])
             else:
@@ -890,7 +888,7 @@ class CTuneSet:
         # Add page number
         if page_num is not None:
             if show_type:
-                ttype = self.tunes[0].Type()
+                ttype = self.tunes[0].TypePlural()
                 pageno = '%s - Page %i' % (ttype, page_num)
             else:
                 pageno = 'Page %i' % page_num
@@ -1115,7 +1113,7 @@ class CBook:
         pages = [cur_page]
         for ignore, tune in index:
             
-            fulltitle = tune.title + ' - ' + tune.type.capitalize() + ' - ' + tune._FullKey()
+            fulltitle = tune.title + ' - ' + tune.Type() + ' - ' + tune._FullKey()
             pnums = set(contents[tune.name])
             pnums = list(pnums)
             pnums.sort()
@@ -1389,32 +1387,21 @@ def GetTuneIndex(include_incomplete):
 
     incomplete_tunes = []
     tunes_by_class = collections.defaultdict(list)
-    for section, section_name, class_name in kSections:
-        if section == 'incomplete':
+    for fn in os.listdir(kDatabaseDir):
+        if fn.startswith('.') or not fn.endswith('.spec'):
             continue
-        try:
-            files = os.listdir(os.path.join(kDatabaseDir, section))
-        except OSError:
+        
+        name = fn[:-len('.spec')]
+        tune = CTune(name)
+        tune.ReadDatabase()
+        if not include_incomplete and (not tune.chords or not tune.notes):
             continue
-        tunes = []
-        for fn in files:
-            if fn.endswith('.spec'):
-                name = fn[:-len('.spec')]
-                tune = CTune(name)
-                tune.ReadDatabase()
-                if not include_incomplete and (not tune.chords or not tune.notes):
-                    continue
-                title = tune.title
-                if title.lower().startswith('the '):
-                    title = title[4:]
-                elif title.lower().startswith('a '):
-                    title = title[2:]
-                pfx = ''
-                if not tune.chords.strip() or not tune.notes.strip():
-                    incomplete_tunes.append((title, name))
-                else:
-                    for klass in tune.klass.split(','):
-                        tunes_by_class[klass.lower()].append((title, name))                    
+        title = tune.GetSortTitle()
+        if not tune.chords.strip() or not tune.notes.strip():
+            incomplete_tunes.append((title, name))
+        else:
+            for klass in tune.klass.split(','):
+                tunes_by_class[klass.lower()].append((title, name))                    
                     
     for klass, tunes in tunes_by_class.items():
         tunes.sort()

@@ -828,7 +828,7 @@ padding-bottom:0.5em;
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
-      title += ' - %s - %s' % (obj.type.capitalize(), obj.GetKeyString())
+      title += ' - %s - %s' % (obj.Type(), obj.GetKeyString())
       if tune in preload_tunes:
         continue
       if visible:
@@ -842,9 +842,9 @@ padding-bottom:0.5em;
   for tune in preload_tunes:
     obj = utils.CTune(tune)
     obj.ReadDatabase()
-    title = '%s - %s - %s' % (obj.title, obj.type.capitalize(), obj.GetKeyString())
+    title = '%s - %s - %s' % (obj.title, obj.Type(), obj.GetKeyString())
     selected_tunes.append(CItem(title, id='tune_%s' % tune.replace('_', '+'),
-                                 hclass='ui-state-default %s' % obj.type))
+                                 hclass='ui-state-default %s' % obj.klass.split(',')[0]))
 
   all_tunes.sort()
   all_tunes = [i[1] for i in all_tunes]
@@ -1885,8 +1885,8 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
 
   key_str = obj.GetKeyString()
 
-  if obj.type:
-    klass = CText(utils.kSectionClasses[obj.type], italic=True, hclass='tune-type')
+  if obj.klass:
+    klass = CText(', '.join([utils.kSectionClasses[k] for k in obj.klass]), italic=True, hclass='tune-type')
   else:
     klass = ''
     

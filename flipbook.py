@@ -16,28 +16,26 @@ class CFlipBook(utils.CBook):
         self.name = 'flip'
         self.url = self.name
     
+        files = os.listdir(utils.kDatabaseDir)
+        files = [os.path.join(utils.kDatabaseDir, f) for f in files if f.endswith('.spec')]
+
         self.pages = []
         for section, section_name, class_name in utils.kSections:
             if section == 'incomplete':
                 continue
-            try:
-                files = os.listdir(os.path.join(utils.kDatabaseDir, section))
-            except OSError:
-                continue
-            tunes = []
+            tunes = set()
             for fn in files:
-                if fn.endswith('.spec'):
-                    name = fn[:-len('.spec')]
-                    tune = utils.CTune(name)
-                    tune.ReadDatabase()
-                    if not tune.chords or not tune.notes:
-                        continue
-                    title = tune.title
-                    if title.lower().startswith('the '):
-                        title = title[4:]
-                    elif title.lower().startswith('a '):
-                        title = title[2:]
-                    tunes.append((title, name))
+                name = os.path.basename(fn[:-len('.spec')])
+                tune = utils.CTune(name)
+                tune.ReadDatabase()
+                if not tune.chords or not tune.notes:
+                    continue
+                if section not in tune.klass:
+                    continue
+                title = tune.GetSortTitle()
+                tunes.add((title, name))
+                
+            tunes = list(tunes)
             tunes.sort()
             
             for title, name in tunes:
@@ -60,29 +58,24 @@ class CFlipBookByTime(utils.CBook):
         self.name = 'flip-by-time'
         self.url = self.name
     
+        files = os.listdir(utils.kDatabaseDir)
+        files = [os.path.join(utils.kDatabaseDir, f) for f in files if f.endswith('.spec')]
+
         self.pages = []
         for section_name, types in utils.kTimeSignatures:
-            all_files = []
-            for section in types:
-                try:
-                    files = os.listdir(os.path.join(utils.kDatabaseDir, section))
-                    files = [os.path.join(utils.kDatabaseDir, section, f) for f in files if f.endswith('.spec')]
-                    all_files.extend(files)
-                except OSError:
-                    continue
-            tunes = []
-            for fn in all_files:
+            tunes = set()
+            for fn in files:
                 name = os.path.basename(fn)[:-len('.spec')]
                 tune = utils.CTune(name)
                 tune.ReadDatabase()
                 if not tune.chords or not tune.notes:
                     continue
-                title = tune.title
-                if title.lower().startswith('the '):
-                    title = title[4:]
-                elif title.lower().startswith('a '):
-                    title = title[2:]
-                tunes.append((title, name))
+                if not any(k in types for k in tune.klass.split(',')):
+                    continue
+                title = tune.GetSortTitle()
+                tunes.add((title, name))
+                
+            tunes = list(tunes)
             tunes.sort()
             
             for title, name in tunes:

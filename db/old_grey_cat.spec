@@ -1,5 +1,5 @@
 T:Old Grey Cat
-C:polka,reel
+C:reel,polka
 O:Ireland
 A:Traditional
 H:This tune may also be of Scottish provenance, but printings only go as far back

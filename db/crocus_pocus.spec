@@ -3,8 +3,8 @@ C:reel,rag
 A:Stephan Deibel
 O:USA - Cambridge NY
 H:This tune was written by Cambridge NY fiddler Stephan Deibel.  "I wrote this tune on a 
-H:beautiful warm Spring day around 2009, when the 1000+ crocuses 
-H:I had planted into the lawn the previous Fall were blooming in profusion."
+H:beautiful warm Spring day around 2009, when the 1000+ crocuses I had planted into the 
+H:lawn the previous Fall were blooming in profusion."
 R:Collected from Author
 K:G
 L:1/4

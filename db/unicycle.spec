@@ -1,5 +1,5 @@
 T:Unicycle
-C:rag,reel
+C:reel,rag
 A:Caz Lewis
 O:USA - Cambridge NY
 H:This tune was written by Cambridge NY recorder and whistle player Caz Lewis, after 
