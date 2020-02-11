@@ -1,5 +1,5 @@
 T:Fair Jenny's
-C:Jig
+C:jig
 O:USA - New England
 A:Peter Barnes
 H:This tune was written in 1976 and was inspired by the folktale of Fair Jenny, who clung 

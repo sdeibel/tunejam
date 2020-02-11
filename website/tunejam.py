@@ -209,7 +209,7 @@ def index_meter():
   tunes = utils.GetTuneIndex(False)
 
   sections = tunes.keys()
-  time_sigs = collections.defaultdict(list)
+  time_sigs = collections.defaultdict(set)
   for section in sections:
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
@@ -231,7 +231,7 @@ def index_meter():
       meter = obj.meter
       if meter in ('2/4', '4/4', 'C'):
         meter = "C, 2/4, and 4/4"
-      time_sigs[meter].append((title, title_html))
+      time_sigs[meter].add((title, tuple([str(t) for t in title_html])))
       
   times = time_sigs.keys()
   times.sort()
@@ -252,7 +252,7 @@ def index_origin():
   tunes = utils.GetTuneIndex(False)
 
   sections = tunes.keys()
-  origins = collections.defaultdict(list)
+  origins = collections.defaultdict(set)
   for section in sections:
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
@@ -274,7 +274,7 @@ def index_origin():
       origin = obj.origin
       if not origin:
         origin = 'To Be Determined'
-      origins[origin].append((title, title_html))
+      origins[origin].add((title, tuple([str(t) for t in title_html])))
       
   for origin in sorted(origins):
     parts.append(CH(origin, 2))
@@ -294,8 +294,12 @@ def index_title():
 
   titles = []
   sections = tunes.keys()
+  all_tunes = set()
   for section in sections:
     for title, tune in tunes[section]:
+      all_tunes.add((title, tune))
+      
+  for title, tune in sorted(all_tunes):
       obj = utils.CTune(tune)
       obj.ReadDatabase()
       if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
@@ -328,7 +332,7 @@ def index_author():
 
   tunes = utils.GetTuneIndex(False)
 
-  authors = collections.defaultdict(list)
+  authors = collections.defaultdict(set)
   sections = tunes.keys()
   for section in sections:
     for title, tune in tunes[section]:
@@ -354,7 +358,7 @@ def index_author():
       title_html.append(CText(title, href="/tune/%s" % tune))
       title_html.extend(play)
       title_html.append(CBreak())
-      authors[author].append((title, title_html))
+      authors[author].add((title, tuple([str(t) for t in title_html])))
       
   for author in sorted(authors):
     parts.append(CH(author, 2))

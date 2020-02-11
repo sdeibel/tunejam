@@ -1,4 +1,5 @@
 T:Lovejoy's Lament
+C:waltz
 A:Stephan Deibel
 O:USA - Cambridge NY
 H:This tune was written by Cambridge NY fiddler Stephan Deibel.  "It is the first 

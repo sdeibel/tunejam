@@ -1,4 +1,5 @@
 T:The Good Doctor
+C:waltz
 A:Stephan Deibel
 O:USA - Cambridge NY
 H:This tune was written by Cambridge NY fiddler Stephan Deibel, in honor of his father, 

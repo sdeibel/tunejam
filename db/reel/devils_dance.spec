@@ -1,6 +1,6 @@
 T:Devil's Dance
-A:Stephan Deibel
 C:reel
+A:Stephan Deibel
 O:USA - Cambridge NY
 H:This tune was written by Cambridge NY fiddler Stephan Deibel.  It was originally 
 H:titled "Seals and Sky" and was written September 2015 on 

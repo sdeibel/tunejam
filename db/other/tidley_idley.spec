@@ -1,4 +1,5 @@
 T:The Tidley-Idley
+C:jig
 A:Stephan Deibel
 O:USA - Cambridge NY
 H:This tune was written by Cambridge NY fiddler Stephan Deibel.  It was inspired by the 1963

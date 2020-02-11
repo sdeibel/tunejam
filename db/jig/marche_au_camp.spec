@@ -1,5 +1,5 @@
 T:Marche au Camp
-C:Jig
+C:jig
 O:Canada - Quebec
 A:Jean-Paul Loyer
 H:This is a tune that was written by Jean-Paul Loyer and recorded on his 1995 CD Ojnab.

@@ -1,6 +1,5 @@
 T:Crocus Pocus
-C:reel
-C:rag
+C:reel,rag
 A:Stephan Deibel
 O:USA - Cambridge NY
 H:This tune was written by Cambridge NY fiddler Stephan Deibel.  "I wrote this tune on a 

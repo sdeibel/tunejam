@@ -54,7 +54,9 @@ kSections = [
     ('polka', 'Polkas', 'Polka'),
     ('polska', 'Polskas', 'Polska'),
     ('hornpipe', 'Hornpipes', 'Hornpipe'),
-    ('strathspey', 'Strathspeys', 'Strathspey'), 
+    ('strathspey', 'Strathspeys', 'Strathspey'),
+    ('rant', 'Rants', 'Rant'), 
+    ('slide', 'Slides', 'Slide'), 
     ('other', 'Other', ''),
     ('incomplete', 'Incomplete Listings', ''), 
 ]
@@ -153,7 +155,7 @@ class CTune:
                         break
                 if not found:
                     error("Invalid line: %s: %s" % (fullpath, line))
-    
+                    
             elif part == 1:
                 spec = '"%s part"' % kPartMap[notes_part]
                 if self.key.find('/') > 0:
@@ -168,6 +170,9 @@ class CTune:
     
         if part != 2:
             error("Missing one or more parts: %s" % fullpath)
+            
+        if self.klass is None:
+            self.klass = 'unknown'        
 
     def _GetSpecFile(self):
         fn = self.name + '.spec'
@@ -1381,9 +1386,9 @@ def PurgeDeletedEvents():
             os.unlink(fn)
         
 def GetTuneIndex(include_incomplete):
-    idx = {}
 
     incomplete_tunes = []
+    tunes_by_class = collections.defaultdict(list)
     for section, section_name, class_name in kSections:
         if section == 'incomplete':
             continue
@@ -1408,17 +1413,17 @@ def GetTuneIndex(include_incomplete):
                 if not tune.chords.strip() or not tune.notes.strip():
                     incomplete_tunes.append((title, name))
                 else:
-                    tunes.append((title, name))
-
+                    for klass in tune.klass.split(','):
+                        tunes_by_class[klass.lower()].append((title, name))                    
+                    
+    for klass, tunes in tunes_by_class.items():
         tunes.sort()
         
-        idx[section] = tunes
-
     if incomplete_tunes:
         incomplete_tunes.sort()
-        idx['incomplete'] = incomplete_tunes
+        tunes_by_class['incomplete'] = incomplete_tunes
     
-    return idx
+    return tunes_by_class
 
 def ParseChords(chords):
 
