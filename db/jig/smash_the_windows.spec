@@ -1,6 +1,6 @@
 T:Smash the Windows
 C:jig
-O:Unknown
+O:Uncertain
 A:Traditional
 H:This melody first appeared in a manuscript copybook from 1780 to 1804 that was written
 H:by John Fife, a fiddler who was possibly from Perthshire, Scotland.  He traveled at sea

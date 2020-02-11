@@ -455,7 +455,7 @@ def dev():
         parts.append(part)
         
   if no_origin:
-    parts.append(CH("Tunes with Uncertain or Unknown Origin", 2))
+    parts.append(CH("Tunes with Unknown Origin", 2))
     parts.append(CParagraph("If you have a documented original provenance for any of these tunes, please email "
                             "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
     parts.append(CBreak())

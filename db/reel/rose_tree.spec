@@ -1,6 +1,6 @@
 T:Rose Tree
 C:march,polka
-O:Unknown
+O:Uncertain
 A:Traditional
 H:The title of this tune comes from its use for a song called A Rose Tree in Full Bearing,
 H:written in 1782 by John O'Keefe, for English composer William Shield's opera The Poor

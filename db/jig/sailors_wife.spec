@@ -1,6 +1,6 @@
 T:Sailor's Wife
 C:jig
-O:Unknown
+O:Uncertain
 A:Traditional
 H:This tune was known earlier as New Shields, which may refer to the Tyneside towns of 
 H:North Shields and South Shields in Northumberland.  However, it may also originate from

@@ -1,6 +1,6 @@
 T:Swinging on a Gate
 C:reel
-O:Unknown
+O:Uncertain
 A:Traditional
 H:This tune is Irish in style but may have originated in the US before its spread
 H:through much of the traditional music world.  It is also known as a hornpipe named 
