@@ -1886,7 +1886,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
   key_str = obj.GetKeyString()
 
   if obj.klass:
-    klass = CText(', '.join([utils.kSectionClasses[k] for k in obj.klass]), italic=True, hclass='tune-type')
+    klass = CText(', '.join([utils.kSectionClasses[k] for k in obj.klass.split(',')]), italic=True, hclass='tune-type')
   else:
     klass = ''
     
