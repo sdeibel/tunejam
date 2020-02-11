@@ -2,6 +2,7 @@ T:Bert Ferguson
 C:jig
 A:Samuel Ian Rothmar Burns
 O:Shetland
+H:This tune was composed by Shetland fiddler Samuel Ian Rothmar Burns (1932-1995).
 U:https://thesession.org/tunes/15604
 K:A
 L:1/8

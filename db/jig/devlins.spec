@@ -2,6 +2,9 @@ T:Devlin's
 C:jig
 A:Traditional
 O:Ireland
+H:The tune was first recorded in 1918 by John J. "Dutch" Kimmell, a Brooklyn
+H:accordion player.  It is also known as Devlin's Favourite and was printed
+H:in the 1997 Portland Collection.
 U:https://thesession.org/tunes/4450
 U:https://tunearch.org/wiki/Annotation:Devlin%27s
 K:Bm
