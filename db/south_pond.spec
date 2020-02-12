@@ -2,7 +2,7 @@ T:South Pond
 C:jig
 A:Bliss McIntosh
 O:USA - Cambridge NY
-H:This tune was written by Cambridge NY fiddler Bliss McIntosh.  According to Bliss, the tune 
+H:This tune was written by Cambridge NY fiddler and flutist Bliss McIntosh.  According to Bliss, the tune 
 H:was named for the feeling of skating on a neighbor's pond on a cold January afternoon.
 R:Collected from Author
 K:Am

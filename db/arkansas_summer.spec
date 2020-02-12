@@ -2,8 +2,10 @@ T:Arkansas Summer
 C:reel
 A:Caz Lewis
 O:USA - Cambridge NY
-H:Cambridge NY recorder and whistle player Caz Lewis wrote this tune around 2012 while
-H:traveling, on a firefly-intensive Arkansas summer night.
+H:Cambridge NY recorder and whistle player Caz Lewis wrote this tune in the summer of 2009,
+H:while camping in the Ozarks in Arkansas.  It was inspired by a firefly-intensive night,
+H:during which a barred owl could be heard hooting.  The first part of the tune represents the 
+H:fireflies, and the second the call of the owl.
 K:Em
 L:1/4
 M:4/4
