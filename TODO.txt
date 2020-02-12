@@ -40,6 +40,7 @@
       ** Coleman's March
       ** January waltz
       ** Others?
+      ** It was the cat -- history: Named after the tune emerged, it seemed to reflect a cat like motion.
     ** Check through all jigs + note which are played as slides (although we have 6/8 and not 12/8 time on them all)
 * Website Phase Four+
   * Improve ability to create live-updating event page
