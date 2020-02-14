@@ -276,7 +276,7 @@ M:%(meter)s
             return None
         
         abc = self.MakeNotes()
-        target, up_to_date = self._GetCacheFile('reminder.svg')
+        target, up_to_date = self._GetCacheFile('notes.svg')
         if not up_to_date:
             ABCToPostscript(abc, svg=True, target=target)
         
@@ -290,7 +290,7 @@ M:%(meter)s
             return None
         
         abc = self.MakeNotes()
-        target, up_to_date = self._GetCacheFile('reminder.eps')
+        target, up_to_date = self._GetCacheFile('notes.eps')
         if not up_to_date:
             ABCToPostscript(abc, eps=True, target=target)
         
@@ -304,7 +304,7 @@ M:%(meter)s
             return None
         
         abc = self.ReadSheetMusic()
-        target, up_to_date = self._GetCacheFile('notes.eps')
+        target, up_to_date = self._GetCacheFile('sheet.eps')
         if not up_to_date:
             ABCToPostscript(abc, eps=True, target=target, width='7in')
         
@@ -313,7 +313,7 @@ M:%(meter)s
     def MakeNotesPNGFile(self, density=600):
         
         eps_file = self.MakeNotesEPSFile()
-        png_file, up_to_date = self._GetCacheFile('reminder.png')
+        png_file, up_to_date = self._GetCacheFile('notes.png')
         if up_to_date:
             return png_file
         
@@ -326,7 +326,7 @@ M:%(meter)s
     def MakeSheetMusicPNGFile(self, density=600):
         
         eps_file = self.MakeSheetMusicEPSFile()
-        png_file, up_to_date = self._GetCacheFile('notes.png')
+        png_file, up_to_date = self._GetCacheFile('sheet.png')
         if up_to_date:
             return png_file
         
