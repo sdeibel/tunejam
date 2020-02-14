@@ -2,7 +2,7 @@ T:Creaky Joints
 C:reel
 A:Caz Lewis
 O:USA - Cambridge NY
-H:This tune was written by Cambridge NY recorder and whistle player Caz Lewis during a,
+H:This tune was written in 2014 by Cambridge NY recorder and whistle player Caz Lewis during a,
 H:time when she was having some joint pain.
 K:D
 L:1/8
