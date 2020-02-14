@@ -30,7 +30,7 @@ kMenu = [
   ('Index', '/index', 'index'),
   ('Sets', '/sets', 'sets'),
   ('Events', '/events', 'event'),
-  ('Printing', '/print', 'print'),
+  ('Books', '/print', 'print'),
   ('Sessions', '/sessions', 'session'),
   ('Dev', '/dev', 'dev')
 ]
@@ -334,7 +334,7 @@ def _index_title_html(obj, title):
   if obj.ReadSheetMusic() is not None:
     show_sheet = [
       CImage(src='/image/notes.png', hclass="show-sheet-index",
-             href='/sheet/%s' % obj.name, width=16, height=16),          
+             href='/sheet/view/%s' % obj.name, width=16, height=16),          
     ]
   title_html = []
   title_html.append(CText(title, href="/tune/%s" % obj.name))
@@ -349,7 +349,8 @@ def index_sheet():
   parts = [
     CH("Sheet Music", 2), 
     CParagraph("This site is mostly about learning by ear, but we have some sheet music "
-               "for locally written tunes:")
+               "for locally written tunes, available both for screen display and printing:"), 
+    CBreak(), 
   ]
   
   tunes = utils.GetTuneIndex(True)
@@ -370,7 +371,23 @@ def index_sheet():
       if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.Type() + ' - ' + obj.GetKeyString()
-      title_html = [CText(title, href="/sheet/%s" % obj.name), CBreak()]
+      show_sheet = CImage(src='/image/notes.png', hclass="show-sheet-index",
+                          href='/sheet/view/%s' % obj.name, width=16, height=16)        
+      print_sheet = CImage(src='/image/print-icon.png', hclass="show-sheet-index",
+                          href='/sheet/print/%s' % obj.name, width=16, height=16)         
+      recording, mimetype, filename = obj.GetRecording()
+      if recording is not None:
+        play = CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
+                      width=16, height=16, href='/recording/%s' % obj.name)
+      else:
+        play = ''
+      title_html = [
+        CText(title, href="/sheet/view/%s" % obj.name),
+        show_sheet,
+        print_sheet,
+        play, 
+        CBreak(), 
+      ]
       titles.append((title, title_html))
       
   titles.sort()
@@ -378,6 +395,9 @@ def index_sheet():
     parts.extend(title_html)
     
   parts.append(CBreak(2))
+  
+  parts.append(CParagraph(["Also available:", CText("Sheet Music for Local Tunes", href='/sheet/all')]))
+  
   return PageWrapper(parts, 'index')
 
 @app.route('/dev')
@@ -978,6 +998,48 @@ def sheet(tune):
   png_file = tune.MakeSheetMusicPNGFile(density=600)
   return send_file(png_file, mimetype='image/png')
 
+@app.route('/sheet/view/<tunes>')
+def sheet_view(tunes):
+  tunes = tunes.split('&')
+  parts = []
+  for tune in tunes:
+    parts.append(CDiv(CImage(src='/sheet/%s' % tune, width="100%")))
+  return PageWrapper(parts, None)
+
+@app.route('/sheet/print/<tunes>')
+def sheet_print(tunes):
+  import sheetbook
+  tunes = tunes.split('&')
+  book = sheetbook.CSheetBook(tunes)
+  pdf_file = book.GeneratePDF(include_index=len(tunes) > 1)
+  return send_file(pdf_file, mimetype='application/pdf')
+
+@app.route('/sheet/all')
+def sheet_all():
+  import sheetbook
+  tunes = utils.GetTuneIndex(True)
+  
+  titles = []
+  sections = tunes.keys()
+  all_tunes = set()
+  for section in sections:
+    for title, tune in tunes[section]:
+      all_tunes.add((title, tune))
+      
+  tunes = []
+  for title, tune in sorted(all_tunes):
+    obj = utils.CTune(tune)
+    obj.ReadDatabase()
+    notes = obj.ReadSheetMusic()
+    if not notes:
+      continue
+    tunes.append(tune)
+    
+  book = sheetbook.CSheetBook(tunes, "Sheet Music for Locally Written Tunes", "Cambridge NY")
+    
+  pdf_file = book.GeneratePDF(include_index=len(tunes) > 1)
+  return send_file(pdf_file, mimetype='application/pdf')
+
 def get_all_books():
   import allbook
   import flipbook
@@ -1036,6 +1098,11 @@ def doprint(format=None, bookname=None):
         img, 
         CBreak(),
       ])
+      
+    parts.extend([
+      CBreak(),
+      CText("Sheet Music for Local Tunes", href='/sheet/all')
+    ])
     
   elif format == 'all-by-section':
     import allbook
@@ -1844,7 +1911,7 @@ def LogoutButton(target):
 def PageWrapper(body, section=None, refresh=None):
   
   # Build html head
-  title = "Tune Jam"
+  title = "Cambridge NY Traditional Music"
   year = time.strftime("%Y", time.localtime())
   head = [
     CTitle(title),
@@ -1927,7 +1994,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
     
   if obj.ReadSheetMusic() is not None:
     show_sheet = CImage(src='/image/notes.png', hclass="show-sheet",
-                   href='/sheet/%s' % name)
+                   href='/sheet/view/%s' % name)
   else:
     show_sheet = ''
     

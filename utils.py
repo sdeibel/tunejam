@@ -992,6 +992,255 @@ class CTuneSet:
 
         return ''.join(parts)
 
+class CSheetPage:
+    
+    def __init__(self, name, header='', footer='', show_pagenum=False):
+
+        self.header = header
+        self.footer = footer
+        self.show_pagenum = show_pagenum
+        
+        self.tunes = [CTune(name)]
+        self.tunes[0].ReadDatabase()
+            
+    def MakeNotesLarge(self):
+        
+        kStart = """textfont Times-Roman
+%%%%headerfont Times-Roman 12
+%%%%header "%s"
+%%%%footerfont Times-Roman 12
+%%%%footer "%s"
+%%%%scale 2.0
+%%%%begintext
+%s
+%%%%endtext
+
+""" % (self.header, self.footer, self.__SetType())
+        
+        parts = [kStart]
+        for i, tune in enumerate(self.tunes):
+            parts.append('X:%i\n'%i)
+            parts.append(tune.MakeNotesLarge())
+    
+        return ''.join(parts)
+
+    def _GetCacheFile(self, resource):
+        
+        dirname = os.path.join(kCacheLoc, 'tuneset')
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        
+        fn = self.tunes[0].name + resource
+        fn = os.path.join(dirname, fn)
+        if not os.path.exists(fn):
+            return fn, False
+        if not kUseCache:
+            return fn, False
+        
+        spec_file = self.tunes[0]._GetSpecFile()
+        if IsFileNewer(spec_file, fn):
+            return fn, False
+        
+        return fn, not kDebugBookGeneration
+            
+    def __SetType(self):
+        stype = self.type
+        if self.setnum:
+            stype += ' - ' + self.setnum
+        return stype
+
+    def MakeChordsLarge(self):
+
+        kStart = """%%%%textfont Times-Roman
+%%%%headerfont Times-Roman 12
+%%%%header "%s"
+%%%%footerfont Times-Roman 12
+%%%%footer "%s"
+%%%%scale 2.0
+%%%%begintext
+%s
+%%%%endtext
+
+""" % (self.header, self.footer, self.__SetType())
+
+        parts = [kStart]
+        for i, tune in enumerate(self.tunes):
+            parts.append('\n')
+            if i > 0:
+                prepend_title = '\n'
+            else:
+                prepend_title = ''
+            parts.append(tune.MakeChordsLarge(prepend_title))
+
+        return ''.join(parts)
+        
+    def MakeCardRing(self):
+        
+        kStart = """%%%%textfont Monaco
+%%%%textfont Times-Roman
+%%%%headerfont Times-Roman 12
+%%%%header "%s"
+%%%%footerfont Times-Roman 12
+%%%%footer "%s"
+
+%%%%scale 1.4
+%%%%begintext
+%s
+%%%%endtext
+
+""" % ('', '', '')
+
+        parts = [kStart]
+        for i, tune in enumerate(self.tunes):
+            parts.append('\nX:%i\n'%i)
+            parts.append(tune.MakeCardRing())
+            
+        return ''.join(parts)
+
+    def MakeCardSmall(self):
+        
+        kStart = """%%%%textfont Monaco
+%%%%textfont Times-Roman
+%%%%headerfont Times-Roman 12
+%%%%header "%s"
+%%%%footerfont Times-Roman 12
+%%%%footer "%s"
+
+%%%%scale 1.4
+%%%%begintext
+%s
+%%%%endtext
+
+""" % (self.header, self.footer, self.__SetType())
+
+        parts = [kStart]
+        for i, tune in enumerate(self.tunes):
+            parts.append('\nX:%i\n'%i)
+            parts.append(tune.MakeCardSmall())
+            
+        return ''.join(parts)
+
+    def MakeCardPDF(self, page_num=None, show_type=False):
+                
+        filename, up_to_date = self._GetCacheFile(resource='-sheet.pdf')
+        # Does not work to cache pages since header/footer vary by book and
+        # some books share pages w/ same three tunes in same order
+        #if up_to_date:
+            #return filename
+        
+        # Set up
+        from reportlab.pdfgen.canvas import Canvas
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.units import inch
+        from reportlab.platypus import Paragraph, Frame, Preformatted, Table, Spacer, TableStyle, Image
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+        
+        pdf = Canvas(filename, pagesize=letter)
+        pdf.setFont('TrebuchetMS', kFontSize)
+        style = getSampleStyleSheet()
+        style.add(ParagraphStyle(
+            name='Bold',
+            parent=style['BodyText'],
+            fontName = 'TrebuchetMSBold',
+            bulletFontName = 'TrebuchetMS',
+            fontSize=kFontSize-1,
+        ))
+        style['BodyText'].fontName = 'TrebuchetMS'
+        style['BodyText'].bulletFontName = 'TrebuchetMS'
+        style['BodyText'].fontSize = kFontSize
+        style['Heading1'].fontName = 'TrebuchetMSBold'
+        style['Heading1'].fontSize = kFontSize
+        style['Heading1'].fontName = 'TrebuchetMSBold'
+        style['Heading1'].fontSize = kFontSize - 1
+        
+        header_footer_font_size = 8
+        
+        style.add(ParagraphStyle(
+            name='HeaderFooter',
+            parent=style['Normal'],
+            fontName='TrebuchetMS',
+            fontSize=header_footer_font_size,
+            firstLineIndent=0,
+            leftIndent=0,
+        ))
+    
+        story=[]
+        
+        tune = self.tunes[0]
+        
+        sheet_png_file = tune.MakeSheetMusicPNGFile()
+        sheet_image = Image(sheet_png_file, 7.0*inch, 9.5*inch, kind='bound', hAlign='LEFT')
+        story.append(sheet_image)
+
+        # Place body into frame
+        f = Frame(1.0*inch, 0.5*inch, 7.0*inch, 10.0*inch, leftPadding=0,
+                  bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
+        f.addFromList(story, pdf)
+        
+        # Add page number
+        if page_num is not None and self.show_pagenum:
+            pageno = 'Page %i' % page_num
+            pageno_width = kFont.stringWidth(pageno, header_footer_font_size)
+            pageno = Paragraph(pageno, style['HeaderFooter'])
+            ptable = Table([[pageno]], colWidths=[pageno_width], rowHeights=[0.25*inch])
+            ptable.setStyle(TableStyle([
+                ('ALIGN', (0, 0),(0, 0),'RIGHT'), 
+                ('VALIGN', (0, 0),(-1,-1),'TOP'), 
+                ('LEFTPADDING', (0, 0), (-1, -1), 0), 
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0), 
+                ('TOPPADDING', (0, 0), (-1, -1), 0), 
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                # For debugging
+                #( 'INNERGRID', (0,0), (-1,-1), 0.25, colors.black),
+                #( 'BOX', (0,0), (-1,-1), 0.25, colors.black),
+            ]))
+            f = Frame(8.0*inch-pageno_width, 10.5*inch, pageno_width, 0.25*inch, leftPadding=0,
+                      bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
+            f.add(ptable, pdf)
+            
+        # Add header/footer
+        if self.header:
+            header = Paragraph(self.header, style['HeaderFooter'])
+            f = Frame(1.0*inch, 10.5*inch, 7.0*inch, 0.25*inch, leftPadding=0.1*inch,
+                      bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
+            f.add(header, pdf)
+
+        if self.footer:
+            footer = Paragraph(self.footer, style['HeaderFooter'])
+            f = Frame(1.0*inch, 0.25*inch, 7.0*inch, 0.25*inch, leftPadding=0.1*inch,
+                      bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
+            f.add(footer, pdf)
+    
+        # Close page and save to disk
+        pdf.save()
+        
+        return filename
+        
+    def MakeFlipBook(self):
+
+        kStart = """%%%%textfont Monaco
+%%%%textfont Times-Roman
+%%%%headerfont Times-Roman 12
+%%%%header "%s"
+%%%%footerfont Times-Roman 12
+%%%%footer "%s"
+
+%%%%scale 1.2
+%%%%leftmargin 1.0in
+%%%%begintext
+
+%%%%endtext
+
+""" % (self.header, self.footer)
+
+        parts = [kStart]
+        for i, tune in enumerate(self.tunes):
+            parts.append('\nX:%i\n'%i)
+            parts.append(tune.MakeFlipBook(i))
+
+        return ''.join(parts)
+
 class CBook:
     
     def __init__(self, name, title='', subtitle='', type_in_header=False, large=False):
@@ -1527,6 +1776,7 @@ def ConcatenatePDFFiles(files, target):
     bindir = '%s/bin' % kBaseDir
     cmd = "PATH=$PATH:%s gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s " % (bindir, target)
     cmd += ' '.join(files)
+    cmd = cmd.replace('&', '\\&')
     os.system(cmd)
     
 def GetWatchFiles(book):
