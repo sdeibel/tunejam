@@ -378,6 +378,8 @@ def index_sheet():
                           href='/sheet/view/%s' % obj.name, width=16, height=16)        
       print_sheet = CImage(src='/image/print-icon.png', hclass="show-sheet-index",
                           href='/sheet/print/%s' % obj.name, width=16, height=16)         
+      abc = CImage(src='/image/abc.png', hclass="show-sheet-index",
+                   href='/sheet/abc/%s' % obj.name, width=16, height=16)         
       recording, mimetype, filename = obj.GetRecording()
       if recording is not None:
         play = CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
@@ -388,6 +390,7 @@ def index_sheet():
         CText(title, href="/sheet/view/%s" % obj.name),
         show_sheet,
         print_sheet,
+        abc, 
         play, 
         CBreak(), 
       ]
@@ -1041,6 +1044,25 @@ def sheet_print(tunes):
   pdf_file = book.GeneratePDF(include_index=len(tunes) > 1)
   return send_file(pdf_file, mimetype='application/pdf')
 
+@app.route('/sheet/abc/<tune>')
+def sheet_abc(tune):
+  tune = utils.CTune(tune)
+  tune.ReadDatabase()
+  sheet = tune.ReadSheetMusic().replace('<', '&lt;').replace('>', '&gt;')
+  parts = [
+    CH(tune.title, 2), 
+    CParagraph("This is the ABC encoding of this tune.  It can be edited and played as sound with "
+               "tools listed at <a href='https://abcnotation.com/software'>https://abcnotation.com/software</a> "
+               "(such as <a href='https://sourceforge.net/projects/easyabc/'>EasyABC</a>)."),
+    CBreak(), 
+    CText('<pre>%s</pre>' % sheet), 
+    CBreak(2),
+    CImage(src='/sheet/%s' % tune.name, width='100%'),
+    CBreak(), 
+  ]
+
+  return PageWrapper(parts, 'local')
+  
 @app.route('/sheet/all')
 def sheet_all():
   import sheetbook
