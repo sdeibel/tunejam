@@ -633,7 +633,7 @@ M:%(meter)s
         if IsFileNewer(spec_file, fn):
             return fn, False
         sheet_music_file = self._GetSheetMusicFile()
-        if IsFileNewer(sheet_music_file, fn):
+        if sheet_music_file and IsFileNewer(sheet_music_file, fn):
             return fn, False
         
         return fn, True
