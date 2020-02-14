@@ -347,7 +347,7 @@ def _index_title_html(obj, title):
 def index_sheet():
   
   parts = [
-    CH("Sheet Music", 2), 
+    CH("Sheet Music for Locally Written Tunes", 2), 
     CParagraph("This site is mostly about learning by ear, but we have some sheet music "
                "for locally written tunes, available both for screen display and printing:"), 
     CBreak(), 
