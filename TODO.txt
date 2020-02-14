@@ -7,10 +7,9 @@
     ** Try to fix so it works better on devices
     ** Authoring of tunes on the dev page  
     ** Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
-    ** Add a site version number in footer
     ** Easier selection by typed fragments to quickly make sets (do OR on each word)
   ** Content
-    ** Complete the partial listings and add missing recordings
+    ** Complete the partial listings and add missing recordings and sheet music
     ** Entirely missing tunes
       ** My other tunes
         ** The Old Trunk
@@ -40,7 +39,6 @@
       ** Others?
       ** It was the cat -- history: Named after the tune emerged, it seemed to reflect a cat like motion.
     ** Check through all jigs + note which are played as slides (although we have 6/8 and not 12/8 time on them all)
-    ** Add sheet music for all other locally written tunes
 * Website Phase Four+
   * Improve ability to create live-updating event page
     * Per-event passwords to prevent edit/deletion by others + on set creation

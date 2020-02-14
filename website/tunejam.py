@@ -25,6 +25,8 @@ app = Flask(__name__)
 app.secret_key = 'TunejamIsAtHubbardHallEachTuesday'
 app.config['SESSION_TYPE'] = 'filesystem'
 
+kSiteVersion = '2.1'
+
 kMenu = [
   ('Home', '/', 'home'), 
   ('Index', '/index', 'index'),
@@ -32,6 +34,7 @@ kMenu = [
   ('Events', '/events', 'event'),
   ('Books', '/print', 'print'),
   ('Sessions', '/sessions', 'session'),
+  ('Local', '/index/sheet', 'local'),
   ('Dev', '/dev', 'dev')
 ]
 
@@ -69,7 +72,7 @@ def home():
              CText(" -- Premade books in several formats, with index.")]), 
       CItem([CText("Sessions", href='/sessions'), CNBSP(),
              CText(" -- A listing of area traditional music sessions.")]),
-      CItem([CText("Sheet Music", href='/index/sheet'), CNBSP(),
+      CItem([CText("Local Tunes", href='/index/sheet'), CNBSP(),
              CText(" -- Sheet music for locally written tunes.")]),
       CItem([CText("Development Page", href='/dev'), CNBSP(),
              CText(" -- How to help improve this site.")]), 
@@ -398,7 +401,7 @@ def index_sheet():
   
   parts.append(CParagraph(["Also available:", CText("Sheet Music for Local Tunes", href='/sheet/all')]))
   
-  return PageWrapper(parts, 'index')
+  return PageWrapper(parts, 'local')
 
 @app.route('/dev')
 def dev():
@@ -406,7 +409,8 @@ def dev():
   parts.append(CH("Listings that Need Work", 1))
   parts.append(CParagraph("This page provides some useful resources for contributing "
                           "materials to this site, and also lists the tunes that are "
-                          "missing notes, chords, a recording, origin, or history."))
+                          "missing notes, chords, a recording, origin, history, or "
+                          "(for local tunes only) sheet music."))
   parts.append(CH("Resources", 2))
   parts.append(CParagraph(
     "In addition to consulting printed material, interviewing authors, and searching "
@@ -434,11 +438,21 @@ def dev():
   ))
   tunes = utils.GetTuneIndex(True)
 
+  titles = {}
+  def sorted_by_title(s):
+    retval = []
+    for n in s:
+      title_txt, title_html = titles[n]
+      retval.append((title_txt, title_html))
+    return sorted(retval)
+  
   sections = tunes.keys()
   sections.sort()
-  no_recording = []
-  no_origin = []
-  no_history = []
+  no_recording = set()
+  no_local = set()
+  no_origin = set()
+  no_history = set()
+
   if 'incomplete'in sections:
     sections.remove('incomplete')
     sections.append('incomplete')
@@ -466,27 +480,40 @@ def dev():
       tune_title.append(CText(title, href="/tune/%s" % tune))
       tune_title.extend(play)
       tune_title.append(CBreak())
+      titles[obj.name] = (title, tune_title)
+      
       if section == 'incomplete':
         parts.extend(tune_title)
       if not recording:
-        no_recording.append((title, tune_title))
+        no_recording.add(obj.name)
+      if obj.origin:
+        origin = obj.origin.lower()
+      else:
+        origin = ''
+      if ('cambridge ny' in origin or 'cambridge, ny' in origin) and obj.ReadSheetMusic() is None:
+        no_local.add(obj.name)
       if not obj.history:
 
-        no_history.append((title, tune_title))
+        no_history.add(obj.name)
       if not obj.origin or 'unknown' in obj.origin.lower():
-        no_origin.append((title, tune_title))
+        no_origin.add(obj.name)
 
-  no_recording.sort()
-  no_origin.sort()
-  no_history.sort()
-  
   if no_recording:
     parts.append(CH("Tunes with No Recording", 2))
     parts.append(CParagraph("Please help complete these listings by creating a slow and "
                             "clear recording of the melody, played once or twice, and emailing it to "
                             "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
     parts.append(CBreak())
-    for title, item in no_recording:
+    for title, item in sorted_by_title(no_recording):
+      for part in item:
+        parts.append(part)
+        
+  if no_local:
+    parts.append(CH("Local Tunes Missing Sheet Music", 2))
+    parts.append(CParagraph("If you have sheet music for any of these tunes, please email "
+                            "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
+    parts.append(CBreak())
+    for title, item in sorted_by_title(no_local):
       for part in item:
         parts.append(part)
         
@@ -495,7 +522,7 @@ def dev():
     parts.append(CParagraph("If you have a documented original provenance for any of these tunes, please email "
                             "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
     parts.append(CBreak())
-    for title, item in no_origin:
+    for title, item in sorted_by_title(no_origin):
       for part in item:
         parts.append(part)
         
@@ -504,7 +531,7 @@ def dev():
     parts.append(CParagraph("If you have documented history for any of these tunes, please email "
                             "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
     parts.append(CBreak())
-    for title, item in no_history:
+    for title, item in sorted_by_title(no_history):
       for part in item:
         parts.append(part)
         
@@ -1942,7 +1969,7 @@ def PageWrapper(body, section=None, refresh=None):
     ] + body + [
       CBreak(2), 
       CHR(),
-      CText('Maintained by Stephan Deibel'),
+      CText('Site Version %s - Maintained by Stephan Deibel' % kSiteVersion),
     ]
   
   body_div = CBody([CDiv(body, id="body")])
