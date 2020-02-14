@@ -14,7 +14,6 @@
     ** Complete the partial listings and add missing recordings
     ** Entirely missing tunes
       ** My other tunes
-        ** Mississippi Wedding
         ** The Old Trunk
         ** March of the Bullfrogs
         ** Dissatisfaction (intro for devil's dance)

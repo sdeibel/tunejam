@@ -69,6 +69,8 @@ def home():
              CText(" -- Premade books in several formats, with index.")]), 
       CItem([CText("Sessions", href='/sessions'), CNBSP(),
              CText(" -- A listing of area traditional music sessions.")]),
+      CItem([CText("Sheet Music", href='/index/sheet'), CNBSP(),
+             CText(" -- Sheet music for locally written tunes.")]),
       CItem([CText("Development Page", href='/dev'), CNBSP(),
              CText(" -- How to help improve this site.")]), 
     ]),
@@ -187,16 +189,8 @@ def index_type():
       if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.GetKeyString()
-      recording, mimetype, filename = obj.GetRecording()
-      play = []
-      if recording is not None:
-        play = [
-          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
-                 href='/recording/%s' % tune, width=16, height=16),
-        ]
-      parts.append(CText(title, href="/tune/%s" % tune))
-      parts.extend(play)
-      parts.append(CBreak())
+      title_html = _index_title_html(obj, title)
+      parts.extend(title_html)
         
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index')
@@ -217,17 +211,7 @@ def index_meter():
       if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.GetKeyString()
-      recording, mimetype, filename = obj.GetRecording()
-      play = []
-      if recording is not None:
-        play = [
-          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
-                 href='/recording/%s' % tune, width=16, height=16),
-        ]
-      title_html = []
-      title_html.append(CText(title, href="/tune/%s" % tune))
-      title_html.extend(play)
-      title_html.append(CBreak())
+      title_html = _index_title_html(obj, title)
       meter = obj.meter
       if meter in ('2/4', '4/4', 'C'):
         meter = "C, 2/4, and 4/4"
@@ -259,18 +243,8 @@ def index_origin():
       obj.ReadDatabase()
       if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
-      title += ' - ' + obj.GetKeyString()
-      recording, mimetype, filename = obj.GetRecording()
-      play = []
-      if recording is not None:
-        play = [
-          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
-                 href='/recording/%s' % tune, width=16, height=16),
-        ]
-      title_html = []
-      title_html.append(CText(title, href="/tune/%s" % tune))
-      title_html.extend(play)
-      title_html.append(CBreak())
+      title += ' - ' + obj.Type() + ' - ' + obj.GetKeyString()
+      title_html = _index_title_html(obj, title)
       origin = obj.origin
       if not origin:
         origin = 'To Be Determined'
@@ -304,18 +278,8 @@ def index_title():
       obj.ReadDatabase()
       if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
-      title += ' - ' + obj.GetKeyString()
-      recording, mimetype, filename = obj.GetRecording()
-      play = []
-      if recording is not None:
-        play = [
-          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
-                 href='/recording/%s' % tune, width=16, height=16),
-        ]
-      title_html = []
-      title_html.append(CText(title, href="/tune/%s" % tune))
-      title_html.extend(play)
-      title_html.append(CBreak())
+      title += ' - ' + obj.Type() + ' - ' + obj.GetKeyString()
+      title_html = _index_title_html(obj, title)
       titles.append((title, title_html))
       
   titles.sort()
@@ -346,24 +310,72 @@ def index_author():
         author = aparts[-1]
         if len(aparts) >= 2:
           author += ', ' + ' '.join(aparts[:-1])
-      title += ' - ' + obj.GetKeyString()
-      recording, mimetype, filename = obj.GetRecording()
-      play = []
-      if recording is not None:
-        play = [
-          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
-                 href='/recording/%s' % tune, width=16, height=16),
-        ]
-      title_html = []
-      title_html.append(CText(title, href="/tune/%s" % tune))
-      title_html.extend(play)
-      title_html.append(CBreak())
+      title += ' - ' + obj.Type() + ' - ' + obj.GetKeyString()
+      title_html = _index_title_html(obj, title)
       authors[author].add((title, tuple([str(t) for t in title_html])))
       
   for author in sorted(authors):
     parts.append(CH(author, 2))
     for title, title_html in sorted(authors[author]):
       parts.extend(title_html)
+    
+  parts.append(CBreak(2))
+  return PageWrapper(parts, 'index')
+
+def _index_title_html(obj, title):
+  recording, mimetype, filename = obj.GetRecording()
+  play = []
+  if recording is not None:
+    play = [
+      CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
+             href='/recording/%s' % obj.name, width=16, height=16),
+    ]
+  show_sheet = []
+  if obj.ReadSheetMusic() is not None:
+    show_sheet = [
+      CImage(src='/image/notes.png', hclass="show-sheet-index",
+             href='/sheet/%s' % obj.name, width=16, height=16),          
+    ]
+  title_html = []
+  title_html.append(CText(title, href="/tune/%s" % obj.name))
+  title_html.extend(show_sheet)
+  title_html.extend(play)
+  title_html.append(CBreak())
+  return title_html
+
+@app.route('/index/sheet')
+def index_sheet():
+  
+  parts = [
+    CH("Sheet Music", 2), 
+    CParagraph("This site is mostly about learning by ear, but we have some sheet music "
+               "for locally written tunes:")
+  ]
+  
+  tunes = utils.GetTuneIndex(True)
+
+  titles = []
+  sections = tunes.keys()
+  all_tunes = set()
+  for section in sections:
+    for title, tune in tunes[section]:
+      all_tunes.add((title, tune))
+      
+  for title, tune in sorted(all_tunes):
+      obj = utils.CTune(tune)
+      obj.ReadDatabase()
+      notes = obj.ReadSheetMusic()
+      if not notes:
+        continue
+      if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
+        title += ' (by {})'.format(obj.author)
+      title += ' - ' + obj.Type() + ' - ' + obj.GetKeyString()
+      title_html = [CText(title, href="/sheet/%s" % obj.name), CBreak()]
+      titles.append((title, title_html))
+      
+  titles.sort()
+  for title, title_html in titles:
+    parts.extend(title_html)
     
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index')
@@ -960,6 +972,12 @@ def png(tune):
   png_file = tune.MakeNotesPNGFile(density=600)
   return send_file(png_file, mimetype='image/png')
 
+@app.route('/sheet/<tune>')
+def sheet(tune):
+  tune = utils.CTune(tune)
+  png_file = tune.MakeSheetMusicPNGFile(density=600)
+  return send_file(png_file, mimetype='image/png')
+
 def get_all_books():
   import allbook
   import flipbook
@@ -1215,6 +1233,12 @@ position:absolute;
 right:50px;
 margin-top:5px;
 }
+span.tune-type-two-icons {
+font-size:70%;
+position:absolute;
+right:90px;
+margin-top:5px;
+}
 h2 {
 padding-top:0.7em;
 padding-bottom:0.5em;
@@ -1234,6 +1258,12 @@ height:20px;
 img.play-tune {
 position:absolute;
 right:10px;
+margin-top:8px;
+max-width:5vw;
+}
+img.show-sheet {
+position:absolute;
+right:50px;
 margin-top:8px;
 max-width:5vw;
 }
@@ -1322,6 +1352,9 @@ margin:0.5in;
 margin:0.5in;
 }
 img.play-tune {
+display:none;
+}
+img.show-sheet {
 display:none;
 }
     """
@@ -1885,18 +1918,28 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
 
   key_str = obj.GetKeyString()
 
-  if obj.klass:
-    klass = CText(', '.join([utils.kSectionClasses[k] for k in obj.klass.split(',')]), italic=True, hclass='tune-type')
-  else:
-    klass = ''
-    
   recording, mimetype, filename = obj.GetRecording()
   if recording is not None:
     play = CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
                   href='/recording/%s' % name)
   else:
     play = CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
-
+    
+  if obj.ReadSheetMusic() is not None:
+    show_sheet = CImage(src='/image/notes.png', hclass="show-sheet",
+                   href='/sheet/%s' % name)
+  else:
+    show_sheet = ''
+    
+  if obj.klass:
+    if show_sheet:
+      klass_type = 'tune-type-two-icons'
+    else:
+      klass_type = 'tune-type'
+    klass = CText(', '.join([utils.kSectionClasses[k] for k in obj.klass.split(',')]), italic=True, hclass=klass_type)
+  else:
+    klass = ''
+    
   if pagetype == 'both':
     if not obj.chords and not obj.notes:
       notes = ''
@@ -1978,7 +2021,8 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
   tune = CDiv([
     CH([
       title + ' - ' + key_str,
-      klass, 
+      klass,
+      show_sheet, 
       play, 
     ], 1, hclass=tclass),
     structure, 
@@ -1986,7 +2030,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
     origin,
     history,
     urls,
-    refs, 
+    refs,
     notes,
     chords,
   ], hclass='tune')

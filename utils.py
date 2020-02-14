@@ -30,6 +30,7 @@ pdfmetrics.registerFont(kBoldFont)
 kBaseDir = os.path.dirname(os.path.dirname(__file__))
 kExecutable = os.path.join(kBaseDir, 'bin/abcm2ps')
 kDatabaseDir = os.path.join(os.path.dirname(__file__), 'db')
+kSheetMusicDir = os.path.join(os.path.dirname(__file__), 'tunes')
 kImageDir = os.path.join(os.path.dirname(__file__), 'images')
 kRecordingsDir = os.path.join(os.path.dirname(__file__), 'recordings')
 kCacheLoc = os.path.join(os.path.dirname(__file__), 'website', 'cache')
@@ -182,6 +183,15 @@ class CTune:
         else:
             return None
         
+    def _GetSheetMusicFile(self):
+        
+        fn = self.name + '.abc'        
+        fullpath = os.path.join(kSheetMusicDir, fn)
+        if os.path.isfile(fullpath):
+            return fullpath
+        else:
+            return None
+        
     def AsDict(self):
         d = {}
         for attrib in dir(self):
@@ -234,7 +244,7 @@ class CTune:
         return None, None, None
     
     def MakeNotes(self):
-        """Generate only the notes for the tune, as ABC"""
+        """Generate only the reminder for the tune, as ABC"""
 
         kFormat = """X:0
 K:%(key)s
@@ -248,6 +258,16 @@ M:%(meter)s
         
         return kFormat % d
         
+    def ReadSheetMusic(self):
+        """Get the notes for this tune, in ABC, or None if not available"""
+
+        fn = self._GetSheetMusicFile()
+        if fn is None:
+            return None
+        
+        with open(fn, 'r') as f:
+            return f.read()
+        
     def MakeNotesSVGFile(self):
     
         try:
@@ -256,22 +276,12 @@ M:%(meter)s
             return None
         
         abc = self.MakeNotes()
-        target, up_to_date = self._GetCacheFile('notes.svg')
+        target, up_to_date = self._GetCacheFile('reminder.svg')
         if not up_to_date:
             ABCToPostscript(abc, svg=True, target=target)
         
         return target
         
-    def MakeNotesSVG(self):
-
-        svg_file = self.MakeNotesSVGFile()
-        
-        f = open(svg_file)
-        svg = f.read()
-        f.close()
-        
-        return svg
-    
     def MakeNotesEPSFile(self):
         
         try:
@@ -280,15 +290,42 @@ M:%(meter)s
             return None
         
         abc = self.MakeNotes()
-        target, up_to_date = self._GetCacheFile('notes.eps')
+        target, up_to_date = self._GetCacheFile('reminder.eps')
         if not up_to_date:
             ABCToPostscript(abc, eps=True, target=target)
+        
+        return target
+        
+    def MakeSheetMusicEPSFile(self):
+        
+        try:
+            self.ReadDatabase()
+        except:
+            return None
+        
+        abc = self.ReadSheetMusic()
+        target, up_to_date = self._GetCacheFile('notes.eps')
+        if not up_to_date:
+            ABCToPostscript(abc, eps=True, target=target, width='7in')
         
         return target
         
     def MakeNotesPNGFile(self, density=600):
         
         eps_file = self.MakeNotesEPSFile()
+        png_file, up_to_date = self._GetCacheFile('reminder.png')
+        if up_to_date:
+            return png_file
+        
+        bin_dir = '%s/bin' % kBaseDir
+        cmd = 'PATH=$PATH:%s convert -density %i -depth 8 -monochrome %s %s' % (bin_dir, density, eps_file, png_file)
+        os.system(cmd)
+        
+        return png_file
+        
+    def MakeSheetMusicPNGFile(self, density=600):
+        
+        eps_file = self.MakeSheetMusicEPSFile()
         png_file, up_to_date = self._GetCacheFile('notes.png')
         if up_to_date:
             return png_file
@@ -581,7 +618,7 @@ M:%(meter)s
         
     def _GetCacheFile(self, basename):
         
-        dirname = os.path.join(kCacheLoc, 'tune', self.klass.split(',')[0])
+        dirname = os.path.join(kCacheLoc, 'tune')
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         
@@ -594,6 +631,9 @@ M:%(meter)s
         
         spec_file = self._GetSpecFile()
         if IsFileNewer(spec_file, fn):
+            return fn, False
+        sheet_music_file = self._GetSheetMusicFile()
+        if IsFileNewer(sheet_music_file, fn):
             return fn, False
         
         return fn, True
@@ -820,7 +860,7 @@ class CTuneSet:
             leftIndent=0,
         ))
     
-        notes_width = 3.25*inch
+        reminder_width = 3.25*inch
         chords_width = 3.75*inch
         
         story=[]
@@ -846,8 +886,8 @@ class CTuneSet:
             ]))
             story.append(ttable)
             
-            notes_png_file = tune.MakeNotesPNGFile()
-            notes_image = Image(notes_png_file, notes_width, 2.5*inch, kind='bound', hAlign='LEFT')
+            reminder_png_file = tune.MakeNotesPNGFile()
+            reminder_image = Image(reminder_png_file, reminder_width, 2.5*inch, kind='bound', hAlign='LEFT')
             chords_drawing = tune.MakeChordsDrawing()
             
             # Make sure chords fit in alloted space
@@ -864,8 +904,8 @@ class CTuneSet:
                 x, y, new_width, new_height = chords_drawing.getBounds()
                 chords_drawing.translate((width-new_width)/factor, (height-new_height)/factor)
             
-            rows = [[notes_image, chords_drawing]]
-            table = Table(rows, vAlign='TOP', colWidths=[notes_width, chords_width], rowHeights=[2.833*inch])
+            rows = [[reminder_image, chords_drawing]]
+            table = Table(rows, vAlign='TOP', colWidths=[reminder_width, chords_width], rowHeights=[2.833*inch])
             table.setStyle(TableStyle([
                 ('ALIGN', (0, 0),(0, 0),'LEFT'), 
                 ('ALIGN', (1, 0),(1, 0),'RIGHT'), 
@@ -1431,7 +1471,7 @@ def ParseChords(chords):
         
     return parts
 
-def ABCToPostscript(abc, svg=False, eps=False, target=None):
+def ABCToPostscript(abc, svg=False, eps=False, target=None, width=None):
 
     f, fn = tempfile.mkstemp(suffix='.abc')
     f = os.fdopen(f, 'w')
@@ -1439,11 +1479,15 @@ def ABCToPostscript(abc, svg=False, eps=False, target=None):
     f.close()
 
     if svg:
-        svg_arg = '-X -m 0 -w 4in'
+        if width is None:
+            width = '4in'
+        svg_arg = '-X -m 0 -w ' + width
         if target is None:
             target = os.path.splitext(fn)[0] + '.svg'
     elif eps:
-        svg_arg = '-E -m 0 -w 3.75in'
+        if width is None:
+            width = '3.75in'
+        svg_arg = '-E -m 0 -w ' + width
         if target is None:
             target = os.path.splitext(fn)[0] + '.eps'
     else:
