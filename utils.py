@@ -739,7 +739,7 @@ class CTuneSet:
         return fn, not kDebugBookGeneration
             
     def __SetType(self):
-        stype = self.type()
+        stype = self.type
         if self.setnum:
             stype += ' - ' + self.setnum
         return stype
