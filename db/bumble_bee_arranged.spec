@@ -1,6 +1,6 @@
 T:Bumblebee Arrangement 
 C:reel
-S:AABBAABBCCCCCCAABB
+S:AABBAABBCCAABB
 A:Stephan Deibel
 O:USA - Cambridge NY
 H:This was written by Cambridge NY fiddler Stephan Deibel.  "I was on my back porch 
@@ -16,6 +16,7 @@ M:2/4
 --
 TD2B,2|TD2B,2|BA GF|
 Bc|Td2BG|TA2FD|
+G2D2 | B2 Bc | dcBA
 --
 |: G  | G  | G  | GD  |
    G  | G  | G  | DG :|
