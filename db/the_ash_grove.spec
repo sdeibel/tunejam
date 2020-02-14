@@ -1,7 +1,7 @@
 T:The Ash Grove
 C:waltz
 K:G
-A:Unknown
+A:Uncertain
 O:Wales
 H:Authorship of this tune is uncertain, but it is primarily of Welsh origin. It may
 H:originally have been based on a composition by Turlough O'Carolan called Beauty in Tears,

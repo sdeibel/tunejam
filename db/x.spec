@@ -2,11 +2,11 @@ T:The X Tune
 C:reel
 A:Caz Lewis
 O:USA - Cambridge NY
-H:This tune was written by Cambridge NY recorder and whistle player Caz Lewis,
-H:for the purpose of having a tune whose name
-H:starts with X.  This was around 2015 when the Hubbard Hall tune jam was playing tunes
-H:in alphabetical order, for no particularly good reason other than the existence of
-H:an early version of the music.cambridgeny.net website.
+H:This tune was composed around 2015 by Cambridge NY recorder and whistle player Caz Lewis.
+H:It was composed primarily for the purpose of having a tune whose name
+H:starts with X, during a time when the Hubbard Hall tune jam was playing through its
+H:repertoire in alphabetical order.
+R:Collected from Author
 K:Em
 L:1/8
 M:C

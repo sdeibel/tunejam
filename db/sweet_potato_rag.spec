@@ -3,6 +3,7 @@ C:reel,rag
 O:USA - Cambridge NY
 A:Caz Lewis
 H:This tune was written by Cambridge NY recorder and whistle player Caz Lewis.
+R:Collected from Author
 K:G
 L:1/8
 M:4/4

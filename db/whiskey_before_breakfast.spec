@@ -1,7 +1,7 @@
 T:Whiskey Before Breakfast
 C:reel
 O:Canada - Manitoba
-A:Unknown
+A:Uncertain
 H:Although this tune is commonly thought of as Irish, it is actually a Metis tune
 H:that is often credited to mid-twentieth century Manitoba fiddler and composer 
 H:Andy deJarlis.  Whether he also wrote it is unknown.

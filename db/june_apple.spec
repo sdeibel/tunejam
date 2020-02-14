@@ -4,7 +4,8 @@ O:USA - Southeast
 A:Traditional - Southeast
 H:This is an old timey tune associated with southwestern Virginia and bordering areas of
 H:North Carolina.  It is named for a type of early-ripening apple that matures in Spring
-H:in the southern United States.
+H:in the southern United States.  Locally we sometimes play the tune over apples that 
+H:have survived in the root cellar until June.
 U:https://tunearch.org/wiki/Annotation:June_Apple
 U:http://communityguitar.com/students/Songs/JuneApple.htm
 U:https://thesession.org/tunes/7237

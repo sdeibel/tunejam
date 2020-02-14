@@ -3,7 +3,7 @@ C:other
 O:Israel
 A:Amitai Ne’eman
 H:This tune is also known as Nigun Atik, which means Ancient Melody.  However, this tune 
-H:was written in the 1950's Amitai Ne’eman, along with dance steps and lyrics, as part
+H:was written in the 1950's by Amitai Ne’eman, along with dance steps and lyrics, as part
 H:of the Israeli folk revival movement.
 U:https://thesession.org/tunes/12963
 U:http://www.hebrewsongs.com/?song=nigunatik

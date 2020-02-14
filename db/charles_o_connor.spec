@@ -6,10 +6,10 @@ O:Ireland
 H:This tune is named for Charles O'Conor (1710–1791), who was an antiquarian scholar 
 H:who in 1749 acceded to the O'Conor seat
 H:of Belnagare, County Roscommon. Although a country gentleman, he was a Catholic,
-H:and thus was barred from many privileges of the his class. He received a classical
+H:and thus was barred from many privileges of his class. He received a classical
 H:education from a Franciscan friar and developed an interest in collecting Irish
 H:manuscripts. O'Carolan was a frequent guest at his house.  A harp that reputedly 
-H:belonged O'Carolan remains with the family. Charles O'Conor's diaries of
+H:belonged to O'Carolan remains with the family. Charles O'Conor's diaries of
 H:1729 relate that he was taught songs on the harp by O'Carolan (then aged 59)
 H:when the bard stayed a fortnight at Belnagare.
 U:https://tunearch.org/wiki/Annotation:Charles_O%27Conor

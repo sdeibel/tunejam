@@ -13,6 +13,7 @@ H:soreness. At night and on dark days the turkeys would stop walking and refuse 
 H:Inside a long covered bridge they could stop until they were carried out into the sun
 H:again. At night they would roost wherever they were located, in such numbers that they 
 H:caused the collapse of buildings.
+R:Collected from Author
 U:https://www.vpr.org/post/thanksgiving-travel-vermont-turkeys-used-walk-boston
 K:Am
 L:1/8

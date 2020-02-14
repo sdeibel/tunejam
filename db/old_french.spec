@@ -2,7 +2,7 @@ T:Old French
 C:reel
 O:Canada - Quebec
 A:Traditional
-H:The original provenance of this tune is in Québécois repertoire, where it was recorded in 1929 by
+H:The original provenance of this tune is in Québécois repertoire, where it was recorded in 1929
 H:by Sotère Mongrain (fiddle) and Ida Mongrain (piano) under the title "Reel de St-Tite." 
 H:The tune was also in Maritime fiddler Don Messer's "Down-East" repertoire, as Rambler's 
 H:Hornpipe.  The Old French title supposedly camed from a remark by an old Vermont fiddler 

@@ -6,7 +6,7 @@ H:This title dates from about 1795 and may be associated with freemasonry, but t
 H:also appeared as "Seven Stars"in 1750 and likely is based on even older versions.  It 
 H:was probably also a fife and drum tune, and according to oral history may have been 
 H:played by the American rebels while burning the HMS Gaspée in Warwick, Rhode Island, 
-H:June 9th, 1772, because it was associated unpopular trade regulations.
+H:June 9th, 1772, because it was associated with unpopular trade regulations.
 U:https://tunearch.org/wiki/Annotation:Moon_and_Seven_Stars_(The)
 U:https://thesession.org/tunes/1857
 U:https://en.wikipedia.org/wiki/Gaspee_Affair

@@ -10,7 +10,7 @@ H:Lexington and Concord. Road to Boston was one of the most popular tunes during
 H:revolution, until American musicians picked up Yankee Doodle and The White Cockade by
 H:hearing British troops playing them in the distance. There is a possibility that Road to
 H:Boston was acquired in the same way, via a similar English tune named Road to 
-H:London.  But, hey, we won the war.
+H:London.
 U:https://tunearch.org/wiki/Annotation:Road_to_Boston
 U:https://thesession.org/tunes/6651
 U:https://en.wikipedia.org/wiki/The_Road_to_Boston

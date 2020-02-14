@@ -1,7 +1,7 @@
 T:Haste to the Wedding
 C:jig
 O:England
-A:Unknown
+A:Uncertain
 H:The tune was introduced under the name "Come, Haste to the Wedding" in the pantomime The
 H:Elopement staged in London in 1767. However, it also appeared under the title "The Small
 H:Pin Cushion" in cellist-composer James Oswald's Caledonian Pocket Companion, Book 10

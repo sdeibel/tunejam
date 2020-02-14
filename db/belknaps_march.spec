@@ -1,8 +1,8 @@
 T:Belknap's March
 C:march
-A:Unknown
+A:Uncertain
 O:USA - New England
-H:Tentative: This tune was named for Daniel Belknap (1771–1815) from Framingham,
+H:This tune may have been written by or named for Daniel Belknap (1771–1815) from Framingham,
 H:Massachusetts. He started a singing school when he was 18 years old and may have served as
 H:a fifer in the War of 1812. A tune called Belknap's March is found in a a secular
 H:“songster” published by Belknap; Belkap also published a number of other tune books,

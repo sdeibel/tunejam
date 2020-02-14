@@ -1,8 +1,10 @@
-T:Trollpolska
+T:Trollpolska efter Hans Börtas
 C:polska
 O:Sweden
-A:Hans Börtas
-H:This is a tune that cames from Hans Börtas from Rättvik in Sweden
+A:Uncertain
+H:This is tune came from the playing Hans Börtas from Rättvik in Sweden.  It is
+H:uncertain whether he wrote it; his name is used to distinguish this tune
+H:from the many other musically unrelated Swedish troll polskas.
 U:https://thesession.org/tunes/7964
 U:https://en.wikipedia.org/wiki/R%C3%A4ttvik
 K:Dm

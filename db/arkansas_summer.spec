@@ -6,6 +6,7 @@ H:Cambridge NY recorder and whistle player Caz Lewis wrote this tune in the summ
 H:while camping in the Ozarks in Arkansas.  It was inspired by a firefly-intensive night,
 H:during which a barred owl could be heard hooting.  The first part of the tune represents the 
 H:fireflies, and the second the call of the owl.
+R:Collected from Author
 K:Em
 L:1/4
 M:4/4

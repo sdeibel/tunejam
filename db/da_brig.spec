@@ -10,8 +10,8 @@ H:fjord). The sight of it inspired him to take down his fiddle and compose this 
 H:which has been preserved in his family every since."
 H:Although it is a jig, this tune is often played as part of a set to dance The Foula Reel,
 H:which of course is also really a jig.  Aly Bain allegedly commented that the Shetlanders 
-H:didn’t know the difference, but more likely they are using an older meaning to "reel," 
-H:namely as a general term for "dance."
+H:didn’t know the difference between a jig and a reel, but they may have been using 
+H:an older meaning to "reel," namely as a general term for "dance."
 U:https://tunearch.org/wiki/Annotation:Brig_(Da)
 U:https://thesession.org/tunes/2203
 U:https://www.jstor.org/stable/4521648?seq=1
