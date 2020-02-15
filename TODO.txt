@@ -1,7 +1,5 @@
 * Website Phase Three
   ** Coding
-    ** Clean up notes/print/abc/play icon code by centralizing
-    ** Add play icon on the ABC page
     ** Split up PDF sheet music for long tunes like Dublin Gypsy into multiple pages
     ** Option to include meta data in sets, events, and books
     ** Next/previous buttons on event set pages

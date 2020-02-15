@@ -326,23 +326,9 @@ def index_author():
   return PageWrapper(parts, 'index')
 
 def _index_title_html(obj, title):
-  recording, mimetype, filename = obj.GetRecording()
-  play = []
-  if recording is not None:
-    play = [
-      CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
-             href='/recording/%s' % obj.name, width=16, height=16),
-    ]
-  show_sheet = []
-  if obj.ReadSheetMusic() is not None:
-    show_sheet = [
-      CImage(src='/image/notes.png', hclass="show-sheet-index",
-             href='/sheet/view/%s' % obj.name, width=16, height=16),          
-    ]
   title_html = []
   title_html.append(CText(title, href="/tune/%s" % obj.name))
-  title_html.extend(show_sheet)
-  title_html.extend(play)
+  title_html.extend(obj.GetActionIcons(index=True))
   title_html.append(CBreak())
   return title_html
 
@@ -375,24 +361,9 @@ def index_sheet():
       if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.Type() + ' - ' + obj.GetKeyString()
-      show_sheet = CImage(src='/image/notes.png', hclass="show-sheet-index",
-                          href='/sheet/view/%s' % obj.name, width=16, height=16)        
-      print_sheet = CImage(src='/image/print-icon.png', hclass="show-sheet-index",
-                          href='/sheet/print/%s' % obj.name, width=16, height=16)         
-      abc = CImage(src='/image/abc.png', hclass="show-sheet-index",
-                   href='/sheet/abc/%s' % obj.name, width=16, height=16)         
-      recording, mimetype, filename = obj.GetRecording()
-      if recording is not None:
-        play = CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
-                      width=16, height=16, href='/recording/%s' % obj.name)
-      else:
-        play = ''
       title_html = [
         CText(title, href="/sheet/view/%s" % obj.name),
-        show_sheet,
-        print_sheet,
-        abc, 
-        play, 
+      ] + obj.GetActionIcons(index=True) + [
         CBreak(), 
       ]
       titles.append((title, title_html))
@@ -474,15 +445,9 @@ def dev():
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.GetKeyString()
       recording, mimetype, filename = obj.GetRecording()
-      play = []
-      if recording is not None:
-        play = [
-          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
-                 href='/recording/%s' % tune, width=16, height=16),
-        ]
       tune_title = []
       tune_title.append(CText(title, href="/tune/%s" % tune))
-      tune_title.extend(play)
+      tune_title.extend(obj.GetActionIcons(index=True))
       tune_title.append(CBreak())
       titles[obj.name] = (title, tune_title)
       
@@ -1050,8 +1015,9 @@ def sheet_abc(tune):
   tune = utils.CTune(tune)
   tune.ReadDatabase()
   sheet = tune.ReadSheetMusic().replace('<', '&lt;').replace('>', '&gt;')
-  parts = [
-    CH(tune.title, 2), 
+  
+  parts = tune.GetActionIcons(icons=['play']) + [
+    CH(tune.title, 2),
     CParagraph("This is the ABC encoding of this tune.  It can be edited and played as sound with "
                "tools listed at <a href='https://abcnotation.com/software'>https://abcnotation.com/software</a> "
                "(such as <a href='https://sourceforge.net/projects/easyabc/'>EasyABC</a>)."),
@@ -1356,6 +1322,18 @@ position:absolute;
 right:90px;
 margin-top:5px;
 }
+span.tune-type-three-icons {
+font-size:70%;
+position:absolute;
+right:130px;
+margin-top:5px;
+}
+span.tune-type-four-icons {
+font-size:70%;
+position:absolute;
+right:170px;
+margin-top:5px;
+}
 h2 {
 padding-top:0.7em;
 padding-bottom:0.5em;
@@ -1372,15 +1350,27 @@ div.tune-break {
 clear:both;
 height:20px;
 }
-img.play-tune {
+img.action-icon-1 {
 position:absolute;
 right:10px;
 margin-top:8px;
 max-width:5vw;
 }
-img.show-sheet {
+img.action-icon-2 {
 position:absolute;
 right:50px;
+margin-top:8px;
+max-width:5vw;
+}
+img.action-icon-3 {
+position:absolute;
+right:90px;
+margin-top:8px;
+max-width:5vw;
+}
+img.action-icon-4 {
+position:absolute;
+right:130px;
 margin-top:8px;
 max-width:5vw;
 }
@@ -1468,10 +1458,7 @@ margin:0.5in;
 #body {
 margin:0.5in;
 }
-img.play-tune {
-display:none;
-}
-img.show-sheet {
+img.action-icon {
 display:none;
 }
     """
@@ -2025,7 +2012,7 @@ def CreateTuneSetPDF(name, title, subtitle, tunes):
   return send_file(pdf, mimetype='application/pdf')
   
 def CreateTuneHTML(name, pagetype='both', metadata=False):
-  
+
   obj = utils.CTune(name)
   try:
     obj.ReadDatabase()
@@ -2035,24 +2022,16 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
 
   key_str = obj.GetKeyString()
 
-  recording, mimetype, filename = obj.GetRecording()
-  if recording is not None:
-    play = CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
-                  href='/recording/%s' % name)
-  else:
-    play = CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
-    
-  if obj.ReadSheetMusic() is not None:
-    show_sheet = CImage(src='/image/notes.png', hclass="show-sheet",
-                   href='/sheet/view/%s' % name)
-  else:
-    show_sheet = ''
-    
+  action_icons = obj.GetActionIcons()
   if obj.klass:
-    if show_sheet:
-      klass_type = 'tune-type-two-icons'
-    else:
+    if len(action_icons) == 1:
       klass_type = 'tune-type'
+    elif len(action_icons) == 2:
+      klass_type = 'tune-type-two-icons'
+    elif len(action_icons) == 3:
+      klass_type = 'tune-type-three-icons'
+    else:
+      klass_type = 'tune-type-four-icons'
     klass = CText(', '.join([utils.kSectionClasses[k] for k in obj.klass.split(',')]), italic=True, hclass=klass_type)
   else:
     klass = ''
@@ -2139,9 +2118,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
     CH([
       title + ' - ' + key_str,
       klass,
-      show_sheet, 
-      play, 
-    ], 1, hclass=tclass),
+    ] + obj.GetActionIcons(), 1, hclass=tclass),
     structure, 
     author,
     origin,
