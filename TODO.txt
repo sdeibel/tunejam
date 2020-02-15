@@ -6,6 +6,9 @@
     ** Try to fix so it works better on devices
     ** Authoring of tunes on the dev page  
     ** Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
+    ** Ability to convert abc to midi wih https://ifdo.ca/~seymour/runabc/top.html
+       (download link is hard to see; buried as "The latest version is abcMIDI-2020.02.12.zip")
+       and play it with https://github.com/mudcube/MIDI.js/ or similar
     ** Easier selection by typed fragments to quickly make sets (do OR on each word)
   ** Content
     ** Complete the partial listings and add missing recordings and sheet music
