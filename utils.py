@@ -254,8 +254,13 @@ class CTune:
             'play': self.__GetPlayIcon,
         }
         
+        if index:
+            to_try = [all_actions[i] for i in icons]
+        else:
+            to_try = [all_actions[i] for i in reversed(icons)]
+            
         retval = []
-        for action in [all_actions[i] for i in reversed(icons)]:
+        for action in to_try:
             icon = action(index, len(retval) + 1)
             if icon:
                 retval.append(icon)
