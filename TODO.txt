@@ -6,6 +6,8 @@
     ** Try to fix so it works better on devices
     ** Authoring of tunes on the dev page  
     ** Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
+       Or use Web Audio API in html5:  https://codepen.io/SitePoint/pen/JRaLVR
+       https://www.html5rocks.com/en/tutorials/webaudio/intro/
     ** Ability to convert abc to midi wih https://ifdo.ca/~seymour/runabc/top.html
        (download link is hard to see; buried as "The latest version is abcMIDI-2020.02.12.zip")
        and play it with https://github.com/mudcube/MIDI.js/ or similar
