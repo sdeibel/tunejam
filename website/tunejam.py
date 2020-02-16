@@ -477,15 +477,6 @@ def dev():
       for part in item:
         parts.append(part)
         
-  if no_local:
-    parts.append(CH("Local Tunes Missing Sheet Music", 2))
-    parts.append(CParagraph("If you have sheet music for any of these tunes, please email "
-                            "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
-    parts.append(CBreak())
-    for title, item in sorted_by_title(no_local):
-      for part in item:
-        parts.append(part)
-        
   if no_origin:
     parts.append(CH("Tunes with Unknown Origin", 2))
     parts.append(CParagraph("If you have a documented original provenance for any of these tunes, please email "
@@ -501,6 +492,15 @@ def dev():
                             "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
     parts.append(CBreak())
     for title, item in sorted_by_title(no_history):
+      for part in item:
+        parts.append(part)
+        
+  if no_local:
+    parts.append(CH("Local Tunes Missing Sheet Music", 2))
+    parts.append(CParagraph("If you have sheet music for any of these tunes, please email "
+                            "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
+    parts.append(CBreak())
+    for title, item in sorted_by_title(no_local):
       for part in item:
         parts.append(part)
         
