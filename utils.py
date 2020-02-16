@@ -96,7 +96,7 @@ class CTune:
     def ReadDatabase(self):
         """Read one file from the tunes database.  Returns CTune named tuple"""
         
-        if self.notes:
+        if self.title:
             return
         
         fullpath = self._GetSpecFile()
