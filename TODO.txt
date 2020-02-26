@@ -20,7 +20,6 @@
         ** White creek trout are jumping
         ** Mr Ernest Hillier aka Two Goats Jig
       ** Sunday river
-      ** Out on the Ocean
       ** Paddy on the Railroad
       ** Paddy on the Turnpike
       ** Flatbush
@@ -28,14 +27,15 @@
       ** Da old store back again
       ** Boys lament for his dragon 
       ** Quarry cross
-      ** Aran boat song
-      ** Kesh jig
       ** Morrison’s jig
       ** Lovers waltz 
       ** January waltz
       ** Others?
-      ** It was the cat -- history: Named after the tune emerged, it seemed to reflect a cat like motion.
-    ** Check through all jigs + note which are played as slides (although we have 6/8 and not 12/8 time on them all)
+      ** It was the cat -- history: Named after the tune emerged, it seemed to reflect a 
+         cat like motion.
+    ** Check through all jigs + note which are played as slides (although we have 6/8 
+       and not 12/8 time on them all)
+    ** Mark other airs as such
 * Website Phase Four+
   * Improve ability to create live-updating event page
     * Per-event passwords to prevent edit/deletion by others + on set creation

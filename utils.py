@@ -59,7 +59,8 @@ kSections = [
     ('strathspey', 'Strathspeys', 'Strathspey'),
     ('rant', 'Rants', 'Rant'), 
     ('slide', 'Slides', 'Slide'), 
-    ('other', 'Other', ''),
+    ('other', 'Others', 'Other'),
+    ('air', 'Airs', 'Air'), 
     ('incomplete', 'Incomplete Listings', ''), 
 ]
 
