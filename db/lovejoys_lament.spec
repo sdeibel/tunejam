@@ -10,7 +10,7 @@ H:the thick sods in the midwest to larger-scale farming.  Ultimately, this put m
 H:upstate New York farmers out of business, something that perhaps Hiram Lovejoy would have
 H:lamented later in life."  It is, however, musically a waltz and not a lament.
 R:Collected from Author
-U:https://cambridge.dlconsulting.com/cgi-bin/cambridge?a=d&d=Sentinel19370227-01.2.7&e=-------en-20--1--txt-txIN-------
+U:https://cambridge.dlconsulting.com/cgi-bin/cambridge?a=d&d=Sentinel19370227-01.2.7
 U:https://www.findagrave.com/memorial/126399124/hiram-h-lovejoy
 K:G
 L:1/8
