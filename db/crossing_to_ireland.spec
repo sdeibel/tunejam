@@ -1,5 +1,5 @@
 T:Crossing to Ireland
-C:waltz
+C:waltz,air
 A:Traditional
 O:Scotland
 H:The Gaelic title of this tune translates as The Ferryboat to Ireland.  The title may 

@@ -1,5 +1,5 @@
 T:Killiecrankie
-C:march
+C:march,air
 O:Scotland
 A:Thomas Connellan
 H:This was written by Thomas Connellan, an Irish harpist who spent time in

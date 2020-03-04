@@ -1,5 +1,5 @@
 T:My Cape Breton Home
-C:waltz
+C:waltz,air
 A:Jerry Holland
 O:Canada - Cape Breton
 H:This tune was composed in 1988 as a slow air by fiddler Jerry Holland (1955-2009), who lived in

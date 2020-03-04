@@ -1,5 +1,5 @@
 T:Star Above The Garter
-C:jig
+C:jig,slide
 O:Ireland
 A:Traditional
 H:This tune recorded in 1969 by Denis Murphy & Julia Clifford as Lisheen Slide,

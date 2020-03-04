@@ -1,5 +1,5 @@
 T:Planxty Fanny Power
-C:waltz
+C:waltz,air
 O:Ireland
 A:Turlough O'Carolan
 H:This tune was composed before 1728 by blind Irish harper Turlough O'Carolan

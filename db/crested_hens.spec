@@ -1,5 +1,5 @@
 T:Crested Hens (Les Poules Huppées)
-C:waltz
+C:waltz,air
 A:Gilles Chabenat
 O:France - Central
 H:Although this tune is often mistakenly thought to be an ancient Breton tune, it was 

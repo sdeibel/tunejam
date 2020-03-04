@@ -1,5 +1,5 @@
 T:Star of the County Down
-C:waltz
+C:waltz,air
 O:Ireland
 A:Traditional
 H:This tune is also known as Sliabh na mBan and My Love Nell, a 19th century song of

@@ -21,9 +21,9 @@
         ** Mr Ernest Hillier aka Two Goats Jig
       ** January waltz (can't find this anywhere)
       ** Others? - All the recent ones
-    ** Check through all jigs + note which are played as slides (although we have 6/8 
-       and not 12/8 time on them all)
-    ** Mark other airs as such
+    ** Recheck through all jigs + note which are also played as slides (look at
+       thesession.org; already looked at tunearch links)
+    ** Check through all reels to see which others are rants
 * Website Phase Four+
   * Improve ability to create live-updating event page
     * Per-event passwords to prevent edit/deletion by others + on set creation
