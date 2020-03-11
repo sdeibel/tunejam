@@ -1,5 +1,5 @@
 T:Planxty George Brabazon
-C:reel
+C:reel,air
 O:Ireland
 A:Turlough O'Carolan
 H:This tune is generally thought to have been composed by Irish harper Turlough O'Carolan

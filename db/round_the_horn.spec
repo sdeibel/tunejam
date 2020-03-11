@@ -1,5 +1,5 @@
 T:Round the Horn
-C:reel
+C:reel,hornpipe
 O:USA - New York
 A:Jay Ungar
 H:This tune was composed by New York fiddler and mandolin player Jay Ungar.

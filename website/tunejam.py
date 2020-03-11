@@ -2131,6 +2131,31 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
   
   return [tune]
   
+def GetNumColumns(chords):
+  counts = collections.defaultdict(int)
+  for part in reversed(chords):
+    count = 0
+    for measure in part:
+      if measure in ('|:', ':|'):
+        continue
+      count += 1
+    counts[count] += 1
+  top_count = 0
+  top_freq = 0
+  for count, freq in counts.items():
+    if freq > top_freq:
+      top_freq = freq
+      top_count = count
+  count = top_count    
+  if count / 5 * 5 == count:
+    return 5
+  elif count / 4 * 4 == count:
+    return 4
+  elif count / 2 * 2 == count:
+    return count / 2
+  else:
+    return count
+    
 def ChordsToHTML(chords, tclass='chords'):
     
     if not isinstance(chords, list):
@@ -2139,6 +2164,7 @@ def ChordsToHTML(chords, tclass='chords'):
     html = []
     part_class = 'even'
     max_line_len = 0
+    target_columns = GetNumColumns(chords)
     for i, part in enumerate(chords):
         row = []
         for i, measure in enumerate(part):
@@ -2152,15 +2178,15 @@ def ChordsToHTML(chords, tclass='chords'):
                 hclass = None
                 if not row:
                     hclass = 'first'
-                elif len(row) == 4:
+                elif len(row) == target_columns:
                     hclass = 'last-chord'
                 row.append(CTD(measure, hclass=hclass))
-            if len(row) == 5 and (i + 1 >= len(part) or part[i+1] != ':|'):
+            if len(row) == target_columns +1 and (i + 1 >= len(part) or part[i+1] != ':|'):
                 row.append(CTD('', hclass='last'))
                 max_line_len = max(max_line_len, len(row))
                 html.append(CTR(row, hclass=part_class))
                 row = []
-            elif len(row) == 6:
+            elif len(row) == target_columns + 2:
                 max_line_len = max(max_line_len, len(row))
                 html.append(CTR(row, hclass=part_class))
                 row = []

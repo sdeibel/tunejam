@@ -20,10 +20,7 @@
         ** White creek trout are jumping
         ** Mr Ernest Hillier aka Two Goats Jig
       ** January waltz (can't find this anywhere)
-      ** Others? - All the recent ones
-    ** Recheck through all jigs + note which are also played as slides (look at
-       thesession.org; already looked at tunearch links)
-    ** Check through all reels to see which others are rants
+      ** Others? - All the recent ones (need to see Bliss's notebook)
 * Website Phase Four+
   * Improve ability to create live-updating event page
     * Per-event passwords to prevent edit/deletion by others + on set creation

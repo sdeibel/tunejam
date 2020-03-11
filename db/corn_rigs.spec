@@ -1,5 +1,5 @@
 T:Corn Rigs
-C:reel
+C:reel,polka,march
 A:Traditional
 O:Scotland
 H:This tune dates from the 17th century, and a country dance of the same name was

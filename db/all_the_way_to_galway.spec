@@ -1,5 +1,5 @@
 T:All The Way To Galway
-C:reel
+C:reel,polka
 O:Ireland
 A:Traditional
 H:This tune dates from a Jacobite era (early 18th century) song and was the precursor to 

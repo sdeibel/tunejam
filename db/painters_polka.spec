@@ -1,5 +1,5 @@
 T:Painter's Polka
-C:reel
+C:reel,polka
 O:Sweden
 A:Traditional
 H:The origin of this tune is a bit unclear, although perhaps from Sweden via the 

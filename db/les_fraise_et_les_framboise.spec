@@ -1,5 +1,5 @@
 T:Les Fraise at les Framboise
-C:reel
+C:reel,air
 A:Traditional
 O:Canada - Quebec
 H:The title of this tune means "raspberries and strawberries".  It may be of Acadian

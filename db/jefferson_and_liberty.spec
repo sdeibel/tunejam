@@ -1,5 +1,5 @@
 T:Jefferson and Liberty (The Gobby-O)
-C:jig
+C:jig,slide
 A:Traditional
 O:Ireland
 H:The title stems from the fact that this tune was used as the melody for a song for Thomas Jefferson's 
