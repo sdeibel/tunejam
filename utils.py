@@ -153,6 +153,9 @@ class CTune:
                             value = existing + '\n' + line[len(key)+1:].strip()
                         else:
                             value = line[len(key)+1:].strip()
+                        if key == 'K':
+                            value = value.split()
+                            value = value[0]
                         setattr(self, field, value)
                         found = True
                         break

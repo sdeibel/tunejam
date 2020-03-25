@@ -13,6 +13,10 @@ K:G
 L:1/8
 M:C
 --
-|GE DE G3A|B2 BA Bc d2|
-|g3ef3d|ed ef ed B2|
+|GEDE G2 GA|B2 BA Bc d2|
+|g3e f3d|edef ed B2|
 --
+|: G   | G  | G | DC  |
+   G   | G  | C | DG :|
+|: EmD | CG | G | DC  |
+   G   | G  | C | DG :|

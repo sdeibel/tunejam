@@ -15,3 +15,7 @@ M:4/4
 AB|d2dA BAFA|ABdA BAFA
 fg|a2ag f2fe|d2dA BAFA|
 --
+|: D | D  | DBm | EmA  |
+   D | D  | GA  | D   :|
+|: D | D  | DBm | EmA  |
+   D | Bm | GA  | D   :|

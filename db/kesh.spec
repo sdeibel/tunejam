@@ -12,6 +12,10 @@ K:G
 L:1/8
 M:6/8
 --
-|G3 GAB| A3 ABd|edd gdd|
-|B2B d2d|ege dBA|B2B dBG|
+D|G2 G GAB| A2 A ABd|edd gdd|
+|B2B dBd|ege dBA|B2B dBG|
 --
+|: G | D  | GEm | AmD  |
+   G | D  | GEm | DG  :|
+|: G | CG | G   | AmD  |
+   G | CG | GD  | G   :|

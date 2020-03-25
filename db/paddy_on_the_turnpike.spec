@@ -8,10 +8,14 @@ H:widely, been adopted into many fiddle traidtions, and exists in many variants 
 H:under many other names.
 U:https://tunearch.org/wiki/Annotation:Paddy_on_the_Turnpike_(1)
 U:https://thesession.org/tunes/338
-K:G
+K:Gm
 L:1/8
 M:4/4
 --
-AG | EAAB A2AB | cAdB cBAG |
-eaab a2af | bfaf gfed | efga g2gf |
+DGG^F G2GA|BGdG eGdG|
+dgg^f g2ga|baga bgaf|
 --
+|: Gm | Gm | F | Dm    |
+   Gm | Gm | F | DmGm :|
+|: Gm | Gm | F | F     |
+   Gm | Gm | F | DmGm :|

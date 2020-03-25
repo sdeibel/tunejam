@@ -9,8 +9,13 @@ U:https://tunearch.org/wiki/Annotation:Boy%27s_Lament_for_His_Dragon_(The)
 U:https://thesession.org/tunes/6970
 K:D
 L:1/8
-M:2/4
+M:C
 --
-e|Ad de/f/|g/f/e/d/ f2|
-g|aA A>c|BG A2|
+cB|A3d d2ef|gfed f4|
+fg|a3 A A2A>A|BAGB A3A|
 --
+|: D    | AD | Em  | A    |
+   D    | AD | EmA | D   :|
+|: DD/C | GD | D   | EmA  |
+   DD/C | GD | DA  | D   :|
+   

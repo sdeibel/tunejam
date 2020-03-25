@@ -56,8 +56,8 @@ def home():
                "melody reminder containing the first few measures of each part.  Where "
                "available, we've also listed author, origin, a brief history of the tune, and "
                "links to additional information."),
-    CParagraph("There are currently a total of %i completed tunes on the site.  In addition, %i " % (total_complete, total_incomplete) +
-               "partial listings have been entered."), 
+    CParagraph("There are currently a total of <a href='/index/title'>%i completed tunes</a> on the site.  In addition, <a href='/dev'>%i " % (total_complete, total_incomplete) +
+               "partial listings</a> have been entered."), 
     CH("The following resources are available:", 2),
     CList([
       CItem([CText("Tune Index", href='/index'), CNBSP(),
@@ -2214,8 +2214,13 @@ def TuneCount(include_incomplete):
   
   tunes = utils.GetTuneIndex(include_incomplete)
   tune_count = 0
+  seen_tunes = set()
   for section in tunes:
-    tune_count += len(tunes[section])
+    for title, name in tunes[section]:
+      if name in seen_tunes:
+        continue
+      seen_tunes.add(name)
+      tune_count += 1
 
   gTuneCountCache[include_incomplete] = tune_count
   return tune_count

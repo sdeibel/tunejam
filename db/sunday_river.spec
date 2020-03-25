@@ -10,6 +10,14 @@ K:F
 L:1/8
 M:3/4
 --
-F G | A2 c3 A | G4 FG |
-AB |c3 dfg | a6 | g4 ga |
+FG | A2 c3 A | G4 FG | A2 c3 A|
+AB | c3 d fg | a6 | g4 ga | g4 fd |
 --
+| F  | G     | F     | G     |
+  Dm | Cb    | Bb    | F     |
+  F  | Gm    | Am    | Bb    |
+  Dm | G     | F(Bb) | F     |
+| F  | F     | Gm    | C7    |
+  F  | F     | Bb    | C7    |
+  Dm | CG    | Bb    | Gdim7 |
+  Dm | Bb/C7 | F(Bb) | F    :|

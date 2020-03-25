@@ -11,4 +11,10 @@ K:D
 L:1/8
 M:6/8
 --
+a2g|fdd cAA|BGG A2G | FAA
+A2G|FAA dAA|BAB dAG | FAA
 --
+|: DA  | GA | DBm | GA7  |
+   BmA | GA | G   | AD  :|
+|: D   | D  | DBm | EmA  |
+   BmA | GA | G   | AD  :|
