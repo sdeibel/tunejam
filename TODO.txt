@@ -1,6 +1,5 @@
 * Website Phase Three
   ** Coding
-    ** Tune count is probably wrong (counting multiple times if in >1 category?)
     ** Are PDF chords working for odd tunes like Arran Boat, Bear Dance I, and
        Snowy Path?
     ** Split up PDF sheet music for long tunes like Dublin Gypsy into multiple pages
