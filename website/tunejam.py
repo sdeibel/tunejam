@@ -504,6 +504,18 @@ def dev():
       for part in item:
         parts.append(part)
         
+  
+  parts.append(CH("Source Code", 2))
+  parts.append(CParagraph("You can set up your own local copy of this website, which runs on "
+                          "Flask and Python on Linux or macOS.  The source code and all the tune files are "
+                          "<a href='https://github.com/sdeibel/tunejam'>available on github</a>.  You'll "
+                          "need to clone the repository and run the platform setup script "
+                          "src/platform/setup.py or its equivalent to set up the dependencies. "
+                          "Then use src/website/tunejam.py as the main entry point to start "
+                          "the site running in Flask."))
+  parts.append(CParagraph("Please <a href='mailto:submit@music.cambridgeny.net'>"
+                          "contact me</a> for help. I am currently the only developer, and would "
+                          "improve packaging and docs if anyone else wants to join in the effort."))
   parts.append(CBreak(2))
   return PageWrapper(parts, 'dev')
 
