@@ -1,4 +1,4 @@
-# ABC notation utils
+# ABC notation utils - this is an extension script for use with Wing Pro
 
 import wingapi
 
