@@ -1580,6 +1580,9 @@ class CBook:
                 spec_file = tune._GetSpecFile()
                 if IsFileNewer(spec_file, fn):
                     return fn, False
+                tune_file = tune._GetSheetMusicFile()
+                if IsFileNewer(tune_file, fn):
+                    return fn, False
                 
         for sfn in GetSourceFiles():
             if IsFileNewer(sfn, fn):

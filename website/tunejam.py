@@ -1007,7 +1007,7 @@ def sheet_print(tunes):
   import sheetbook
   tunes = tunes.split('&')
   book = sheetbook.CSheetBook(tunes)
-  pdf_file = book.GeneratePDF(include_index=len(tunes) > 1)
+  pdf_file = book.GeneratePDF(include_index=len(tunes) > 1, generate=True)
   return send_file(pdf_file, mimetype='application/pdf')
 
 @app.route('/sheet/abc/<tune>')
