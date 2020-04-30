@@ -7,16 +7,16 @@ H:slowly, as an air.
 U:https://tunearch.org/wiki/Annotation:Flatworld
 U:https://thesession.org/tunes/7859
 U:https://en.wikipedia.org/wiki/Andy_Cutting
-K:Em
+K:Am
 L:1/8
 M:3/4
 --
-f ef|df cf Bf|G2 Bc dB|
-Bc dB ba|g2 gf ed|cd ec ag|
+e de|ce Be Ac|F2 AB cA|
+AB cA ag|f2 fe dc|Bc dB gf|
 --
-|: Bm | G  | Em  | F#m |
-   Bm | G  | A   | Bm :|
-|  Bm | G  | A   | F#m |
-   G  | Em | F#m | F#m |
-   Bm | G  | A   | F#m |
-   G  | Em | A   | Bm  |
+|: Am | F  | Dm  | G   |
+   Am | F  | G   | Am :|
+|  Am | F  | G   | C   |
+   F  | Dm | Bm  | E7  |
+   Am | F  | G   | C   |
+   F  | Dm | E7  | Am  |
