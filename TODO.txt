@@ -15,7 +15,6 @@
        and play it with https://github.com/mudcube/MIDI.js/ or similar
     ** Easier selection by typed fragments to quickly make sets (do OR on each word)
   ** Content
-    ** Add chords to all recently added *.abc tunes
     ** Complete the partial listings and add missing recordings and sheet music
     ** Entirely missing tunes
       ** My other tunes
