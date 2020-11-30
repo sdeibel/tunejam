@@ -5,6 +5,7 @@ import tempfile
 import sys
 import time
 import collections
+from html import * 
 
 # Configuration
 kFontSize = 18
@@ -58,7 +59,8 @@ kSections = [
     ('strathspey', 'Strathspeys', 'Strathspey'),
     ('rant', 'Rants', 'Rant'), 
     ('slide', 'Slides', 'Slide'), 
-    ('other', 'Other', ''),
+    ('other', 'Others', 'Other'),
+    ('air', 'Airs', 'Air'), 
     ('incomplete', 'Incomplete Listings', ''), 
 ]
 
@@ -90,11 +92,12 @@ class CTune:
         self.meter = ''
         self.notes = ''
         self.chords = ''
+        self.sheet = ''
         
     def ReadDatabase(self):
         """Read one file from the tunes database.  Returns CTune named tuple"""
         
-        if self.notes:
+        if self.title:
             return
         
         fullpath = self._GetSpecFile()
@@ -150,6 +153,9 @@ class CTune:
                             value = existing + '\n' + line[len(key)+1:].strip()
                         else:
                             value = line[len(key)+1:].strip()
+                        if key == 'K':
+                            value = value.split()
+                            value = value[0]
                         setattr(self, field, value)
                         found = True
                         break
@@ -243,6 +249,82 @@ class CTune:
                 return '/recording/' + self.name + enc, mtype, recording
         return None, None, None
     
+    def GetActionIcons(self, index=False, icons=['sheet', 'print', 'abc', 'play']):
+        
+        all_actions = {
+            'sheet': self.__GetSheetIcon,
+            'print': self.__GetPrintIcon,
+            'abc': self.__GetABCIcon,
+            'play': self.__GetPlayIcon,
+        }
+        
+        if index:
+            to_try = [all_actions[i] for i in icons]
+        else:
+            to_try = [all_actions[i] for i in reversed(icons)]
+            
+        retval = []
+        for action in to_try:
+            icon = action(index, len(retval) + 1)
+            if icon:
+                retval.append(icon)
+                
+        return retval
+    
+    def __GetSheetIcon(self, index, pos):
+        hclass, size = self.__GetIconInfo(index, pos)
+        if self.ReadSheetMusic() is not None:
+            sheet = CImage(src='/image/notes.png', hclass=hclass,
+                           href='/sheet/view/%s' % self.name, width=size, height=size)
+        else:
+            sheet = ''
+
+        return sheet
+
+    def __GetPrintIcon(self, index, pos):
+        hclass, size = self.__GetIconInfo(index, pos)
+        if self.ReadSheetMusic() is not None:
+            sheet = CImage(src='/image/print-icon.png', hclass=hclass,
+                           href='/sheet/print/%s' % self.name, width=size, height=size)
+        else:
+            sheet = ''
+
+        return sheet
+
+    def __GetABCIcon(self, index, pos):
+        hclass, size = self.__GetIconInfo(index, pos)
+        if self.ReadSheetMusic() is not None:
+            sheet = CImage(src='/image/abc.png', hclass=hclass,
+                           href='/sheet/abc/%s' % self.name, width=size, height=size)
+        else:
+            sheet = ''
+
+        return sheet
+
+    def __GetPlayIcon(self, index, pos):
+        self.ReadDatabase()
+        recording, mimetype, filename = self.GetRecording()
+        hclass, size = self.__GetIconInfo(index, pos)
+        if recording is not None:
+            play = CImage(src='/image/speaker_louder_32.png', hclass=hclass,
+                          href='/recording/%s' % self.name, width=size, height=size)
+        elif not index:
+            play = CImage(src='/image/speaker_louder_disabled_32.png', hclass=hclass,
+                          width=size, height=size)
+        else:
+            play = ''
+
+        return play
+
+    def __GetIconInfo(self, index, pos):
+        if index:
+            hclass = 'action-icon-index'
+            size = 16
+        else:
+            hclass = 'action-icon-%i' % pos
+            size = 32
+        return hclass, size
+
     def MakeNotes(self):
         """Generate only the reminder for the tune, as ABC"""
 
@@ -261,12 +343,16 @@ M:%(meter)s
     def ReadSheetMusic(self):
         """Get the notes for this tune, in ABC, or None if not available"""
 
+        if self.sheet:
+            return self.sheet
+        
         fn = self._GetSheetMusicFile()
         if fn is None:
             return None
         
         with open(fn, 'r') as f:
-            return f.read()
+            self.sheet = f.read()
+            return self.sheet
         
     def MakeNotesSVGFile(self):
     
@@ -1493,6 +1579,9 @@ class CBook:
             for tune in page.tunes:
                 spec_file = tune._GetSpecFile()
                 if IsFileNewer(spec_file, fn):
+                    return fn, False
+                tune_file = tune._GetSheetMusicFile()
+                if IsFileNewer(tune_file, fn):
                     return fn, False
                 
         for sfn in GetSourceFiles():

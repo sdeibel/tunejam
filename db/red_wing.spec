@@ -1,5 +1,5 @@
 T:Red Wing
-C:reel
+C:reel,air
 O:USA - New York
 A:Kerry Mills
 H:This tune was written in 1907 by Kerry Mills, an American ragtime composer and music

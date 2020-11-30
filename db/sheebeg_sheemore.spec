@@ -1,5 +1,5 @@
 T:Sheebeg Sheemore (Sí Bheag Sí Mhór)
-C:waltz
+C:waltz,air
 O:Ireland
 A:Turlough O'Carolan
 H:Although played as a waltz now, this was written as an air before waltzes even existed,

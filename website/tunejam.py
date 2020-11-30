@@ -56,8 +56,8 @@ def home():
                "melody reminder containing the first few measures of each part.  Where "
                "available, we've also listed author, origin, a brief history of the tune, and "
                "links to additional information."),
-    CParagraph("There are currently a total of %i completed tunes on the site.  In addition, %i " % (total_complete, total_incomplete) +
-               "partial listings have been entered."), 
+    CParagraph("There are currently a total of <a href='/index/title'>%i completed tunes</a> on the site.  In addition, <a href='/dev'>%i " % (total_complete, total_incomplete) +
+               "partial listings</a> have been entered."), 
     CH("The following resources are available:", 2),
     CList([
       CItem([CText("Tune Index", href='/index'), CNBSP(),
@@ -326,23 +326,9 @@ def index_author():
   return PageWrapper(parts, 'index')
 
 def _index_title_html(obj, title):
-  recording, mimetype, filename = obj.GetRecording()
-  play = []
-  if recording is not None:
-    play = [
-      CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
-             href='/recording/%s' % obj.name, width=16, height=16),
-    ]
-  show_sheet = []
-  if obj.ReadSheetMusic() is not None:
-    show_sheet = [
-      CImage(src='/image/notes.png', hclass="show-sheet-index",
-             href='/sheet/view/%s' % obj.name, width=16, height=16),          
-    ]
   title_html = []
   title_html.append(CText(title, href="/tune/%s" % obj.name))
-  title_html.extend(show_sheet)
-  title_html.extend(play)
+  title_html.extend(obj.GetActionIcons(index=True))
   title_html.append(CBreak())
   return title_html
 
@@ -375,24 +361,9 @@ def index_sheet():
       if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.Type() + ' - ' + obj.GetKeyString()
-      show_sheet = CImage(src='/image/notes.png', hclass="show-sheet-index",
-                          href='/sheet/view/%s' % obj.name, width=16, height=16)        
-      print_sheet = CImage(src='/image/print-icon.png', hclass="show-sheet-index",
-                          href='/sheet/print/%s' % obj.name, width=16, height=16)         
-      abc = CImage(src='/image/abc.png', hclass="show-sheet-index",
-                   href='/sheet/abc/%s' % obj.name, width=16, height=16)         
-      recording, mimetype, filename = obj.GetRecording()
-      if recording is not None:
-        play = CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
-                      width=16, height=16, href='/recording/%s' % obj.name)
-      else:
-        play = ''
       title_html = [
         CText(title, href="/sheet/view/%s" % obj.name),
-        show_sheet,
-        print_sheet,
-        abc, 
-        play, 
+      ] + obj.GetActionIcons(index=True) + [
         CBreak(), 
       ]
       titles.append((title, title_html))
@@ -474,15 +445,9 @@ def dev():
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.GetKeyString()
       recording, mimetype, filename = obj.GetRecording()
-      play = []
-      if recording is not None:
-        play = [
-          CImage(src='/image/speaker_louder_32.png', hclass="play-tune-index",
-                 href='/recording/%s' % tune, width=16, height=16),
-        ]
       tune_title = []
       tune_title.append(CText(title, href="/tune/%s" % tune))
-      tune_title.extend(play)
+      tune_title.extend(obj.GetActionIcons(index=True))
       tune_title.append(CBreak())
       titles[obj.name] = (title, tune_title)
       
@@ -512,15 +477,6 @@ def dev():
       for part in item:
         parts.append(part)
         
-  if no_local:
-    parts.append(CH("Local Tunes Missing Sheet Music", 2))
-    parts.append(CParagraph("If you have sheet music for any of these tunes, please email "
-                            "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
-    parts.append(CBreak())
-    for title, item in sorted_by_title(no_local):
-      for part in item:
-        parts.append(part)
-        
   if no_origin:
     parts.append(CH("Tunes with Unknown Origin", 2))
     parts.append(CParagraph("If you have a documented original provenance for any of these tunes, please email "
@@ -539,6 +495,27 @@ def dev():
       for part in item:
         parts.append(part)
         
+  if no_local:
+    parts.append(CH("Local Tunes Missing Sheet Music", 2))
+    parts.append(CParagraph("If you have sheet music for any of these tunes, please email "
+                            "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
+    parts.append(CBreak())
+    for title, item in sorted_by_title(no_local):
+      for part in item:
+        parts.append(part)
+        
+  
+  parts.append(CH("Source Code", 2))
+  parts.append(CParagraph("You can set up your own local copy of this website, which runs on "
+                          "Flask and Python on Linux or macOS.  The source code and all the tune files are "
+                          "<a href='https://github.com/sdeibel/tunejam'>available on github</a>.  You'll "
+                          "need to clone the repository and run the platform setup script "
+                          "src/platform/setup.py or its equivalent to set up the dependencies. "
+                          "Then use src/website/tunejam.py as the main entry point to start "
+                          "the site running in Flask."))
+  parts.append(CParagraph("Please <a href='mailto:submit@music.cambridgeny.net'>"
+                          "contact me</a> for help. I am currently the only developer, and would "
+                          "improve packaging and docs if anyone else wants to join in the effort."))
   parts.append(CBreak(2))
   return PageWrapper(parts, 'dev')
 
@@ -1042,7 +1019,7 @@ def sheet_print(tunes):
   import sheetbook
   tunes = tunes.split('&')
   book = sheetbook.CSheetBook(tunes)
-  pdf_file = book.GeneratePDF(include_index=len(tunes) > 1)
+  pdf_file = book.GeneratePDF(include_index=len(tunes) > 1, generate=True)
   return send_file(pdf_file, mimetype='application/pdf')
 
 @app.route('/sheet/abc/<tune>')
@@ -1050,8 +1027,9 @@ def sheet_abc(tune):
   tune = utils.CTune(tune)
   tune.ReadDatabase()
   sheet = tune.ReadSheetMusic().replace('<', '&lt;').replace('>', '&gt;')
-  parts = [
-    CH(tune.title, 2), 
+  
+  parts = tune.GetActionIcons(icons=['play']) + [
+    CH(tune.title, 2),
     CParagraph("This is the ABC encoding of this tune.  It can be edited and played as sound with "
                "tools listed at <a href='https://abcnotation.com/software'>https://abcnotation.com/software</a> "
                "(such as <a href='https://sourceforge.net/projects/easyabc/'>EasyABC</a>)."),
@@ -1356,6 +1334,18 @@ position:absolute;
 right:90px;
 margin-top:5px;
 }
+span.tune-type-three-icons {
+font-size:70%;
+position:absolute;
+right:130px;
+margin-top:5px;
+}
+span.tune-type-four-icons {
+font-size:70%;
+position:absolute;
+right:170px;
+margin-top:5px;
+}
 h2 {
 padding-top:0.7em;
 padding-bottom:0.5em;
@@ -1372,15 +1362,27 @@ div.tune-break {
 clear:both;
 height:20px;
 }
-img.play-tune {
+img.action-icon-1 {
 position:absolute;
 right:10px;
 margin-top:8px;
 max-width:5vw;
 }
-img.show-sheet {
+img.action-icon-2 {
 position:absolute;
 right:50px;
+margin-top:8px;
+max-width:5vw;
+}
+img.action-icon-3 {
+position:absolute;
+right:90px;
+margin-top:8px;
+max-width:5vw;
+}
+img.action-icon-4 {
+position:absolute;
+right:130px;
 margin-top:8px;
 max-width:5vw;
 }
@@ -1468,10 +1470,7 @@ margin:0.5in;
 #body {
 margin:0.5in;
 }
-img.play-tune {
-display:none;
-}
-img.show-sheet {
+img.action-icon {
 display:none;
 }
     """
@@ -2025,7 +2024,7 @@ def CreateTuneSetPDF(name, title, subtitle, tunes):
   return send_file(pdf, mimetype='application/pdf')
   
 def CreateTuneHTML(name, pagetype='both', metadata=False):
-  
+
   obj = utils.CTune(name)
   try:
     obj.ReadDatabase()
@@ -2035,24 +2034,16 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
 
   key_str = obj.GetKeyString()
 
-  recording, mimetype, filename = obj.GetRecording()
-  if recording is not None:
-    play = CImage(src='/image/speaker_louder_32.png', hclass="play-tune",
-                  href='/recording/%s' % name)
-  else:
-    play = CImage(src='/image/speaker_louder_disabled_32.png', hclass="play-tune")
-    
-  if obj.ReadSheetMusic() is not None:
-    show_sheet = CImage(src='/image/notes.png', hclass="show-sheet",
-                   href='/sheet/view/%s' % name)
-  else:
-    show_sheet = ''
-    
+  action_icons = obj.GetActionIcons()
   if obj.klass:
-    if show_sheet:
-      klass_type = 'tune-type-two-icons'
-    else:
+    if len(action_icons) == 1:
       klass_type = 'tune-type'
+    elif len(action_icons) == 2:
+      klass_type = 'tune-type-two-icons'
+    elif len(action_icons) == 3:
+      klass_type = 'tune-type-three-icons'
+    else:
+      klass_type = 'tune-type-four-icons'
     klass = CText(', '.join([utils.kSectionClasses[k] for k in obj.klass.split(',')]), italic=True, hclass=klass_type)
   else:
     klass = ''
@@ -2139,9 +2130,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
     CH([
       title + ' - ' + key_str,
       klass,
-      show_sheet, 
-      play, 
-    ], 1, hclass=tclass),
+    ] + obj.GetActionIcons(), 1, hclass=tclass),
     structure, 
     author,
     origin,
@@ -2154,6 +2143,31 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
   
   return [tune]
   
+def GetNumColumns(chords):
+  counts = collections.defaultdict(int)
+  for part in reversed(chords):
+    count = 0
+    for measure in part:
+      if measure in ('|:', ':|'):
+        continue
+      count += 1
+    counts[count] += 1
+  top_count = 0
+  top_freq = 0
+  for count, freq in counts.items():
+    if freq > top_freq:
+      top_freq = freq
+      top_count = count
+  count = top_count    
+  if count / 5 * 5 == count:
+    return 5
+  elif count / 4 * 4 == count:
+    return 4
+  elif count / 2 * 2 == count:
+    return count / 2
+  else:
+    return count
+    
 def ChordsToHTML(chords, tclass='chords'):
     
     if not isinstance(chords, list):
@@ -2162,6 +2176,7 @@ def ChordsToHTML(chords, tclass='chords'):
     html = []
     part_class = 'even'
     max_line_len = 0
+    target_columns = GetNumColumns(chords)
     for i, part in enumerate(chords):
         row = []
         for i, measure in enumerate(part):
@@ -2175,15 +2190,15 @@ def ChordsToHTML(chords, tclass='chords'):
                 hclass = None
                 if not row:
                     hclass = 'first'
-                elif len(row) == 4:
+                elif len(row) == target_columns:
                     hclass = 'last-chord'
                 row.append(CTD(measure, hclass=hclass))
-            if len(row) == 5 and (i + 1 >= len(part) or part[i+1] != ':|'):
+            if len(row) == target_columns +1 and (i + 1 >= len(part) or part[i+1] != ':|'):
                 row.append(CTD('', hclass='last'))
                 max_line_len = max(max_line_len, len(row))
                 html.append(CTR(row, hclass=part_class))
                 row = []
-            elif len(row) == 6:
+            elif len(row) == target_columns + 2:
                 max_line_len = max(max_line_len, len(row))
                 html.append(CTR(row, hclass=part_class))
                 row = []
@@ -2211,8 +2226,13 @@ def TuneCount(include_incomplete):
   
   tunes = utils.GetTuneIndex(include_incomplete)
   tune_count = 0
+  seen_tunes = set()
   for section in tunes:
-    tune_count += len(tunes[section])
+    for title, name in tunes[section]:
+      if name in seen_tunes:
+        continue
+      seen_tunes.add(name)
+      tune_count += 1
 
   gTuneCountCache[include_incomplete] = tune_count
   return tune_count

@@ -1,5 +1,5 @@
 T:A Yowe Cam to Wir Door, Yarmin'
-C:reel
+C:reel,air
 O:Shetland
 A:Traditional
 H:This very old Shetland tune's title translates to A Ewe Came to Our Door, Bleating.

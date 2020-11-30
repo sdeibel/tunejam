@@ -1,5 +1,5 @@
 T:Farewell to Whisky
-C:polka
+C:polka,air
 O:Scotland
 A:Neil Gow
 H:This is a lament written in the late 1700's for the closing of the Whisky distilleries in

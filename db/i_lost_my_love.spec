@@ -1,5 +1,5 @@
 T:I Lost My Love
-C:jig
+C:jig,air
 O:Scotland
 A:Traditional
 H:This tune is probably Scottish but it is closely related to an Irish jig called

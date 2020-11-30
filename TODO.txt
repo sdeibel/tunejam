@@ -3,44 +3,29 @@
     ** Clean up notes/print/abc/play icon code by centralizing
     ** Add play icon on the ABC page
     ** Add some photos?  home, local, events, sessions, others?
+    ** Are PDF chords working for odd tunes like Arran Boat, Bear Dance I, and
+       Snowy Path?
     ** Split up PDF sheet music for long tunes like Dublin Gypsy into multiple pages
     ** Option to include meta data in sets, events, and books
     ** Next/previous buttons on event set pages
     ** Try to fix so it works better on devices
     ** Authoring of tunes on the dev page  
     ** Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
+       Or use Web Audio API in html5:  https://codepen.io/SitePoint/pen/JRaLVR
+       https://www.html5rocks.com/en/tutorials/webaudio/intro/
+    ** Ability to convert abc to midi wih https://ifdo.ca/~seymour/runabc/top.html
+       (download link is hard to see; buried as "The latest version is abcMIDI-2020.02.12.zip")
+       and play it with https://github.com/mudcube/MIDI.js/ or similar
     ** Easier selection by typed fragments to quickly make sets (do OR on each word)
   ** Content
     ** Complete the partial listings and add missing recordings and sheet music
     ** Entirely missing tunes
       ** My other tunes
-        ** The Old Trunk
-        ** March of the Bullfrogs
-        ** Dissatisfaction (intro for devil's dance)
         ** Janvrin's Island
-        ** The Blue Jay
         ** White creek trout are jumping
         ** Mr Ernest Hillier aka Two Goats Jig
-      ** Sunday river
-      ** Farewell to Chernobyl
-      ** Out on the Ocean
-      ** Paddy on the Railroad
-      ** Paddy on the Turnpike
-      ** Flatbush
-      ** Flatworld
-      ** Far from home
-      ** Da old store back again
-      ** Boys lament for his dragon 
-      ** Quarry cross
-      ** Aran boat song
-      ** Kesh jig
-      ** Morrison’s jig
-      ** Lovers waltz 
-      ** Coleman's March
-      ** January waltz
-      ** Others?
-      ** It was the cat -- history: Named after the tune emerged, it seemed to reflect a cat like motion.
-    ** Check through all jigs + note which are played as slides (although we have 6/8 and not 12/8 time on them all)
+      ** January waltz (can't find this anywhere)
+      ** Others? - All the recent ones (need to see Bliss's notebook)
 * Website Phase Four+
   * Improve ability to create live-updating event page
     * Per-event passwords to prevent edit/deletion by others + on set creation

@@ -1,5 +1,5 @@
 T:My Love is But a Lassie Yet
-C:reel
+C:reel,polka,march,air
 O:Scotland
 A:Traditional
 H:The title of this tune comes from two songs written for it by Robert Burns and James 

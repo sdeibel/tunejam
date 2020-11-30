@@ -1,5 +1,5 @@
 T:Road to Lisdoonvarna
-C:jig
+C:jig,slide
 O:Ireland
 A:Traditional
 H:Lisdoonvarna in County Clare is a former spa town where Victorians went for 

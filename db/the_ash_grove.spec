@@ -1,5 +1,5 @@
 T:The Ash Grove
-C:waltz
+C:waltz,air
 K:G
 A:Uncertain
 O:Wales

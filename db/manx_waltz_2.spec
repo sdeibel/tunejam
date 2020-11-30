@@ -1,5 +1,5 @@
 T:Manx Waltz #2
-C:waltz
+C:waltz,air
 O:Isle of Man
 A:Traditional
 H:This is a one-part lullaby from the Isle of Man that is sung in the Manx language.

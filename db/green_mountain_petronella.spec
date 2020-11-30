@@ -1,5 +1,5 @@
 T:Green Mountain Petronella
-C:reel
+C:reel,polka
 O:USA - New England
 A:Traditional
 H:Canterbury New Hampshire caller and musician Dudley Laufman has been credited with 

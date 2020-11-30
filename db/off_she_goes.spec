@@ -1,5 +1,5 @@
 T:Off She Goes
-C:jig
+C:jig,slide
 O:England
 A:Traditional
 H:This jig probably dates from around 1780, and is one of the most popular and long-lived 

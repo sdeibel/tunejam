@@ -1,10 +1,10 @@
 T: Golden Slippers
-C:reel
+C:reel,polka,air
 O:USA
 A:James A. Bland
 H:This tune was composed by prominent black minstrel songwriter and banjo player James
 H:A. Bland in 1870 as "Oh! Dem Golden Slippers."  He died in 1911, poor despite his 
-H:hundreds of compositions
+H:hundreds of successful compositions
 U:https://tunearch.org/wiki/Annotation:Golden_Slippers
 U:https://thesession.org/tunes/5402
 K:D

@@ -1,5 +1,5 @@
 T:Christmas Day Ida Moarnin'
-C:jig
+C:jig,air
 A:Friedemann Stickle
 O:Shetland
 H:The author was a famous Shetland fiddler in the 18th and early 19th century, and used to

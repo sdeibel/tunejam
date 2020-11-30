@@ -1,5 +1,5 @@
 T:Joys of Quebec
-C:reel
+C:reel,polka
 O:Canada - Quebec
 A:Fortunat Malouin
 H:This tune was written in the 1920's by Fortunat Malouin (1870-1935). The original French 

@@ -1,5 +1,5 @@
 T:Charles O'Connor
-C:jig
+C:jig,air
 K:D
 A:Turlough O'Carolan
 O:Ireland

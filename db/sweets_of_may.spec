@@ -1,5 +1,5 @@
 T:Sweets of May
-C:jig
+C:jig,slide
 O:Ireland
 A:Traditional
 H:This three part jig is based on an earlier two-part tune called Follow Me Down To

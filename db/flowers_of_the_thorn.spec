@@ -1,5 +1,5 @@
 T:Flowers of the Thorn
-C:waltz
+C:waltz,air
 O:Wales
 A:Traditional
 H:This tune may be played as a waltz, but was originally a slow air or lament.

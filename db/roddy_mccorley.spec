@@ -1,5 +1,5 @@
 T:Roddy McCorley
-C:march
+C:march,air
 O:Ireland
 A:Traditional
 H:This tune commemorates Roddy McCorley, who (probably) participated in the 1798

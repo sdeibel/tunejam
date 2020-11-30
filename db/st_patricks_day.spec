@@ -1,5 +1,5 @@
 T:Saint Patrick's Day
-C:jig
+C:jig,air
 O:Ireland
 A:Traditional
 H:This tune was published in The Hibernian Muse (London, 1787, No. 52, p. 32).  The

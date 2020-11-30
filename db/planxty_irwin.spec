@@ -1,5 +1,5 @@
 T:Planxty Irwin
-C:waltz
+C:waltz,air
 O:Ireland
 A:Turlough O'Carolan
 H:Composed probably around 1713 by blind Irish harper Turlough O'Carolan (1670-1738) for 

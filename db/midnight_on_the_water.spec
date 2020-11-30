@@ -1,5 +1,5 @@
 T:Midnight on the Water
-C:waltz
+C:waltz,air
 O:USA - Texas
 A:Luke Thomasson
 H:This tune was popularized by Benny Thomasson, the son of the author.  According to Benny,

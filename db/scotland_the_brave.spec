@@ -1,5 +1,5 @@
 T:Scotland the Brave
-C:march
+C:march,air
 O:Scotland
 A:Traditional
 H:This tune appeared in the late 19th century. Author and humorist Cliff Hanley wrote
