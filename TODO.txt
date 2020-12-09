@@ -1,5 +1,7 @@
 * Website Phase Three
   ** Coding
+    ** Fix sets page for mobile devices (also can list same thing twice
+       when search + do "random 3")
     ** Clean up notes/print/abc/play icon code by centralizing
     ** Add play icon on the ABC page
     ** Add some photos?  home, local, events, sessions, others?
