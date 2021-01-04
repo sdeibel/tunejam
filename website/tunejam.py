@@ -2263,7 +2263,7 @@ if __name__ == '__main__':
     if found_process:
       time.sleep(3.0)
       
-  kWatchFiles = False  
+  kWatchFiles = True  
   if kWatchFiles:
     
     # Kick off background task process to regenerate books so they
