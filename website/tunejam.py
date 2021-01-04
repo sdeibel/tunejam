@@ -2262,9 +2262,10 @@ if __name__ == '__main__':
         pass
     if found_process:
       time.sleep(3.0)
-      
-  kWatchFiles = True  
-  if kWatchFiles:
+
+  # This only makes sense when testing; on the server, the crontask is run by cron
+  kWatchFilesToRegenerateBooks = False  
+  if kWatchFilesToRegenerateBooks:
     
     # Kick off background task process to regenerate books so they
     # are cached and load quickly for users
