@@ -1,5 +1,5 @@
 T:The Blue Jay
-C:jig
+C:other
 A:Stephan Deibel
 O:USA - Cambridge NY
 H:This tune was written in September 2015 by Cambridge NY fiddler Stephan Deibel.  "I wrote 
@@ -11,7 +11,7 @@ H:This imitation became the basis for a simple melody."
 R:Collected from Author
 K:Dm
 L:1/8
-M:6/8
+M:2/4
 --
 |{d2-}d# z {d2-} d# z | fed2 | {d2-}d# z {d2-} d# z | cBA2
 |a2a2|daa2|adef|eAe2|

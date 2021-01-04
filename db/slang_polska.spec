@@ -1,5 +1,5 @@
 T:Slängpolska (Eklunda Polska #3)
-C:waltz
+C:polska
 O:Sweden
 A:Vikste-Lasse
 H:This tune was written by Vikste-Lasse (Johan Leonard Larsson 1897−1983) who was
@@ -11,7 +11,7 @@ K:G
 L:1/8
 M:3/4
 --
-g3g ag | dB c2 Bc | de dc A2 | 
+g>g bg dB | c2/B/c/ d/e/d/c/ Ac | 
 GA|B>B cc BB |  Ad d4| B>B cc BB | 
 --
 |: G   | C-D | GC- | D 

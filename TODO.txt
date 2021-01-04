@@ -1,5 +1,7 @@
 * Website Phase Three
   ** Coding
+    ** Fix sets page for mobile devices (also can list same thing twice
+       when search + do "random 3")
     ** Clean up notes/print/abc/play icon code by centralizing
     ** Add play icon on the ABC page
     ** Add some photos?  home, local, events, sessions, others?
@@ -24,6 +26,7 @@
         ** Janvrin's Island
         ** White creek trout are jumping
         ** Mr Ernest Hillier aka Two Goats Jig
+        ** Isolation Jig
       ** January waltz (can't find this anywhere)
       ** Others? - All the recent ones (need to see Bliss's notebook)
 * Website Phase Four+

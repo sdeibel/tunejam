@@ -19,5 +19,5 @@ Bc|(d2d)B(c2c)A) | B2BA GABc |
 --
 |: G  | G    | C   | C
    G  | G    | C   | D :|
-|: DG | EmD  | G   | C
-   GD | EmBm | CAm | D :|
+|: DC | Em   | G   | C
+   GD | Em   | C   | D :|
