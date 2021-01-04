@@ -1112,7 +1112,7 @@ def doprint(format=None, bookname=None):
       if book is None:
         parts.append(CBreak())
         continue
-      if os.path.exists(os.path.join(utils.kDatabaseDir, book.name+'.lock')):
+      if os.path.exists(os.path.join(utils.kCacheLoc, book.name+'.lock')):
         url = None
         title = book.subtitle + ' - temporarily unavailable - rebuilding '
         img = CImage(src='/image/rebuilding.gif')
