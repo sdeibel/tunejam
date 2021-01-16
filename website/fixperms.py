@@ -20,7 +20,9 @@ all_dirs = [
 def fix():
   for dirname in all_dirs:
     os.chdir(dirname)
+    print("Fixing perms for %s" % dirname)
     for cmd in cmds:
+      print(cmd)
       os.system(cmd)
 
 if __name__ == '__main__':

@@ -42,7 +42,7 @@ def regenerate_books(force=False, log=True):
       continue
 
     # There may already be another process rebuilding the books
-    lock_file = os.path.join(utils.kDatabaseDir, book.name+'.lock')
+    lock_file = os.path.join(utils.kCacheLoc, book.name+'.lock')
     pid = get_lock_pid(lock_file)
     if pid is None and os.path.exists(lock_file):
       os.unlink(lock_file)
@@ -68,7 +68,7 @@ def regenerate_books(force=False, log=True):
         print("Book %s was up to date" % target)
         
     # Remove the lock file
-    lock_file = os.path.join(utils.kDatabaseDir, book.name+'.lock')
+    lock_file = os.path.join(utils.kCacheLoc, book.name+'.lock')
     try:
       os.unlink(lock_file)
     except OSError:

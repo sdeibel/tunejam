@@ -1112,7 +1112,7 @@ def doprint(format=None, bookname=None):
       if book is None:
         parts.append(CBreak())
         continue
-      if os.path.exists(os.path.join(utils.kDatabaseDir, book.name+'.lock')):
+      if os.path.exists(os.path.join(utils.kCacheLoc, book.name+'.lock')):
         url = None
         title = book.subtitle + ' - temporarily unavailable - rebuilding '
         img = CImage(src='/image/rebuilding.gif')
@@ -2262,9 +2262,10 @@ if __name__ == '__main__':
         pass
     if found_process:
       time.sleep(3.0)
-      
-  kWatchFiles = False  
-  if kWatchFiles:
+
+  # This only makes sense when testing; on the server, the crontask is run by cron
+  kWatchFilesToRegenerateBooks = False  
+  if kWatchFilesToRegenerateBooks:
     
     # Kick off background task process to regenerate books so they
     # are cached and load quickly for users

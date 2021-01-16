@@ -49,3 +49,4 @@ proj.launch-config = {loc('setsheets.py'): ('project',
         (u'--ring --book drafts',
          ''))}
 proj.main-file = loc('website/tunejam.py')
+testing.auto-test-file-specs = []

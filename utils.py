@@ -1581,7 +1581,7 @@ class CBook:
                 if IsFileNewer(spec_file, fn):
                     return fn, False
                 tune_file = tune._GetSheetMusicFile()
-                if IsFileNewer(tune_file, fn):
+                if tune_file and IsFileNewer(tune_file, fn):
                     return fn, False
                 
         for sfn in GetSourceFiles():
