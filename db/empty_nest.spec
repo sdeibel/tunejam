@@ -2,11 +2,14 @@ T:The Empty Nest
 C:air,waltz
 O:Cape Breton
 A:Ashley MacIsaac
-H:This tune was commissioned from Ashley MacIsaac in early 2021, as a birthday gift for
-H:Stephan Deibel. It commemorates the abrupt transition to empty-nester status experienced
-H:by Stephan and his wife Gina, when their daughter went to college and was unable to return
-H:home due to the Covid pandemic of 2020 and 2021.
+H:This tune was written by Cape Breton fiddler Ashley MacIsaac in January 2021.  It was
+H:was a birthday gift for Stephan Deibel, commissioned by his lovely wife Gina.  The tune 
+H:commemorates their abrupt and unexpectedly long-lasting transition to empty-nester 
+H:status when their daughter left for college and was unable to return home due to the 
+H:Covid pandemic of 2020 and 2021.  The original video recording of the tune, linked
+H:below, was unfortunately truncated in transmission, at just after the halfway mark.
 U:https://www.youtube.com/watch?v=t8OVJMLZVxk&feature=youtu.be
+U:http://ashleymacisaac.com/
 K:D
 L:1/8
 M:3/4
