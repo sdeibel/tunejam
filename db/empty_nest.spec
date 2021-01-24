@@ -3,8 +3,8 @@ C:air,waltz
 O:Cape Breton
 A:Ashley MacIsaac
 H:This tune was written by Cape Breton fiddler Ashley MacIsaac in January 2021.  It was
-H:was a birthday gift for Stephan Deibel, commissioned by his lovely wife Gina.  The tune 
-H:commemorates their abrupt and unexpectedly long-lasting transition to empty-nester 
+H:a birthday gift for Stephan Deibel, commissioned by his lovely wife Gina.  The tune 
+H:commemorates their abrupt and long-lasting transition to empty-nester 
 H:status when their daughter left for college and was unable to return home due to the 
 H:Covid pandemic of 2020 and 2021.  The original video recording of the tune, linked
 H:below, was unfortunately truncated in transmission, at just after the halfway mark.
