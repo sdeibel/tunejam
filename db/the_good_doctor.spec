@@ -15,5 +15,5 @@ A/A/|B2E|EAB|
 --
 |: A | E    | BmE | AE |
    A | BmE  | BmE | A :|
-|: E | A    | EmE | A  |
+|: E | A    | EmE | AE |
    E | AF#m | BmE | A :|
