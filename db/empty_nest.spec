@@ -15,15 +15,15 @@ L:1/8
 M:3/4
 --
 --
-|: D | G | A | D  |
-   D | D | G | A  |
-   D | D | G | D  |
-   D | D | G | D :|
-|  A | A | D | D  |
-   G | D | G | A  |
-   G | A | D | D  |
-   D | D | G | D  |
-|  A | A | D | D  |
-   G | D | G | A  |
-   D | D | G | D  |
-   D | D | G | D  |
+|: D | G   | A | D  |
+   D | D   | G | A  |
+   D | D   | G | D  |
+   D | D   | G | D :|
+|  A | A   | D | D  |
+   G | D   | G | A  |
+   G | A   | D | D  |
+   D | D   | G | D  |
+|  A | A   | D | D  |
+   G | D   | G | A  |
+   D | D   | G | D  |
+   D | F#m | G | D  |
