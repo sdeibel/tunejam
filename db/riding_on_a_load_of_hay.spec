@@ -19,6 +19,6 @@ e/f/|g2f2|edB2c/d/|
 |: Em  | Em  | D    | Bm  |
    Em  | EmC | EmD  | Em :|
 |  EmD | Em  | D    | D   |
-   EmD | Em  | D    | D   |
+   EmD | Em  | D    | Em  |
    EmD | Em  | D    | D   |
    EmD | CBm | AmBm | Em  |
