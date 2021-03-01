@@ -14,9 +14,11 @@ K:D
 L:1/8
 M:3/4
 --
+Ad|f3ed2|B3cd2|
+ef|g3fg2|e2f2g2|
 --
 |: D | G   | A | D  |
-   D | D   | G | A  |
+   D | Bm  | G | A  |
    D | D   | G | D  |
    D | D   | G | D :|
 |  A | A   | D | D  |
