@@ -8,7 +8,10 @@ H:commemorates their abrupt and long-lasting transition to empty-nester
 H:status when their daughter left for college and was unable to return home due to the 
 H:Covid pandemic of 2020 and 2021.  The original video recording of the tune, linked
 H:below, was unfortunately truncated in transmission, at just after the halfway mark.
+H:Ashley recorded it again a while later (also linked below) but without the variation
+H:in the second B part.
 U:https://www.youtube.com/watch?v=t8OVJMLZVxk&feature=youtu.be
+U:https://youtu.be/r-BxSYNe2x4
 U:http://ashleymacisaac.com/
 K:D
 L:1/8
