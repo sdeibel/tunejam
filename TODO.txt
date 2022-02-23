@@ -1,5 +1,12 @@
 * Website Phase Three
   ** Coding
+    ** Generate playable midi with music21.  For example:
+        import os
+        from music21 import converter
+        score = converter.parse('/Users/sdeibel/abc/src/tunes/mountain_ash.abc')
+        fn = score.write('midi')
+        os.system('open {}'.format(fn))    
+        (or feed midi into a js midi player or let browser open it)
     ** Fix sets page for mobile devices (also can list same thing twice
        when search + do "random 3")
     ** Clean up notes/print/abc/play icon code by centralizing
