@@ -14,6 +14,9 @@ kBoldFontName = 'TrebuchetMSBold'
 if sys.platform == 'darwin':
     kFontLoc = '/Library/Fonts/Trebuchet MS.ttf'
     kBoldFontLoc = '/Library/Fonts/Trebuchet MS Bold.ttf'
+    if not os.path.exists(kFontLoc):
+        kFontLoc = '/System/Library/Fonts/Supplemental/Trebuchet MS.ttf'
+        kBoldFontLoc = '/System/Library/Fonts/Supplemental/Trebuchet MS Bold.ttf'
 else:
     kFontLoc = '/usr/share/fonts/webcore/trebuc.ttf'
     kBoldFontLoc = '/usr/share/fonts/webcore/trebucbd.ttf'
