@@ -15,7 +15,7 @@ M:4/4
 Bcded2c2|B2d4c2|
 dBGB dBGB|dAFA dAFA|
 --
-|: GD7 | GD7| GD7 | D7G    |
-   GD7 | GC | D7  | G     :|
-|: G   | D  | Em  | Bm     |
-   C   | G  | Am  | D7(G) :|
+|: GD7 | GD7 | GD7 | D7G    |
+   GD7 | GC  | D7  | G     :|
+|: G   | D   | Em  | Bm     |
+   C   | G   | Am  | D7(G) :|
