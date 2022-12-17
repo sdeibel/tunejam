@@ -1,3 +1,4 @@
+** Fix note generation on production site
 * Website Phase Three
   ** Coding
     ** Generate playable midi with music21.  For example:
@@ -33,7 +34,7 @@
         ** Janvrin's Island
         ** White creek trout are jumping
         ** Mr Ernest Hillier aka Two Goats Jig
-        ** Isolation Jig
+        ** Isolation Jig - need notes and full written form
       ** January waltz (can't find this anywhere)
       ** Others? - All the recent ones (need to see Bliss's notebook)
 * Website Phase Four+
