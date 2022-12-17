@@ -21,5 +21,5 @@ Bc|g6|f4e2|
 --
 |: G   | CD  | GEm | AmD  |
    GEm | CAm | D   | G   :|
-|: GC  | G   | EmA | D7   |
-   GC  | GEm | CD  | G   :|
+|: GC  | G   | EmA | AmD7 |
+   GC  | GEm | AmD | G   :|
