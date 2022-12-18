@@ -14,9 +14,9 @@ M:6/8
 D2|:GFG G,2D|GFG A2B|
 dBd g2f|ede d2B|
 --
-|: G | C | Am | D   |
-   G | C | Am | DG :|
-|  G | C | Am | D   |
-   G | C | Am | G   |
-   G | C | Am | D   |
-   G | C | Am | DG  |
+|: G | C | Am  | D  |
+   G | C | AmD | G :|
+|  G | C | Am  | D  |
+   G | C | AmD | DG |
+   G | C | Am  | D  |
+   G | C | AmD | G  |
