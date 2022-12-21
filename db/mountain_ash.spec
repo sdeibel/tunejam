@@ -19,6 +19,6 @@ M:6/8
   Dm | C  | Dm   | C  |
   Dm | Am | Am   | Dm |
 | Am | Dm | Am   | C  |
-  Dm | Dm | AmEm | Dm |
+  Dm | Dm | AmEm | Am |
   Am | C  | Am   | C  |
   Am | Am | Dm   | Am |
