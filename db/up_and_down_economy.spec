@@ -16,6 +16,6 @@ E|A>BA AGA|c2de2e|
 e|a3 age|g2ec2d|
 --
 |: Am | C | Em | G   |
-   Am | C | CG | Em :|
+   Am | C | CG | Am :|
 |: Am | C | D  | Em  |
    Am | F | Em | Am :|
