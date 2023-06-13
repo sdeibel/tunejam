@@ -857,6 +857,7 @@ padding-bottom:0.5em;
   ], onsubmit="return FilterSubmit();", id="filter-form"))
   parts.append(CBreak())
   
+  seen_tunes = set()
   all_tunes = []
   tunes = utils.GetTuneIndex(include_incomplete=True)
   for section in tunes:
@@ -871,6 +872,9 @@ padding-bottom:0.5em;
       title += ' - %s - %s' % (obj.Type(), obj.GetKeyString())
       if tune in preload_tunes:
         continue
+      if title in seen_tunes:
+        continue
+      seen_tunes.add(title)
       if visible:
         all_tunes.append((title, CItem(title, id='tune_%s' % tune.replace('_', '+'),
                                        hclass='ui-state-default %s' % section)))
