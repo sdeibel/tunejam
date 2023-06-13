@@ -622,13 +622,13 @@ def sets(spec=None, sid=None):
   
   parts = []
   # Jquery and jquery-ui came from:
-  # http://jquery.com/download/ (version 1.22.0)
-  # http://jqueryui.com/download/ (version 1.11.4)
+  # http://jquery.com/download/ (version 3.7.0)
+  # http://jqueryui.com/download/all (version 1.13.2)
   # Extra JS libraries came from:
   # https://github.com/padolsey-archive/jquery.fn/tree/master/sortElements
   # https://raw.github.com/furf/jquery-ui-touch-punch/master/jquery.ui.touch-punch.min.js
   parts.append("""<link rel="stylesheet" href="/js/ui/jquery-ui.css">
-<script src="/js/jquery-1.12.0.min.js"></script>
+<script src="/js/jquery-3.7.0.min.js"></script>
 <script src="/js/ui/jquery-ui.min.js"></script>
 <script src="/js/jquery.sortElements.js"></script>
 <script src="/js/jquery.ui.touch-punch.min.js"></script> 
@@ -1872,8 +1872,8 @@ def login():
   target = request.form['target']
   
   if 'tune'not in pw or 'jam' not in pw:
-    parts = CheckPassword()
-    return PageWrapper(parts, 'event')
+    CheckPassword()
+    return authorize(target)
   
   session['password'] = pw
   
@@ -1913,7 +1913,7 @@ def EventReloader(sid):
   parts = []
   
   parts.append("""
-<script src="/js/jquery-1.12.0.min.js"></script>
+<script src="/js/jquery-3.7.0.min.js"></script>
 <script src="/js/ui/jquery-ui.min.js"></script>
 """)
   
