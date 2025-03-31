@@ -1,4 +1,0 @@
-Testing diff/merge
-More
-than one line
-Why?
