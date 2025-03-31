@@ -19,8 +19,8 @@ DE| G2DE GDEG| DEGA B2AB|
 ef| g2ed edB2| BABG E2DE|
 --
 |: G     | GD7   | GEm   | Am7D7 |
-   GD7/A | G/BEm | Am7D7 | GCG  :|
+   GD    | GBm   | AmD   | GCG  :|
 |  Em    | G7C   | GEm   | AmD7  |
-   Em    | G7C   | G/DD  | GCG   |
+   Em    | G7C   | G     | GCG   |
    Em    | G7C   | GEm   | AmD7  |
-   CA    | G/BEm | Am7D7 | G     |
+   G     | GBm   | AmD   | G     |
