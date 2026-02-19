@@ -1973,6 +1973,7 @@ def PageWrapper(body, section=None, refresh=None):
     CTitle(title),
     CMeta("text/html; charset=utf-8", http_equiv="Content-Type"),
     CMeta("Copyright (c) 1999-%s Stephan Deibel" % year, name="Copyright"),
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
     '<link rel="stylesheet" type="text/css" href="/css/screen" media="screen" />', 
     '<link rel="stylesheet" type="text/css" href="/css/print" media="print" />', 
   ]
