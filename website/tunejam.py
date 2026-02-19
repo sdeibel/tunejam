@@ -840,7 +840,18 @@ $(function() {
       scrollSpeed: 100,
     }).disableSelection();
   } else {
-    // On desktop, drag between lists; only Selected is reorderable
+    // On desktop, double-click to move items between lists
+    $(document).on("dblclick", "#alltunes li", function() {
+      $(this).appendTo("#selectedtunes");
+    });
+    $(document).on("dblclick", "#selectedtunes li", function() {
+      $(this).appendTo("#alltunes");
+      $( "#alltunes" ).children().sortElements(function(a, b){
+        return a.innerHTML > b.innerHTML ? 1 : -1;
+      });
+      FilterTunes();
+    });
+    // Also drag between lists; only Selected is reorderable
     function resortAvailable() {
       $( "#alltunes" ).children().sortElements(function(a, b){
         return a.innerHTML > b.innerHTML ? 1 : -1;
