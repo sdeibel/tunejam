@@ -354,26 +354,95 @@ def _index_title_html(obj, title):
   return title_html
 
 @app.route('/index/sheet')
-def index_sheet():
-  
+@app.route('/index/sheet/<stype>')
+def index_sheet(stype='title'):
+
   parts = [
-    CH("Sheet Music for Locally Written Tunes", 2), 
+    CH("Sheet Music for Locally Written Tunes", 2),
     CParagraph("This site is mostly about learning by ear, but we have some sheet music "
                "for locally written tunes, available both for screen display and printing, "
-               "and in the ABC encoding:"), 
-    CBreak(), 
+               "and in the ABC encoding:"),
   ]
-  
+
+  parts.append(CText('Sort By:', bold=1))
+  parts.append(CNBSP())
+  parts.append(CText('Title', href='/index/sheet/title', bold=stype=='title'))
+  parts.append(CNBSP())
+  parts.append(CText('Author', href='/index/sheet/author', bold=stype=='author'))
+  parts.append(CNBSP())
+  parts.append(CText('Key', href='/index/sheet/key', bold=stype=='key'))
+  parts.append(CBreak(2))
+
   tunes = utils.GetTuneIndex(True)
 
-  titles = []
   sections = tunes.keys()
   all_tunes = set()
   for section in sections:
     for title, tune in tunes[section]:
       all_tunes.add((title, tune))
-      
-  for title, tune in sorted(all_tunes):
+
+  def _sheet_title_html(obj, title):
+    return [
+      CText(title, href="/sheet/view/%s" % obj.name),
+    ] + obj.GetActionIcons(index=True) + [
+      CBreak(),
+    ]
+
+  if stype == 'author':
+    authors = collections.defaultdict(list)
+    for title, tune in sorted(all_tunes):
+      obj = utils.CTune(tune)
+      obj.ReadDatabase()
+      notes = obj.ReadSheetMusic()
+      if not notes:
+        continue
+      author = obj.author
+      if not author:
+        author = "To Be Determined"
+      else:
+        aparts = author.split()
+        author = aparts[-1]
+        if len(aparts) >= 2:
+          author += ', ' + ' '.join(aparts[:-1])
+      title += ' - ' + obj.Type() + ' - ' + obj.GetKeyString()
+      authors[author].append((title, _sheet_title_html(obj, title)))
+    for i, author in enumerate(sorted(authors)):
+      if i > 0:
+        parts.append(CBreak())
+      parts.append(CH(author, 3))
+      parts.append(CBreak())
+      for title, title_html in sorted(authors[author]):
+        parts.extend(title_html)
+
+  elif stype == 'key':
+    keys = collections.defaultdict(list)
+    for title, tune in sorted(all_tunes):
+      obj = utils.CTune(tune)
+      obj.ReadDatabase()
+      notes = obj.ReadSheetMusic()
+      if not notes:
+        continue
+      if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
+        title += ' (by {})'.format(obj.author)
+      title += ' - ' + obj.Type()
+      key_str = obj.GetKeyString()
+      if '/' in obj.key:
+        key_str = 'Multiple Keys'
+      keys[key_str].append((title, _sheet_title_html(obj, title)))
+    def key_sort(k):
+      if k == 'Multiple Keys':
+        return 'zzz'
+      return k.replace('Minor', '1').replace('Major', '2').replace('Modal', '3')
+    for i, key in enumerate(sorted(keys, key=key_sort)):
+      if i > 0:
+        parts.append(CBreak())
+      parts.append(CH(key, 3))
+      parts.append(CBreak())
+      for title, title_html in sorted(keys[key]):
+        parts.extend(title_html)
+
+  else:  # title
+    for title, tune in sorted(all_tunes):
       obj = utils.CTune(tune)
       obj.ReadDatabase()
       notes = obj.ReadSheetMusic()
@@ -382,21 +451,12 @@ def index_sheet():
       if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.Type() + ' - ' + obj.GetKeyString()
-      title_html = [
-        CText(title, href="/sheet/view/%s" % obj.name),
-      ] + obj.GetActionIcons(index=True) + [
-        CBreak(), 
-      ]
-      titles.append((title, title_html))
-      
-  titles.sort()
-  for title, title_html in titles:
-    parts.extend(title_html)
-    
+      parts.extend(_sheet_title_html(obj, title))
+
   parts.append(CBreak(2))
-  
+
   parts.append(CParagraph(["Also available:", CText("Sheet Music for Local Tunes", href='/sheet/all')]))
-  
+
   return PageWrapper(parts, 'local')
 
 @app.route('/dev')
