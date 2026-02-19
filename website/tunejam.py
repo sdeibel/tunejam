@@ -597,7 +597,67 @@ def dev():
   parts.append(CParagraph("Please <a href='mailto:submit@music.cambridgeny.net'>"
                           "contact me</a> for help. I am currently the only developer, and would "
                           "improve packaging and docs if anyone else wants to join in the effort."))
+
+  editor = CheckPassword()
+  if editor:
+    parts.append(CH("Cache Management", 2))
+    parts.append(CParagraph("Clear cached generated files to force regeneration:"))
+    parts.append(CList([
+      CItem([CText("Clear Tune Cache", href='/dev/clear-cache/tune'),
+             CText(" -- Individual tune artifacts (notes, chords, sheet music images)")]),
+      CItem([CText("Clear Tune Set Cache", href='/dev/clear-cache/tuneset'),
+             CText(" -- Tune set page PDFs")]),
+      CItem([CText("Clear Book Cache", href='/dev/clear-cache/book'),
+             CText(" -- Full book PDFs")]),
+      CItem([CText("Clear All Caches", href='/dev/clear-cache/all'),
+             CText(" -- All of the above")]),
+    ]))
+    parts.append(LogoutButton('/dev'))
+  else:
+    parts.append(CBreak())
+    parts.append(LoginButton('/dev', label=None))
+
   parts.append(CBreak(2))
+  return PageWrapper(parts, 'dev')
+
+@app.route('/dev/clear-cache/<cache_type>')
+def clear_cache(cache_type):
+  import shutil
+
+  editor = CheckPassword()
+  if not editor:
+    return redirect('/authorize/dev', code=303)
+
+  cleared = []
+  cache_dirs = {
+    'tune': os.path.join(utils.kCacheLoc, 'tune'),
+    'tuneset': os.path.join(utils.kCacheLoc, 'tuneset'),
+    'book': os.path.join(utils.kCacheLoc, 'book'),
+  }
+
+  if cache_type == 'all':
+    targets = ['tune', 'tuneset', 'book']
+  elif cache_type in cache_dirs:
+    targets = [cache_type]
+  else:
+    return redirect('/dev', code=303)
+
+  for t in targets:
+    d = cache_dirs[t]
+    if os.path.exists(d):
+      for fn in os.listdir(d):
+        fp = os.path.join(d, fn)
+        if os.path.isfile(fp):
+          os.remove(fp)
+      cleared.append(t)
+
+  parts = [
+    CH("Cache Cleared", 2),
+    CParagraph("Cleared cache: %s" % ', '.join(cleared)),
+    CBreak(),
+    CText("Return to Dev page", href='/dev'),
+    CBreak(2),
+  ]
   return PageWrapper(parts, 'dev')
 
 @app.route('/sets', methods=['GET', 'POST'])
@@ -1723,7 +1783,7 @@ def events(delete=None, undelete=None):
         CBreak(), 
       ])
   
-  parts.append(LogoutButton('/event'))
+  parts.append(LogoutButton('/events'))
   parts.append(CBreak())
   
   return PageWrapper(parts, 'event')
@@ -2121,15 +2181,13 @@ $(document).ready(function() {
   
   return parts
 
-def LoginButton(target):
-  
-  return CForm([
-      CBreak(),
-      CText("Log in to create or edit events", bold=1),
-      CBreak(2), 
-      CInput(type='SUBMIT', value="Login"),
-      CBreak(2), 
-    ], action='/authorize%s' % target, method='GET')
+def LoginButton(target, label="Log in to create or edit events"):
+
+  parts = [CBreak()]
+  if label:
+    parts.extend([CText(label, bold=1), CBreak(2)])
+  parts.extend([CInput(type='SUBMIT', value="Login"), CBreak(2)])
+  return CForm(parts, action='/authorize%s' % target, method='GET')
   
 def LogoutButton(target):
   
