@@ -804,12 +804,13 @@ left:370px;
 overflow:auto;
 }
 @media only screen and (max-width:600px) {
-div.list-right {
-left:0px;
-top:345px;
+div.list-area {
+display:block;
 }
-div.list-left {
-height:670px;
+div.list-right {
+position:relative;
+left:0px;
+top:0px;
 }
 div.scroll {
 width:87vw;
