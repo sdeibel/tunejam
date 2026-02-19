@@ -684,14 +684,46 @@ def sets(spec=None, sid=None):
         parts = CreateTuneSetHTML(tunes, pagetype)
 
         if sid is not None:
+          current_set = '&'.join(tunes)
+          if pagetype == 'both':
+            pt_suffix = '&event=%s' % sid
+          else:
+            pt_suffix = '&pagetype=%s&event=%s' % (pagetype, sid)
+
+          # Find previous/next sets in the event
+          prev_set = None
+          next_set = None
+          if current_set in s.sets:
+            idx = s.sets.index(current_set)
+            if idx > 0:
+              prev_set = s.sets[idx - 1]
+            if idx < len(s.sets) - 1:
+              next_set = s.sets[idx + 1]
+
+          nav = []
+          if prev_set is not None:
+            nav.append(CText("<< Previous Set", href='/sets/%s%s' % (prev_set, pt_suffix)))
+          nav.append(CText("Return to event %s" % s.title, href='/event/%s' % sid))
+          if next_set is not None:
+            nav.append(CText("Next Set >>", href='/sets/%s%s' % (next_set, pt_suffix)))
+
+          top_nav = []
+          for i, item in enumerate(nav):
+            if i > 0:
+              top_nav.extend([CNBSP(3), CText('|'), CNBSP(3)])
+            top_nav.append(item)
+
           parts.insert(0, CText("Set from Event: %s" % s.title, bold=1))
-          parts.extend([
-            CBreak(2),
-            CText("Return to event %s" % s.title, href='/event/%s' % sid, hclass='bottom-menu-left'),
-          ])
+          parts.insert(1, CBreak())
+          for i, item in enumerate(top_nav):
+            parts.insert(2 + i, item)
+          parts.insert(2 + len(top_nav), CBreak(2))
+
+          parts.extend([CBreak(2)] + top_nav[:])
           if editor:
             parts.extend([
-              CText("Delete this set", href='/event/%s/delete/%s' % (sid, '&'.join(tunes)), hclass='bottom-menu-right'),
+              CNBSP(3), CText('|'), CNBSP(3),
+              CText("Delete this set", href='/event/%s/delete/%s' % (sid, current_set)),
             ])
           parts.append(CBreak(2))
           
