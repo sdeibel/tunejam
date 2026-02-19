@@ -928,8 +928,8 @@ padding: 0px;
 }
 div.list-area {
 position:relative;
-display:inline;
-overflow:auto;
+display:block;
+min-height:330px;
 }
 div.list-title {
 font-weight:bold;
