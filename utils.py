@@ -413,17 +413,45 @@ M:%(meter)s
         return png_file
         
     def MakeSheetMusicPNGFile(self, density=600):
-        
+
         eps_file = self.MakeSheetMusicEPSFile()
         png_file, up_to_date = self._GetCacheFile('sheet.png')
         if up_to_date:
             return png_file
-        
+
         bin_dir = '%s/bin' % kBaseDir
         cmd = 'PATH=$PATH:%s convert -density %i -depth 8 -monochrome %s %s' % (bin_dir, density, eps_file, png_file)
         os.system(cmd)
-        
+
         return png_file
+
+    def MakeSheetMusicPDFFile(self):
+        """Generate a paginated PDF of the full sheet music, with US letter pages"""
+
+        try:
+            self.ReadDatabase()
+        except:
+            return None
+
+        abc = self.ReadSheetMusic()
+        pdf_file, up_to_date = self._GetCacheFile('sheet.pdf')
+        if up_to_date:
+            return pdf_file
+
+        ps_file = ABCToPostscript(abc, width='7in')
+
+        bindir = '%s/bin' % kBaseDir
+        cmd = ("PATH=$PATH:%s gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
+               "-sPAPERSIZE=letter -dFIXEDMEDIA -dPDFFitPage "
+               "-sOutputFile=%s %s" % (bindir, pdf_file, ps_file))
+        os.system(cmd)
+
+        try:
+            os.remove(ps_file)
+        except:
+            pass
+
+        return pdf_file
         
     def MakeNotesLarge(self):
         """Generate large form of notes"""
@@ -1210,101 +1238,9 @@ class CSheetPage:
         return ''.join(parts)
 
     def MakeCardPDF(self, page_num=None, show_type=False):
-                
-        filename, up_to_date = self._GetCacheFile(resource='-sheet.pdf')
-        # Does not work to cache pages since header/footer vary by book and
-        # some books share pages w/ same three tunes in same order
-        #if up_to_date:
-            #return filename
-        
-        # Set up
-        from reportlab.pdfgen.canvas import Canvas
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib.units import inch
-        from reportlab.platypus import Paragraph, Frame, Preformatted, Table, Spacer, TableStyle, Image
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib import colors
-        
-        pdf = Canvas(filename, pagesize=letter)
-        pdf.setFont('TrebuchetMS', kFontSize)
-        style = getSampleStyleSheet()
-        style.add(ParagraphStyle(
-            name='Bold',
-            parent=style['BodyText'],
-            fontName = 'TrebuchetMSBold',
-            bulletFontName = 'TrebuchetMS',
-            fontSize=kFontSize-1,
-        ))
-        style['BodyText'].fontName = 'TrebuchetMS'
-        style['BodyText'].bulletFontName = 'TrebuchetMS'
-        style['BodyText'].fontSize = kFontSize
-        style['Heading1'].fontName = 'TrebuchetMSBold'
-        style['Heading1'].fontSize = kFontSize
-        style['Heading1'].fontName = 'TrebuchetMSBold'
-        style['Heading1'].fontSize = kFontSize - 1
-        
-        header_footer_font_size = 8
-        
-        style.add(ParagraphStyle(
-            name='HeaderFooter',
-            parent=style['Normal'],
-            fontName='TrebuchetMS',
-            fontSize=header_footer_font_size,
-            firstLineIndent=0,
-            leftIndent=0,
-        ))
-    
-        story=[]
-        
+
         tune = self.tunes[0]
-        
-        sheet_png_file = tune.MakeSheetMusicPNGFile()
-        sheet_image = Image(sheet_png_file, 7.0*inch, 9.5*inch, kind='bound', hAlign='LEFT')
-        story.append(sheet_image)
-
-        # Place body into frame
-        f = Frame(1.0*inch, 0.5*inch, 7.0*inch, 10.0*inch, leftPadding=0,
-                  bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
-        f.addFromList(story, pdf)
-        
-        # Add page number
-        if page_num is not None and self.show_pagenum:
-            pageno = 'Page %i' % page_num
-            pageno_width = kFont.stringWidth(pageno, header_footer_font_size)
-            pageno = Paragraph(pageno, style['HeaderFooter'])
-            ptable = Table([[pageno]], colWidths=[pageno_width], rowHeights=[0.25*inch])
-            ptable.setStyle(TableStyle([
-                ('ALIGN', (0, 0),(0, 0),'RIGHT'), 
-                ('VALIGN', (0, 0),(-1,-1),'TOP'), 
-                ('LEFTPADDING', (0, 0), (-1, -1), 0), 
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0), 
-                ('TOPPADDING', (0, 0), (-1, -1), 0), 
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-                # For debugging
-                #( 'INNERGRID', (0,0), (-1,-1), 0.25, colors.black),
-                #( 'BOX', (0,0), (-1,-1), 0.25, colors.black),
-            ]))
-            f = Frame(8.0*inch-pageno_width, 10.5*inch, pageno_width, 0.25*inch, leftPadding=0,
-                      bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
-            f.add(ptable, pdf)
-            
-        # Add header/footer
-        if self.header:
-            header = Paragraph(self.header, style['HeaderFooter'])
-            f = Frame(1.0*inch, 10.5*inch, 7.0*inch, 0.25*inch, leftPadding=0.1*inch,
-                      bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
-            f.add(header, pdf)
-
-        if self.footer:
-            footer = Paragraph(self.footer, style['HeaderFooter'])
-            f = Frame(1.0*inch, 0.25*inch, 7.0*inch, 0.25*inch, leftPadding=0.1*inch,
-                      bottomPadding=0, rightPadding=0, topPadding=0, showBoundary=0)
-            f.add(footer, pdf)
-    
-        # Close page and save to disk
-        pdf.save()
-        
-        return filename
+        return tune.MakeSheetMusicPDFFile()
         
     def MakeFlipBook(self):
 
