@@ -633,12 +633,45 @@ def sets(spec=None, sid=None):
 <script src="/js/jquery.sortElements.js"></script>
 <script src="/js/jquery.ui.touch-punch.min.js"></script> 
 <script>
+var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 $(function() {
-  $( "#alltunes, #selectedtunes" ).sortable({
-    connectWith: ".connectedSortable",
-    containment: ".list-area",
-    scrollSpeed: 100,
-  }).disableSelection();
+  if (isTouchDevice) {
+    // On touch devices, use tap to move items between lists
+    $(document).on("click", "#alltunes li", function() {
+      $(this).appendTo("#selectedtunes");
+    });
+    $(document).on("click", "#selectedtunes li", function() {
+      $(this).appendTo("#alltunes");
+      $( "#alltunes" ).children().sortElements(function(a, b){
+        return a.innerHTML > b.innerHTML ? 1 : -1;
+      });
+      FilterTunes();
+    });
+    // Allow reordering within Selected list only
+    $( "#selectedtunes" ).sortable({
+      scrollSpeed: 100,
+    }).disableSelection();
+  } else {
+    // On desktop, drag between lists; only Selected is reorderable
+    function resortAvailable() {
+      $( "#alltunes" ).children().sortElements(function(a, b){
+        return a.innerHTML > b.innerHTML ? 1 : -1;
+      });
+      FilterTunes();
+    }
+    $( "#alltunes" ).sortable({
+      connectWith: "#selectedtunes",
+      containment: ".list-area",
+      scrollSpeed: 100,
+      stop: resortAvailable,
+      receive: resortAvailable,
+    }).disableSelection();
+    $( "#selectedtunes" ).sortable({
+      connectWith: "#alltunes",
+      containment: ".list-area",
+      scrollSpeed: 100,
+    }).disableSelection();
+  }
 });
 function SubmitTunes(sid, old_set) {
   var tunes = $( "#selectedtunes" ).sortable( "serialize", {key:"tune"});
@@ -818,6 +851,17 @@ float:none;
 width:87vw;
 }
 }
+.mobile-instructions {
+display:none;
+}
+@media only screen and (max-width:600px) {
+.desktop-instructions {
+display:none;
+}
+.mobile-instructions {
+display:block;
+}
+}
 p {
 padding-left:0px;
 padding-top:0.5em;
@@ -829,10 +873,13 @@ padding-bottom:0.5em;
   parts.append(CH("Create a Tune Set", 1))
   if error:
     parts.append(CParagraph([CText("Error: ", bold=1), error], style="background-color:#FFFF00; padding-left:5px;"))
-  parts.append(CParagraph("Drag one or more songs from the list "
-                          "on the left to the list on the right, or press the 'Random 3' "
-                          "button to select three random tunes.  Then "
-                          "press Submit to generate the set:"))
+  parts.append("""<p class="desktop-instructions">Drag one or more songs from the Available list """
+               """to the Selected list, or press 'Random 3' to select three random tunes.  """
+               """Then press Create Set to generate the set:</p>""")
+  parts.append("""<p class="mobile-instructions">Tap a song to move it to the Selected list.  """
+               """Tap it again to move it back.  Drag to reorder songs in the Selected list.  """
+               """You can also press 'Random 3' to select three random tunes.  """
+               """Then press Create Set to generate the set:</p>""")
   
   
   section_options = [
@@ -904,7 +951,7 @@ padding-bottom:0.5em;
     CDiv([CDiv(CText("Selected:"), hclass='list-title'), CBreak(), selected_list], hclass='list-right'), 
   ], hclass='list-area'))
   parts.append(CBreak())
-  parts.append(CParagraph("On mobile devices, scroll with two fingers, or by dragging an item down, or by entering a text filter to shorten the list.", hclass="clear"))
+  parts.append(CDiv(hclass="clear"))
   
   # Creating set outside of event
   if sid is None:
