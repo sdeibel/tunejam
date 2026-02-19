@@ -104,28 +104,10 @@ def sessions():
                    "email list</a> for more information and announcements."),
              CBreak(2), 
              ]), 
-      CItem([CText("Cambridge NY Pan-Celtic Session", href='https://www.facebook.com/groups/cambridgesession'), CNBSP(), CText('--'), CNBSP(),
-             CText("Every Thursday 5pm-8pm in the Argyle Brewery's Cambridge NY location, "
-                   "in the old passenger railway station on Broad Street, across from "
-                   "the Cambridge Hotel. This is mostly a fast-paced session for moderately "
-                   "advanced players.  The session features tunes and songs from (at least) "
-                   "Ireland, Shetland, Cape Breton, Quebec, and New England, with a "
-                   "smattering of Swedish, English, Eastern European, Appalachian, and "
-                   "locally written tunes, as well as some others.  Tip money is collected "
-                   "to benefit local non-profits."), 
-             CBreak(2), 
-             ]), 
       CItem([CText("Saratoga Pan-Celtic Session", href='https://www.facebook.com/Saratoga-Pan-Celtic-Session-135466146471469/'), CNBSP(), CText('--'), CNBSP(),
              CText("Almost every Wednesday 7pm-11pm at The Parting Glass in Saratoga NY. "
                     "This is a fun, open group of mostly amateur musicians that enjoy playing "
                     "Quebecois, Scottish and Cape Breton, as well as Irish fiddle tunes."), 
-             CBreak(2), 
-             ]), 
-      CItem([CText("Wayside Country Store Session", href='https://www.facebook.com/events/1596240033844443'), CNBSP(), CText('--'), CNBSP(),
-             CText("The first Friday of each month from 6:30pm to 8:30 pm at the Wayside Country Store in "
-                   "West Arlington, VT.  Gigue-a-Bit and Friends play traditional contra/other dance tunes for "
-                   "hostess and store owner Nancy Tschorn and her customers. Tip money collected is "
-                   "contributed to the Arlington Vermont Food Shelf."), 
              CBreak(2), 
              ]), 
       CItem([CText("North Adams Session", href='https://thesession.org/sessions/3549'), CNBSP(), CText('--'), CNBSP(),
