@@ -700,32 +700,47 @@ def sets(spec=None, sid=None):
             if idx < len(s.sets) - 1:
               next_set = s.sets[idx + 1]
 
-          nav = []
+          prev_link = None
+          next_link = None
           if prev_set is not None:
-            nav.append(CText("<< Previous Set", href='/sets/%s%s' % (prev_set, pt_suffix)))
-          nav.append(CText("Return to event %s" % s.title, href='/event/%s' % sid))
+            prev_link = CText("<< Previous Set", href='/sets/%s%s' % (prev_set, pt_suffix))
           if next_set is not None:
-            nav.append(CText("Next Set >>", href='/sets/%s%s' % (next_set, pt_suffix)))
+            next_link = CText("Next Set >>", href='/sets/%s%s' % (next_set, pt_suffix))
 
-          top_nav = []
-          for i, item in enumerate(nav):
-            if i > 0:
-              top_nav.extend([CNBSP(3), CText('|'), CNBSP(3)])
-            top_nav.append(item)
+          event_link = '/event/%s' % sid
 
-          parts.insert(0, CText("Set from Event: %s" % s.title, bold=1))
+          # Top: event title as link, prev/next left/right justified
+          top_nav_items = []
+          if prev_link is not None:
+            top_nav_items.append(CDiv(prev_link, style="float:left"))
+          if next_link is not None:
+            top_nav_items.append(CDiv(next_link, style="float:right"))
+          top_nav = CDiv(top_nav_items, style="overflow:auto")
+
+          header = CText("Set from Event: <a href='%s'>%s</a>" % (event_link, s.title), bold=1)
+          parts.insert(0, header)
           parts.insert(1, CBreak())
-          for i, item in enumerate(top_nav):
-            parts.insert(2 + i, item)
-          parts.insert(2 + len(top_nav), CBreak(2))
+          parts.insert(2, top_nav)
+          parts.insert(3, CBreak(2))
 
-          parts.extend([CBreak(2)] + top_nav[:])
+          # Bottom: prev/next left/right, return and delete centered
+          bottom_center = [CText("Return to event %s" % s.title, href=event_link)]
           if editor:
-            parts.extend([
+            bottom_center.extend([
               CNBSP(3), CText('|'), CNBSP(3),
               CText("Delete this set", href='/event/%s/delete/%s' % (sid, current_set)),
             ])
-          parts.append(CBreak(2))
+
+          bottom_items = []
+          if prev_link is not None:
+            bottom_items.append(CDiv(CText("<< Previous Set", href='/sets/%s%s' % (prev_set, pt_suffix)),
+                                     style="float:left"))
+          if next_link is not None:
+            bottom_items.append(CDiv(CText("Next Set >>", href='/sets/%s%s' % (next_set, pt_suffix)),
+                                     style="float:right"))
+          bottom_items.append(CDiv(bottom_center, style="text-align:center"))
+
+          parts.extend([CBreak(2), CDiv(bottom_items, style="overflow:auto"), CBreak(2)])
           
         return PageWrapper(parts)
 
