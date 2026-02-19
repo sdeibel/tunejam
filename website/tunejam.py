@@ -137,10 +137,15 @@ def _index_header(itype):
   parts.append(CText('Author', href='/index/author', bold=itype=='author'))
   parts.append(CNBSP())
   parts.append(CText('Origin', href='/index/origin', bold=itype=='origin'))
+  parts.append(CNBSP())
+  parts.append(CText('Key', href='/index/key', bold=itype=='key'))
   parts.append(CBreak(2))
-  
+
   sorting = itype
-  if itype == 'meter':
+  if itype == 'key':
+    parts.append(CH("Index by Key", 1))
+    sorting = 'key'
+  elif itype == 'meter':
     parts.append(CH("Index by Time Signature", 1))
     sorting = 'time signature'
   elif itype == 'author':
@@ -240,6 +245,40 @@ def index_origin():
     for title, title_html in sorted(origins[origin]):
       parts.extend(title_html)
     
+  parts.append(CBreak(2))
+  return PageWrapper(parts, 'index')
+
+@app.route('/index/key')
+def index_key():
+
+  parts = _index_header('key')
+
+  tunes = utils.GetTuneIndex(False)
+
+  keys = collections.defaultdict(set)
+  sections = tunes.keys()
+  for section in sections:
+    for title, tune in tunes[section]:
+      obj = utils.CTune(tune)
+      obj.ReadDatabase()
+      if obj.author and obj.author.lower() not in ('traditional', 'unknown'):
+        title += ' (by {})'.format(obj.author)
+      title += ' - ' + obj.Type()
+      title_html = _index_title_html(obj, title)
+      key_str = obj.GetKeyString()
+      if '/' in obj.key:
+        key_str = 'Multiple Keys'
+      keys[key_str].add((title, tuple([str(t) for t in title_html])))
+
+  def key_sort(k):
+    if k == 'Multiple Keys':
+      return 'zzz'
+    return k.replace('Minor', '1').replace('Major', '2').replace('Modal', '3')
+  for key in sorted(keys, key=key_sort):
+    parts.append(CH(key, 2))
+    for title, title_html in sorted(keys[key]):
+      parts.extend(title_html)
+
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index')
 
