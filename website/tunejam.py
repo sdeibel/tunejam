@@ -811,8 +811,10 @@ div.list-right {
 position:relative;
 left:0px;
 top:0px;
+clear:both;
 }
 div.scroll {
+float:none;
 width:87vw;
 }
 }
