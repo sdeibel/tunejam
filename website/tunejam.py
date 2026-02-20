@@ -1953,25 +1953,25 @@ span.tune-type {
 font-size:max(70%, 14px);
 position:absolute;
 right:calc(10px + clamp(18px, 3.1vw, 34px) + 10px);
-top:5px;
+top:2px;
 }
 span.tune-type-two-icons {
 font-size:max(70%, 14px);
 position:absolute;
 right:calc(10px + 2 * (clamp(18px, 3.1vw, 34px) + 10px));
-top:5px;
+top:2px;
 }
 span.tune-type-three-icons {
 font-size:max(70%, 14px);
 position:absolute;
 right:calc(10px + 3 * (clamp(18px, 3.1vw, 34px) + 10px));
-top:5px;
+top:2px;
 }
 span.tune-type-four-icons {
 font-size:max(70%, 14px);
 position:absolute;
 right:calc(10px + 4 * (clamp(18px, 3.1vw, 34px) + 10px));
-top:5px;
+top:2px;
 }
 h2 {
 padding-top:0.7em;
@@ -2002,28 +2002,28 @@ height:20px;
 img.action-icon-1 {
 position:absolute;
 right:10px;
-top:8px;
+top:5px;
 width:clamp(18px, 3.1vw, 34px);
 height:clamp(18px, 3.1vw, 34px);
 }
 img.action-icon-2 {
 position:absolute;
 right:calc(10px + clamp(18px, 3.1vw, 34px) + 10px);
-top:8px;
+top:5px;
 width:clamp(18px, 3.1vw, 34px);
 height:clamp(18px, 3.1vw, 34px);
 }
 img.action-icon-3 {
 position:absolute;
 right:calc(10px + 2 * (clamp(18px, 3.1vw, 34px) + 10px));
-top:8px;
+top:5px;
 width:clamp(18px, 3.1vw, 34px);
 height:clamp(18px, 3.1vw, 34px);
 }
 img.action-icon-4 {
 position:absolute;
 right:calc(10px + 3 * (clamp(18px, 3.1vw, 34px) + 10px));
-top:8px;
+top:5px;
 width:clamp(18px, 3.1vw, 34px);
 height:clamp(18px, 3.1vw, 34px);
 }
