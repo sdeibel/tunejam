@@ -1930,21 +1930,21 @@ color:#044300;
 }
 h1.tune-title {
 clear:both;
-white-space:nowrap;
 font-size:min(3.5vw, 38px);
 color:#000000;
+max-width:80%;
 }
 h1.long-tune-title {
 clear:both;
-white-space:nowrap;
 font-size:min(2.6vw, 28px);
 color:#000000;
+max-width:80%;
 }
 h1.extra-long-tune-title {
 clear:both;
-white-space:nowrap;
 font-size:min(2.5vw, 27px);
 color:#000000;
+max-width:80%;
 }
 span.tune-type {
 font-size:max(70%, 14px);
