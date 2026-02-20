@@ -1930,45 +1930,48 @@ color:#044300;
 }
 h1.tune-title {
 clear:both;
+position:relative;
 font-size:min(3.5vw, 38px);
 color:#000000;
-max-width:80%;
+padding-right:20%;
 }
 h1.long-tune-title {
 clear:both;
+position:relative;
 font-size:min(2.6vw, 28px);
 color:#000000;
-max-width:80%;
+padding-right:20%;
 }
 h1.extra-long-tune-title {
 clear:both;
+position:relative;
 font-size:min(2.5vw, 27px);
 color:#000000;
-max-width:80%;
+padding-right:20%;
 }
 span.tune-type {
 font-size:max(70%, 14px);
 position:absolute;
 right:calc(10px + clamp(18px, 3.1vw, 34px) + 10px);
-margin-top:5px;
+top:5px;
 }
 span.tune-type-two-icons {
 font-size:max(70%, 14px);
 position:absolute;
 right:calc(10px + 2 * (clamp(18px, 3.1vw, 34px) + 10px));
-margin-top:5px;
+top:5px;
 }
 span.tune-type-three-icons {
 font-size:max(70%, 14px);
 position:absolute;
 right:calc(10px + 3 * (clamp(18px, 3.1vw, 34px) + 10px));
-margin-top:5px;
+top:5px;
 }
 span.tune-type-four-icons {
 font-size:max(70%, 14px);
 position:absolute;
 right:calc(10px + 4 * (clamp(18px, 3.1vw, 34px) + 10px));
-margin-top:5px;
+top:5px;
 }
 h2 {
 padding-top:0.7em;
@@ -1999,28 +2002,28 @@ height:20px;
 img.action-icon-1 {
 position:absolute;
 right:10px;
-margin-top:8px;
+top:8px;
 width:clamp(18px, 3.1vw, 34px);
 height:clamp(18px, 3.1vw, 34px);
 }
 img.action-icon-2 {
 position:absolute;
 right:calc(10px + clamp(18px, 3.1vw, 34px) + 10px);
-margin-top:8px;
+top:8px;
 width:clamp(18px, 3.1vw, 34px);
 height:clamp(18px, 3.1vw, 34px);
 }
 img.action-icon-3 {
 position:absolute;
 right:calc(10px + 2 * (clamp(18px, 3.1vw, 34px) + 10px));
-margin-top:8px;
+top:8px;
 width:clamp(18px, 3.1vw, 34px);
 height:clamp(18px, 3.1vw, 34px);
 }
 img.action-icon-4 {
 position:absolute;
 right:calc(10px + 3 * (clamp(18px, 3.1vw, 34px) + 10px));
-margin-top:8px;
+top:8px;
 width:clamp(18px, 3.1vw, 34px);
 height:clamp(18px, 3.1vw, 34px);
 }
@@ -2029,6 +2032,7 @@ position:relative;
 left:-0.1in;
 top:0in;
 width:48%;
+margin-top:20px;
 }
 img.notes-only {
 width:100%;
@@ -2047,7 +2051,7 @@ border:0px;  /* For Chrome and Safari */
 border-left:2px solid #000;
 border-right:2px solid #000;
 margin-left:4px;
-margin-top:15px;
+margin-top:30px;
 margin-bottom:15px;
 float:right;
 width:48%;
@@ -2834,7 +2838,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, editor=False):
       urls.append(CText('Ref: '))
       urls.append(CText(url, href=url))
       urls.append(CBreak())
-    urls = CParagraph(''.join([str(u) for u in urls]))
+    urls = CDiv(''.join([str(u) for u in urls]), style='font-size:95%; padding-top:0.5em')
   else:
     urls = ''
     
@@ -2845,7 +2849,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, editor=False):
       refs.append(CText('Ref: '))
       refs.append(CText(ref))
       refs.append(CBreak())
-    refs = CParagraph(''.join([str(r) for r in refs]))
+    refs = CDiv(''.join([str(r) for r in refs]), style='font-size:95%; padding-top:0.5em')
   else:
     refs = ''
     
