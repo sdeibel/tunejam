@@ -58,7 +58,7 @@ def home():
                "links to additional information."),
     CParagraph("There are currently a total of <a href='/index/title'>%i completed tunes</a> on the site.  In addition, <a href='/dev'>%i " % (total_complete, total_incomplete) +
                "partial listings</a> have been entered."), 
-    CH("The following resources are available:", 2),
+    CH("&#9834; The following resources are available:", 2),
     CList([
       CItem([CText("Tune Index", href='/index'), CNBSP(),
              CText(" -- A list of all the tunes, sortable by <a href='/index/title'>title<a>, "
@@ -94,7 +94,7 @@ def sessions():
                "45 minutes of Cambridge NY that share significant overlap with the tune "
                "repertoire hosted on this website:"), 
     CList([
-      CItem([CText("Hubbard Hall Tune Jam", href='/'), CNBSP(), CText('--'), CNBSP(), 
+      CItem([CText('&#9834; '), CText("Hubbard Hall Tune Jam", href='/'), CNBSP(), CText('--'), CNBSP(), 
              CText("Every Tuesday 5:30pm-7:30pm in the Beacon Feed (aka Studio) building "
                    "behind <a href='http://www.hubbardhall.org/'>Hubbard Hall</a> in Cambridge NY.  The "
                    "group focuses on learning traditional and modern Irish, Scottish, Shetland, "
@@ -104,13 +104,13 @@ def sessions():
                    "email list</a> for more information and announcements."),
              CBreak(2), 
              ]), 
-      CItem([CText("Saratoga Pan-Celtic Session", href='https://www.facebook.com/Saratoga-Pan-Celtic-Session-135466146471469/'), CNBSP(), CText('--'), CNBSP(),
+      CItem([CText('&#9834; '), CText("Saratoga Pan-Celtic Session", href='https://www.facebook.com/Saratoga-Pan-Celtic-Session-135466146471469/'), CNBSP(), CText('--'), CNBSP(),
              CText("Almost every Wednesday 7pm-11pm at The Parting Glass in Saratoga NY. "
                     "This is a fun, open group of mostly amateur musicians that enjoy playing "
                     "Quebecois, Scottish and Cape Breton, as well as Irish fiddle tunes."), 
              CBreak(2), 
              ]), 
-      CItem([CText("North Adams Session", href='https://thesession.org/sessions/3549'), CNBSP(), CText('--'), CNBSP(),
+      CItem([CText('&#9834; '), CText("North Adams Session", href='https://thesession.org/sessions/3549'), CNBSP(), CText('--'), CNBSP(),
              CText("Every Saturday 10:30am until 2 or 3pm at the Lickety Split Coffee Shop "
                    "inside Mass MoCA. They play mostly Contra and New England fiddle music. "
                    "Sheet music is OK. Beginners may find it challenging but all are welcome."), 
@@ -126,7 +126,7 @@ def _index_header(itype):
   
   parts = []
 
-  parts.append(CText('Sort Index By:', bold=1))
+  parts.append(CText('&#9834; Sort Index By:', bold=1))
   parts.append(CNBSP())
   parts.append(CText('Title', href='/index/title', bold=itype=='title'))
   parts.append(CNBSP())
@@ -364,7 +364,7 @@ def index_sheet(stype='title'):
                "and in the ABC encoding:"),
   ]
 
-  parts.append(CText('Sort By:', bold=1))
+  parts.append(CText('&#9834; Sort By:', bold=1))
   parts.append(CNBSP())
   parts.append(CText('Title', href='/index/sheet/title', bold=stype=='title'))
   parts.append(CNBSP())
@@ -455,7 +455,7 @@ def index_sheet(stype='title'):
 
   parts.append(CBreak(2))
 
-  parts.append(CParagraph(["Also available:", CText("Sheet Music for Local Tunes", href='/sheet/all')]))
+  parts.append(CParagraph(["&#9834; Also available:", CText("Sheet Music for Local Tunes", href='/sheet/all')]))
 
   return PageWrapper(parts, 'local')
 
@@ -467,7 +467,7 @@ def dev():
                           "materials to this site, and also lists the tunes that are "
                           "missing notes, chords, a recording, origin, history, or "
                           "(for local tunes only) sheet music."))
-  parts.append(CH("Resources", 2))
+  parts.append(CH("&#9834; Resources", 2))
   parts.append(CParagraph(
     "In addition to consulting printed material, interviewing authors, and searching "
     "the web, the following resources were particularly useful "
@@ -514,7 +514,7 @@ def dev():
     sections.append('incomplete')
   for section in sections:
     if section == 'incomplete':
-      parts.append(CH(utils.kSectionTitles[section], 2))
+      parts.append(CH("&#9834; " + utils.kSectionTitles[section], 2))
       parts.append(CParagraph("Please help complete these listings by emailing the missing notes (first "
                               "2-3 measures of each part) or chords to "
                               "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
@@ -549,7 +549,7 @@ def dev():
         no_origin.add(obj.name)
 
   if no_recording:
-    parts.append(CH("Tunes with No Recording", 2))
+    parts.append(CH("&#9834; Tunes with No Recording", 2))
     parts.append(CParagraph("Please help complete these listings by creating a slow and "
                             "clear recording of the melody, played once or twice, and emailing it to "
                             "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
@@ -559,7 +559,7 @@ def dev():
         parts.append(part)
         
   if no_origin:
-    parts.append(CH("Tunes with Unknown Origin", 2))
+    parts.append(CH("&#9834; Tunes with Unknown Origin", 2))
     parts.append(CParagraph("If you have a documented original provenance for any of these tunes, please email "
                             "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
     parts.append(CBreak())
@@ -568,7 +568,7 @@ def dev():
         parts.append(part)
         
   if no_history:
-    parts.append(CH("Tunes with No Known History", 2))
+    parts.append(CH("&#9834; Tunes with No Known History", 2))
     parts.append(CParagraph("If you have documented history for any of these tunes, please email "
                             "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
     parts.append(CBreak())
@@ -577,7 +577,7 @@ def dev():
         parts.append(part)
         
   if no_local:
-    parts.append(CH("Local Tunes Missing Sheet Music", 2))
+    parts.append(CH("&#9834; Local Tunes Missing Sheet Music", 2))
     parts.append(CParagraph("If you have sheet music for any of these tunes, please email "
                             "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
     parts.append(CBreak())
@@ -586,7 +586,7 @@ def dev():
         parts.append(part)
         
   
-  parts.append(CH("Source Code", 2))
+  parts.append(CH("&#9834; Source Code", 2))
   parts.append(CParagraph("You can set up your own local copy of this website, which runs on "
                           "Flask and Python on Linux or macOS.  The source code and all the tune files are "
                           "<a href='https://github.com/sdeibel/tunejam'>available on github</a>.  You'll "
@@ -1121,7 +1121,7 @@ padding-bottom:0.5em;
     section_options.append((key, title))
     
   parts.append(CForm([
-    CText("Filter:", bold=1),
+    CText("&#9834; Filter:", bold=1),
     CSelect(section_options, current=filter, name='filter',
             onchange='FilterTunes()', id='filterselect'),
     CInput(type='TEXT', name='text_filter', onkeyup='FilterTunes()', id='filtertext'), 
@@ -1577,13 +1577,15 @@ def doprint(format=None, bookname=None):
         img = ''
         title = book.subtitle
       parts.extend([
+        CText('&#9834; '),
         CText(title, href=url),
-        img, 
+        img,
         CBreak(),
       ])
-      
+
     parts.extend([
       CBreak(),
+      CText('&#9834; '),
       CText("Sheet Music for Local Tunes", href='/sheet/all'),
       CDiv(style='clear:both'),
     ])
@@ -1988,8 +1990,9 @@ def events(delete=None, undelete=None):
   if events:
     for event in events:
       parts.extend([
-        CText(event.title, href='/event/%s' % event.name), 
-        CBreak(), 
+        CText('&#9834; '),
+        CText(event.title, href='/event/%s' % event.name),
+        CBreak(),
       ])
   else:
     parts.append(CParagraph(CText("There are no active events right now.", italic=1)))
