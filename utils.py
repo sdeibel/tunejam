@@ -186,6 +186,15 @@ class CTune:
     def WriteChords(self, new_chords_text):
         """Replace the chord section (after second --) in the .spec file."""
 
+        # Skip write if only trailing whitespace or blank lines differ
+        def _strip_trailing(text):
+            lines = [l.rstrip() for l in text.splitlines()]
+            while lines and not lines[-1]:
+                lines.pop()
+            return '\n'.join(lines)
+        if _strip_trailing(new_chords_text) == _strip_trailing(self.chords):
+            return
+
         fullpath = self._GetSpecFile()
         if fullpath is None:
             error("Could not find spec for %s" % self.name)
