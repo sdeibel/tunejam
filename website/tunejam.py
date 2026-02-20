@@ -120,7 +120,7 @@ def sessions():
     CParagraph("See also <a href='https://thesession.org/sessions'>thesession.org</a>")
   ])
       
-  return PageWrapper(parts, 'home')
+  return PageWrapper(parts, 'session')
 
 def _index_header(itype):
   
@@ -2465,7 +2465,7 @@ def PageWrapper(body, section=None, refresh=None):
       if os.path.exists(img_path):
         eye_candy = CImage(src='/image/eye-candy/%s.jpeg' % img_name,
                            hclass='eye-candy',
-                           style='float:right; width:%d%%; margin:0 0 10px 15px' % img_width)
+                           style='float:right; width:%d%%; margin:0 0 10px 15px; border:3px solid white; outline:2px solid black' % img_width)
 
     # Insert eye-candy image after the first CH heading so it
     # appears below the title rather than beside it
