@@ -25,7 +25,7 @@ app = Flask(__name__)
 app.secret_key = 'TunejamIsAtHubbardHallEachTuesday'
 app.config['SESSION_TYPE'] = 'filesystem'
 
-kSiteVersion = '2.1'
+kSiteVersion = '3.0'
 
 kMenu = [
   ('Home', '/', 'home'), 
@@ -611,6 +611,8 @@ def dev():
              CText(" -- Full book PDFs")]),
       CItem([CText("Clear All Caches", href='/dev/clear-cache/all'),
              CText(" -- All of the above")]),
+      CItem([CText("Rebuild All Books", href='/dev/rebuild-books'),
+             CText(" -- Regenerate all book PDFs (runs in background)")]),
     ]))
     parts.append(LogoutButton('/dev'))
   else:
@@ -654,6 +656,29 @@ def clear_cache(cache_type):
   parts = [
     CH("Cache Cleared", 2),
     CParagraph("Cleared cache: %s" % ', '.join(cleared)),
+    CBreak(),
+    CText("Return to Dev page", href='/dev'),
+    CBreak(2),
+  ]
+  return PageWrapper(parts, 'dev')
+
+@app.route('/dev/rebuild-books')
+def rebuild_books():
+  import threading
+  import crontask
+
+  editor = CheckPassword()
+  if not editor:
+    return redirect('/authorize/dev', code=303)
+
+  thread = threading.Thread(target=crontask.regenerate_books)
+  thread.daemon = True
+  thread.start()
+
+  parts = [
+    CH("Rebuilding Books", 2),
+    CParagraph("All books are being regenerated in the background. "
+               "This may take several minutes."),
     CBreak(),
     CText("Return to Dev page", href='/dev'),
     CBreak(2),
