@@ -1850,9 +1850,10 @@ max-width:1079px;
 background-color: #ffffff;
 }
 #footer {
+clear:both;
 background-color: #e8f0e8;
 padding: 8px 12px;
-margin: 12px -12px 0;
+margin: 0 -12px 0;
 border-top: 1px solid #88aa88;
 }
 div.tune-break {
@@ -2534,7 +2535,7 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
       CDiv([CImage(src='/image/header.jpg')], id='header'),
       CDiv(items, id='main-menu'),
     ] + body + [
-      CBreak(2),
+      CDiv('', style='clear:both; height:20px'),
       CDiv([CText('Site Version %s - Maintained by Stephan Deibel' % kSiteVersion)], id='footer'),
     ]
   
