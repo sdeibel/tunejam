@@ -1244,8 +1244,185 @@ padding-bottom:0.5em;
 @app.route('/tune/<tune>')
 def tune(tune):
   parts = []
-  parts.extend(CreateTuneHTML(tune, metadata=True))
+  editor = CheckPassword()
+  parts.extend(CreateTuneHTML(tune, metadata=True, editor=editor))
   return PageWrapper(parts)
+
+@app.route('/tune/<tune>/edit')
+def tune_edit(tune):
+  if not CheckPassword():
+    return redirect('/authorize/tune/%s/edit' % tune, code=303)
+
+  obj = utils.CTune(tune)
+  try:
+    obj.ReadDatabase()
+    title = obj.title
+  except SystemExit:
+    title = "Unknown Tune"
+
+  if not obj.chords:
+    return redirect('/tune/%s' % tune, code=303)
+
+  parsed = utils.ParseChords(obj.chords)
+  target_columns = GetNumColumns(parsed)
+
+  parts = []
+  parts.append(CH("Edit Chords: %s" % title, 2))
+
+  # Build the form with input fields for each chord cell
+  rows = []
+  part_class = 'even'
+  chord_index = 0
+  for part_num, part in enumerate(parsed):
+    row = []
+    for i, measure in enumerate(part):
+      if measure != '|:' and not row:
+        row.append(CTD('', hclass='first'))
+      if measure == '|:':
+        row.append(CTD(' :', hclass='first'))
+      elif measure == ':|':
+        row.append(CTD(': ', hclass='last'))
+      else:
+        hclass = None
+        if not row:
+          hclass = 'first'
+        elif len(row) == target_columns:
+          hclass = 'last-chord'
+        field_name = 'chord_%d' % chord_index
+        inp = CInput(type='text', name=field_name, value=measure,
+                     size=max(6, len(measure) + 2))
+        row.append(CTD(inp, hclass=hclass))
+        chord_index += 1
+      if len(row) == target_columns + 1 and (i + 1 >= len(part) or part[i + 1] != ':|'):
+        row.append(CTD('', hclass='last'))
+        rows.append(CTR(row, hclass=part_class))
+        row = []
+      elif len(row) == target_columns + 2:
+        rows.append(CTR(row, hclass=part_class))
+        row = []
+    if row:
+      rows.append(CTR(row, hclass=part_class))
+
+    if part_class == 'even':
+      part_class = 'odd'
+    else:
+      part_class = 'even'
+
+  # Pad rows to same length
+  max_line_len = 0
+  for row in rows:
+    max_line_len = max(max_line_len, len(row.body))
+  for row in rows:
+    while len(row.body) < max_line_len:
+      row.append(CTD(''))
+
+  table = CTable(rows, width=None, hclass='chords', style='float:left')
+
+  form_body = [
+    CInput(type='HIDDEN', name='num_chords', value=str(chord_index)),
+    table,
+    CDiv(style='clear:both'),
+    CBreak(),
+    CInput(type='SUBMIT', value='  Save  '),
+    CText(' '),
+    CInput(type='button', value='  Cancel  ', onclick="window.location='/tune/%s'" % tune),
+  ]
+
+  parts.append(CForm(form_body, action='/tune/%s/save' % tune, method='POST'))
+
+  return PageWrapper(parts)
+
+@app.route('/tune/<tune>/save', methods=['POST'])
+def tune_save(tune):
+  if not CheckPassword():
+    return redirect('/authorize/tune/%s/edit' % tune, code=303)
+
+  obj = utils.CTune(tune)
+  try:
+    obj.ReadDatabase()
+  except SystemExit:
+    return redirect('/tune/%s' % tune, code=303)
+
+  if not obj.chords:
+    return redirect('/tune/%s' % tune, code=303)
+
+  # Read submitted chord values
+  num_chords = int(request.form.get('num_chords', 0))
+  new_chord_values = []
+  for i in range(num_chords):
+    val = request.form.get('chord_%d' % i, '').strip()
+    new_chord_values.append(val)
+
+  # Parse each line to extract structure (repeat markers) and chord values
+  orig_lines = obj.chords.strip().splitlines()
+  chord_index = 0
+  line_data = []
+  for line in orig_lines:
+    stripped = line.strip()
+    has_open = stripped.startswith('|:')
+    has_close = stripped.endswith(':|')
+
+    # Extract inner content between repeat markers / outer bars
+    inner = stripped
+    if has_open:
+      inner = inner[2:]
+    if has_close:
+      inner = inner[:-2]
+    elif inner.endswith('|'):
+      inner = inner[:-1]
+    if not has_open and inner.startswith('|'):
+      inner = inner[1:]
+
+    # Split by | to get chord cells
+    cells = [c.strip() for c in inner.split('|')]
+    cells = [c for c in cells if c]
+
+    # Replace with new values
+    new_chords = []
+    for c in cells:
+      if chord_index < len(new_chord_values):
+        new_chords.append(new_chord_values[chord_index])
+      else:
+        new_chords.append(c)
+      chord_index += 1
+
+    line_data.append((has_open, has_close, new_chords))
+
+  # Compute max width per column across all lines
+  max_cols = max(len(d[2]) for d in line_data)
+  col_widths = [0] * max_cols
+  for _, _, chords in line_data:
+    for i, c in enumerate(chords):
+      col_widths[i] = max(col_widths[i], len(c))
+
+  # Build formatted lines with uniform column widths
+  # If any line has a close repeat (:|), non-repeat lines need an extra space
+  # before their closing | so that all ending |'s align vertically
+  any_close = any(d[1] for d in line_data)
+  result_lines = []
+  for has_open, has_close, chords in line_data:
+    if has_open:
+      prefix = '|:'
+    else:
+      prefix = '  '
+
+    padded = [c.ljust(col_widths[i]) for i, c in enumerate(chords)]
+    line = prefix + ' ' + ' | '.join(padded)
+
+    if has_close:
+      line += ' :|'
+    elif any_close:
+      line += '  |'
+    else:
+      line += ' |'
+
+    result_lines.append(line)
+
+  new_chords_text = '\n'.join(result_lines)
+
+  obj.WriteChords(new_chords_text)
+
+  return redirect('/tune/%s' % tune, code=303)
 
 @app.route('/png/<tune>')
 def png(tune):
@@ -2275,7 +2452,7 @@ def CreateTuneSetPDF(name, title, subtitle, tunes):
   pdf = book.GeneratePDF(include_index=False, generate=True)
   return send_file(pdf, mimetype='application/pdf')
   
-def CreateTuneHTML(name, pagetype='both', metadata=False):
+def CreateTuneHTML(name, pagetype='both', metadata=False, editor=False):
 
   obj = utils.CTune(name)
   try:
@@ -2378,12 +2555,17 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
   else:
     refs = ''
     
+  if editor and obj.chords:
+    edit_link = CDiv(CText("Edit Chords", href='/tune/%s/edit' % name), style='clear:both; text-align:right')
+  else:
+    edit_link = ''
+
   tune = CDiv([
     CH([
       title + ' - ' + key_str,
       klass,
     ] + obj.GetActionIcons(), 1, hclass=tclass),
-    structure, 
+    structure,
     author,
     origin,
     history,
@@ -2391,8 +2573,9 @@ def CreateTuneHTML(name, pagetype='both', metadata=False):
     refs,
     notes,
     chords,
+    edit_link,
   ], hclass='tune')
-  
+
   return [tune]
   
 def GetNumColumns(chords):

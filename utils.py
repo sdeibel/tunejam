@@ -183,15 +183,53 @@ class CTune:
         if self.klass is None:
             self.klass = 'unknown'        
 
+    def WriteChords(self, new_chords_text):
+        """Replace the chord section (after second --) in the .spec file."""
+
+        fullpath = self._GetSpecFile()
+        if fullpath is None:
+            error("Could not find spec for %s" % self.name)
+
+        f = open(fullpath)
+        lines = f.readlines()
+        f.close()
+
+        # Find the second -- delimiter
+        delim_count = 0
+        cut_index = None
+        for i, line in enumerate(lines):
+            if line.strip() == '--':
+                delim_count += 1
+                if delim_count == 2:
+                    cut_index = i
+                    break
+
+        if cut_index is None:
+            error("Could not find chord section in %s" % fullpath)
+
+        # Keep everything up to and including the second --
+        new_lines = lines[:cut_index + 1]
+
+        # Add new chord text
+        for line in new_chords_text.splitlines():
+            new_lines.append(line + '\n')
+
+        f = open(fullpath, 'w')
+        f.writelines(new_lines)
+        f.close()
+
+        # Update in-memory chords
+        self.chords = new_chords_text.rstrip() + '\n'
+
     def _GetSpecFile(self):
-        
-        fn = self.name + '.spec'        
+
+        fn = self.name + '.spec'
         fullpath = os.path.join(kDatabaseDir, fn)
         if os.path.isfile(fullpath):
             return fullpath
         else:
             return None
-        
+
     def _GetSheetMusicFile(self):
         
         fn = self.name + '.abc'        
