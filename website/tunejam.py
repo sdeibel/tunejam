@@ -1304,7 +1304,31 @@ def tune_edit(tune):
   if not obj.chords:
     return redirect('/tune/%s' % tune, code=303)
 
-  parsed = utils.ParseChords(obj.chords)
+  # Separate header/footer text from chord chart lines
+  chord_lines = obj.chords.strip().splitlines()
+  header_lines = []
+  footer_lines = []
+  chart_lines = []
+  in_chart = False
+  past_chart = False
+  for line in chord_lines:
+    if '|' in line:
+      in_chart = True
+      past_chart = False
+      chart_lines.append(line)
+    elif in_chart:
+      past_chart = True
+      in_chart = False
+      footer_lines.append(line)
+    elif past_chart:
+      footer_lines.append(line)
+    else:
+      header_lines.append(line)
+  header_text = '\n'.join(header_lines)
+  footer_text = '\n'.join(footer_lines)
+
+  chart_text = '\n'.join(chart_lines)
+  parsed = utils.ParseChords(chart_text)
   target_columns = GetNumColumns(parsed)
 
   parts = []
@@ -1357,19 +1381,91 @@ def tune_edit(tune):
     while len(row.body) < max_line_len:
       row.append(CTD(''))
 
-  table = CTable(rows, width=None, hclass='chords', style='float:left')
+  table = CTable(rows, width=None, hclass='chords', style='float:left; margin-left:0; margin-top:5px')
+
+  validate_js = """
+<script>
+function validateChords() {
+  var n = parseInt(document.querySelector('input[name=num_chords]').value);
+  for (var i = 0; i < n; i++) {
+    var field = document.querySelector('input[name=chord_' + i + ']');
+    if (!field) continue;
+    var val = field.value;
+    // Validate each character
+    for (var j = 0; j < val.length; j++) {
+      var c = val[j];
+      var prev = j > 0 ? val[j-1] : '';
+      var next = j + 1 < val.length ? val[j+1] : '';
+      var N = 'ABCDEFGH';
+      if (N.indexOf(c) >= 0) continue;
+      if (c == '/' || c == '(' || c == ')') continue;
+      if ((c == 'b' || c == '#' || c == '+') && N.indexOf(prev) >= 0) continue;
+      if (c == 'm' && (N.indexOf(prev) >= 0 || prev == 'b' || prev == '#' || prev == 'i')) continue;
+      if ((c == '7' || c == '6') && (N.indexOf(prev) >= 0 || prev == 'b' || prev == '#' || prev == 'm')) continue;
+      if (c == '9' && (N.indexOf(prev) >= 0 || prev == 'b' || prev == '#' || prev == 'm' || prev == 'p')) continue;
+      if (c == '-' && (N.indexOf(prev) >= 0 || prev == 'b' || prev == '#' || prev == 'm' || prev == '7' || prev == '6')) continue;
+      if ('0123456789'.indexOf(c) >= 0 && (next == '/' || prev == '/')) continue;
+      if ((c == '1' || c == '2' || c == '3') && next == ':') continue;
+      if (c == ':' && (prev == '1' || prev == '2' || prev == '3')) continue;
+      if (c == 'i' && N.indexOf(prev) >= 0) continue;
+      if (c == 's' && (N.indexOf(prev) >= 0 || prev == 'b' || prev == '#')) continue;
+      if (c == 'u' && prev == 's') continue;
+      if (c == 'p' && prev == 'u') continue;
+      field.style.backgroundColor = '#ffcccc';
+      field.focus();
+      alert('Invalid chord: ' + val + '\\n\\nCharacter \\'' + c + '\\' at position ' + (j+1) + ' is not allowed here.');
+      return false;
+    }
+    field.style.backgroundColor = '';
+  }
+  return true;
+}
+</script>
+"""
 
   form_body = [
+    validate_js,
     CInput(type='HIDDEN', name='num_chords', value=str(chord_index)),
-    table,
-    CDiv(style='clear:both'),
-    CBreak(),
+    CTable([
+      CTR([
+        CTD(CText('Notes:', bold=1), style='vertical-align:top; padding-right:8px'),
+        CTD(CInput(type='text', name='chord_header', value=header_text, size=60)),
+      ]),
+      CTR([
+        CTD(''),
+        CTD([table, CDiv(style='clear:both')], style='padding:10px 0'),
+      ]),
+      CTR([
+        CTD(CText('Notes:', bold=1), style='vertical-align:top; padding-right:8px'),
+        CTD(CInput(type='text', name='chord_footer', value=footer_text, size=60)),
+      ]),
+    ], width=None, style='border:0; margin:0; padding:0'),
+    CBreak(2),
     CInput(type='SUBMIT', value='  Save  '),
     CText(' '),
     CInput(type='button', value='  Cancel  ', onclick="window.location='/tune/%s'" % tune),
   ]
 
-  parts.append(CForm(form_body, action='/tune/%s/save' % tune, method='POST'))
+  parts.append(CForm(form_body, action='/tune/%s/save' % tune, method='POST',
+                      onsubmit='return validateChords()'))
+
+  parts.append(CDiv([
+    CH("Chord Notation Rules", 3),
+    CParagraph([
+      CText("Notes: ", bold=1), "A B C D E F G H (uppercase; H is German Bb)", CBreak(),
+      CText("Flat/Sharp/Augmented: ", bold=1), "b # + (must follow a note letter)", CBreak(),
+      CText("Minor: ", bold=1), "m (must follow a note, flat, or sharp)", CBreak(),
+      CText("7th/6th: ", bold=1), "7 6 (must follow a note, flat, sharp, or minor)", CBreak(),
+      CText("9th: ", bold=1), "9 (must follow a note, flat, sharp, minor, or 'p' in 'sup')", CBreak(),
+      CText("Diminished: ", bold=1), "Dim (e.g., C#Dim, GDim7)", CBreak(),
+      CText("Suspended: ", bold=1), "sup (e.g., Csup9)", CBreak(),
+      CText("Sustain/Tie: ", bold=1), "- (must follow a note, flat, sharp, minor, 7th, or 6th)", CBreak(),
+      CText("Alternatives: ", bold=1), "/ ( ) (e.g., A(G/B) for optional chords)", CBreak(),
+      CText("Alternate endings: ", bold=1), "1: 2: 3: (digit followed by colon)", CBreak(),
+      CText("Time signature: ", bold=1), "Digits around / (e.g., 6/8, 9/8)", CBreak(),
+      CText("Header/Footer: ", bold=1), "Free text for instructions or comments (not validated)",
+    ]),
+  ], style='padding-top:20px'))
 
   return PageWrapper(parts, 'index', show_eye_candy=False)
 
@@ -1387,18 +1483,24 @@ def tune_save(tune):
   if not obj.chords:
     return redirect('/tune/%s' % tune, code=303)
 
-  # Read submitted chord values
+  # Read header/footer text
+  header_text = request.form.get('chord_header', '').strip()
+  footer_text = request.form.get('chord_footer', '').strip()
+
+  # Read submitted chord values with auto-correction and validation
   num_chords = int(request.form.get('num_chords', 0))
   new_chord_values = []
   for i in range(num_chords):
     val = request.form.get('chord_%d' % i, '').strip()
+    val = ValidateChord(val)
     new_chord_values.append(val)
 
-  # Parse each line to extract structure (repeat markers) and chord values
+  # Parse only chart lines (those with |) from original chords
   orig_lines = obj.chords.strip().splitlines()
+  chart_lines = [line for line in orig_lines if '|' in line]
   chord_index = 0
   line_data = []
-  for line in orig_lines:
+  for line in chart_lines:
     stripped = line.strip()
     has_open = stripped.startswith('|:')
     has_close = stripped.endswith(':|')
@@ -1441,6 +1543,10 @@ def tune_save(tune):
   # before their closing | so that all ending |'s align vertically
   any_close = any(d[1] for d in line_data)
   result_lines = []
+
+  if header_text:
+    result_lines.append(header_text)
+
   for has_open, has_close, chords in line_data:
     if has_open:
       prefix = '|:'
@@ -1458,6 +1564,9 @@ def tune_save(tune):
       line += ' |'
 
     result_lines.append(line)
+
+  if footer_text:
+    result_lines.append(footer_text)
 
   new_chords_text = '\n'.join(result_lines)
 
@@ -2720,6 +2829,46 @@ def GetNumColumns(chords):
   else:
     return count
     
+def ValidateChord(val):
+  """Validate chord content.
+  Valid: A-H (notes), b (flat, after A-H), # (sharp, after A-H),
+  m (minor, after A-H/b/#/i), 7/6 (after A-H/b/#/m), 9 (after A-H/b/#/m/p),
+  - (tie/sustain, after A-H/b/#/m/7/6), / ( ) (alternatives/optional),
+  1-3 followed by : (alternate endings), Dim (diminished), sup (suspended)."""
+  notes = 'ABCDEFGH'
+  for i, c in enumerate(val):
+    prev = val[i - 1] if i > 0 else ''
+    nxt = val[i + 1] if i + 1 < len(val) else ''
+    if c in notes:
+      continue
+    if c in '/()\n':
+      continue
+    if c in ('b', '#', '+') and prev in notes:
+      continue
+    if c == 'm' and (prev in notes or prev in ('b', '#', 'i')):
+      continue
+    if c in ('7', '6') and (prev in notes or prev in ('b', '#', 'm')):
+      continue
+    if c == '9' and (prev in notes or prev in ('b', '#', 'm', 'p')):
+      continue
+    if c == '-' and (prev in notes or prev in ('b', '#', 'm', '7', '6')):
+      continue
+    if c in '0123456789' and (nxt == '/' or prev == '/'):
+      continue
+    if c in ('1', '2', '3') and nxt == ':':
+      continue
+    if c == ':' and prev in ('1', '2', '3'):
+      continue
+    if c == 'i' and prev in notes:
+      continue
+    if c == 's' and (prev in notes or prev in ('b', '#')):
+      continue
+    if c == 'u' and prev == 's':
+      continue
+    if c == 'p' and prev == 'u':
+      continue
+  return val
+
 def ChordsToHTML(chords, tclass='chords'):
     
     if not isinstance(chords, list):

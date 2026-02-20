@@ -21,5 +21,5 @@ Bc|d2Bcd2|d2Bcd2|
 --
 |: G    | Am   | D7   | D7  |
    G    | CAm  | D7   | G  :|
-|: GGM7 | G6G  | CCM7 | AmD |
-   GC   | D   | GD7   | G  :|
+|: GG7  | G6G  | CC7  | AmD |
+   GC   | D    | GD7  | G  :|
