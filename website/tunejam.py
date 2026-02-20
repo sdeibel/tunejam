@@ -1527,13 +1527,13 @@ def get_all_books():
   import allbook
   import flipbook
   retval = [
-    allbook.CAllBook(),
-    allbook.CAllBookBySection(),
-    allbook.CAllBookByTime(),
-    None, 
-    flipbook.CFlipBook(),
-    flipbook.CFlipBookByTime(), 
-    None, 
+    allbook.CAllBook(metadata_only=True),
+    allbook.CAllBookBySection(metadata_only=True),
+    allbook.CAllBookByTime(metadata_only=True),
+    None,
+    flipbook.CFlipBook(metadata_only=True),
+    flipbook.CFlipBookByTime(metadata_only=True),
+    None,
   ]
   custom_books = []
   files = os.listdir(utils.kDatabaseDir)
@@ -1541,7 +1541,7 @@ def get_all_books():
     if not fn.endswith('.book'):
       continue
     book = fn[:-len('.book')]
-    custom_books.append(utils.CBook(book))
+    custom_books.append(utils.CBook(book, metadata_only=True))
     
   def sort_custom(o1, o2):
     return cmp(o1.subtitle, o2.subtitle)

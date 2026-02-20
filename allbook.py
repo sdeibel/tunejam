@@ -7,8 +7,8 @@ import utils
 
 class CAllBookBySection(utils.CBook):
 
-    def __init__(self):
-        
+    def __init__(self, metadata_only=False):
+
         self.title = 'Hubbard Hall Tune Jam'
         self.subtitle = 'All Tunes - By Type'
         self.type_in_header = True
@@ -16,7 +16,11 @@ class CAllBookBySection(utils.CBook):
         self.contact = 'http://music.cambridgeny.net'
         self.name = 'all-by-section'
         self.url = self.name
-    
+
+        if metadata_only:
+            self.pages = []
+            return
+
         files = os.listdir(utils.kDatabaseDir)
         files = [os.path.join(utils.kDatabaseDir, f) for f in files if f.endswith('.spec')]
     
@@ -56,8 +60,8 @@ class CAllBookBySection(utils.CBook):
         
 class CAllBookByTime(utils.CBook):
 
-    def __init__(self):
-        
+    def __init__(self, metadata_only=False):
+
         self.title = 'Hubbard Hall Tune Jam'
         self.subtitle = 'All Tunes - By Time Signature'
         self.type_in_header = True
@@ -65,7 +69,11 @@ class CAllBookByTime(utils.CBook):
         self.contact = 'http://music.cambridgeny.net'
         self.name = 'all-by-time'
         self.url = self.name
-    
+
+        if metadata_only:
+            self.pages = []
+            return
+
         files = os.listdir(utils.kDatabaseDir)
         files = [os.path.join(utils.kDatabaseDir, f) for f in files if f.endswith('.spec')]
 
@@ -103,14 +111,18 @@ class CAllBookByTime(utils.CBook):
         
 class CAllBook(utils.CBook):
 
-    def __init__(self):
-        
+    def __init__(self, metadata_only=False):
+
         self.title = 'Hubbard Hall Tune Jam'
         self.subtitle = 'All Tunes - Alphabetical'
         self.date = time.strftime("%d %B %Y", time.localtime())
         self.contact = 'http://music.cambridgeny.net'
         self.name = 'all'
         self.url = self.name
+
+        if metadata_only:
+            self.pages = []
+            return
 
         files = os.listdir(utils.kDatabaseDir)
         files = [os.path.join(utils.kDatabaseDir, f) for f in files if f.endswith('.spec')]

@@ -1306,8 +1306,8 @@ class CSheetPage:
 
 class CBook:
     
-    def __init__(self, name, title='', subtitle='', type_in_header=False, large=False):
-        
+    def __init__(self, name, title='', subtitle='', type_in_header=False, large=False, metadata_only=False):
+
         if name.endswith('.book'):
             fn = name
             name = os.path.basename(name)[:-len('.book')]
@@ -1321,7 +1321,7 @@ class CBook:
         self.contact = 'http://music.cambridgeny.net'
         self.name = name
         self.url = 'book/%s' % name
-        
+
         if not os.path.isfile(fn):
             error("Could not find book %s" % name)
         f = open(fn)
@@ -1333,7 +1333,11 @@ class CBook:
         self.title, self.subtitle, self.date, self.contact = lines[:4]
         if not lines[4].strip() == '--':
             error("Malformed book %s: Missing -- after header" % fn)
-            
+
+        if metadata_only:
+            self.pages = []
+            return
+
         self.pages = []
         set_num = 1
         for i, line in enumerate(lines[5:]):

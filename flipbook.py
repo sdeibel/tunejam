@@ -6,8 +6,8 @@ import utils
 
 class CFlipBook(utils.CBook):
 
-    def __init__(self):
-        
+    def __init__(self, metadata_only=False):
+
         self.title = 'Hubbard Hall Tune Jam'
         self.subtitle = 'Set Flip Book - By Type'
         self.type_in_header = True
@@ -15,7 +15,11 @@ class CFlipBook(utils.CBook):
         self.contact = 'http://music.cambridgeny.net'
         self.name = 'flip'
         self.url = self.name
-    
+
+        if metadata_only:
+            self.pages = []
+            return
+
         files = os.listdir(utils.kDatabaseDir)
         files = [os.path.join(utils.kDatabaseDir, f) for f in files if f.endswith('.spec')]
 
@@ -48,8 +52,8 @@ class CFlipBook(utils.CBook):
 
 class CFlipBookByTime(utils.CBook):
 
-    def __init__(self):
-        
+    def __init__(self, metadata_only=False):
+
         self.title = 'Hubbard Hall Tune Jam'
         self.subtitle = 'Set Flip Book - By Time Signature'
         self.type_in_header = True
@@ -57,7 +61,11 @@ class CFlipBookByTime(utils.CBook):
         self.contact = 'http://music.cambridgeny.net'
         self.name = 'flip-by-time'
         self.url = self.name
-    
+
+        if metadata_only:
+            self.pages = []
+            return
+
         files = os.listdir(utils.kDatabaseDir)
         files = [os.path.join(utils.kDatabaseDir, f) for f in files if f.endswith('.spec')]
 
