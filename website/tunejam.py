@@ -2013,12 +2013,13 @@ table.chords {
 position:relative;
 top:0in;
 right:0in;
-font-size:2.8vw;
+font-size:min(3vw, 26px);
 border:0px;  /* For Chrome and Safari */
 border-left:2px solid #000;
 border-right:2px solid #000;
 margin-left:4px;
-margin-top:20px;
+margin-top:15px;
+margin-bottom:15px;
 float:right;
 }
 table.chords-only {
@@ -2062,8 +2063,18 @@ clear:both;
 left:0in;
 right:none;
 font-size:5.5vw;
-width:95%;
+width:100%;
 float:left;
+}
+div.chord-group {
+clear:both;
+float:left;
+width:100%;
+}
+div.chord-note {
+font-size:4vw !important;
+width:auto !important;
+min-width:0 !important;
 }
 }
 
@@ -2870,10 +2881,34 @@ def ValidateChord(val):
   return val
 
 def ChordsToHTML(chords, tclass='chords'):
-    
+
+    # Separate header/footer text (lines without |) from chart lines
+    header_text = ''
+    footer_text = ''
     if not isinstance(chords, list):
-        chords = utils.ParseChords(chords)
-        
+        lines = chords.splitlines()
+        header_lines = []
+        footer_lines = []
+        chart_lines = []
+        in_chart = False
+        past_chart = False
+        for line in lines:
+            if '|' in line:
+                in_chart = True
+                past_chart = False
+                chart_lines.append(line)
+            elif in_chart:
+                past_chart = True
+                in_chart = False
+                footer_lines.append(line)
+            elif past_chart:
+                footer_lines.append(line)
+            else:
+                header_lines.append(line)
+        header_text = '\n'.join(header_lines).strip()
+        footer_text = '\n'.join(footer_lines).strip()
+        chords = utils.ParseChords('\n'.join(chart_lines))
+
     html = []
     part_class = 'even'
     max_line_len = 0
@@ -2905,19 +2940,29 @@ def ChordsToHTML(chords, tclass='chords'):
                 row = []
         if row:
             html.append(CTR(row, hclass=part_class))
-            
+
         if part_class == 'even':
             part_class = 'odd'
         else:
             part_class = 'even'
-        
+
     for row in html:
       while len(row.body) < max_line_len:
         row.append(CTD(''))
-        
-    html = CTable(html, width=None, hclass=tclass)
-    
-    return html
+
+    table = CTable(html, width=None, hclass=tclass)
+
+    if not header_text and not footer_text:
+        return table
+
+    note_style = 'font-size:min(2.5vw, 21px); width:0; min-width:100%; overflow-wrap:break-word'
+    parts = []
+    if header_text:
+        parts.append(CDiv(CText(header_text, italic=1), hclass='chord-note', style=note_style))
+    parts.append(table)
+    if footer_text:
+        parts.append(CDiv(CText(footer_text, italic=1), hclass='chord-note', style=note_style))
+    return CDiv(parts, hclass='chord-group', style='float:right; display:grid; grid-template-columns:1fr')
   
 gTuneCountCache = {}
 def TuneCount(include_incomplete):
