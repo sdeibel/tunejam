@@ -1265,7 +1265,7 @@ padding-bottom:0.5em;
   else:
     section = 'sets'
     
-  return PageWrapper(parts, section)
+  return PageWrapper(parts, section, show_eye_candy=(section != 'event'))
 
 @app.route('/tune/<tune>')
 def tune(tune):
