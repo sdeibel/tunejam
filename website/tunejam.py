@@ -2028,8 +2028,7 @@ img.notes {
 position:relative;
 left:-0.1in;
 top:0in;
-max-width:45%;
-min-width:2.5in;
+width:48%;
 }
 img.notes-only {
 width:100%;
@@ -2051,6 +2050,15 @@ margin-left:4px;
 margin-top:15px;
 margin-bottom:15px;
 float:right;
+width:48%;
+table-layout:fixed;
+margin-right:10px;
+}
+table.chords td.first {
+width:1.2em;
+}
+table.chords td.last {
+width:1.2em;
 }
 table.chords-only {
 clear:both;
@@ -2082,6 +2090,17 @@ padding-right:0.5em;
 
 /* Adjust CSS for narrow devices */
 @media only screen and (max-width: 489px) {
+#body {
+margin:5px;
+padding:0 5px;
+overflow-x:hidden;
+}
+#main-menu {
+margin:0 -5px 12px;
+}
+#footer {
+margin:0 -5px 0;
+}
 img.notes {
 width:100%;
 max-width:100%;
@@ -2092,14 +2111,22 @@ table.chords {
 clear:both;
 left:0in;
 right:none;
-font-size:5.5vw;
-width:100%;
+font-size:4.5vw;
+width:calc(100% - 5px);
+max-width:none;
+table-layout:fixed;
 float:left;
+}
+table.chords td.first {
+width:1.2em;
+}
+table.chords td.last {
+width:1.2em;
 }
 div.chord-group {
 clear:both;
 float:left;
-width:100%;
+max-width:100%;
 }
 div.chord-note {
 font-size:4vw !important;
