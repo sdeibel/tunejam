@@ -16,7 +16,7 @@ Bee fee|aee fed|
 --
 |: Em | EmD | Em | GD  |
    Em | EmD | G  | D  :|
-| Em  | EmD | Em | D   |
-  Em  | EmD | G  | D   |
-  Em  | EmD | Em | D   |
-  Em  | DG  | D  | D   |
+|  Em | EmD | Em | D   |
+   Em | EmD | G  | D   |
+   Em | EmD | Em | D   |
+   Em | DG  | D  | D   |

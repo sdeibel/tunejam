@@ -12,9 +12,9 @@ M:3/4
 AF|DAFA DAFA|defe dcBA|
 cd|eAAA fAAA|gAfA eAAA|
 --
-| D   | D   | A  | EmA7 |
-  D   | D   | A7 | DA   |
-  D   | D   | A  | EmA7 |
-  D   | D   | A7 | D    |
-|: AD | A7D | A  | EmA7 |
-    D | D   | A7 | D   :|
+|  D  | D   | A  | EmA7  |
+   D  | D   | A7 | DA    |
+   D  | D   | A  | EmA7  |
+   D  | D   | A7 | D     |
+|: AD | A7D | A  | EmA7  |
+   D  | D   | A7 | D    :|

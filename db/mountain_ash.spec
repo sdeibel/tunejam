@@ -14,11 +14,11 @@ M:6/8
 | A d2 e f2 | d e4 d |
 | EE2 A,A,2 | FF2 A,A,2|
 --
-| Dm | C  | Dm   | C  |
-  Dm | Am | Dm   | Am |
-  Dm | C  | Dm   | C  |
-  Dm | Am | Am   | Dm |
-| Am | Dm | Am   | C  |
-  Dm | Dm | AmEm | Am |
-  Am | C  | Am   | C  |
-  Am | Am | Dm   | Am |
+|  Dm | C  | Dm   | C  |
+   Dm | Am | Dm   | Am |
+   Dm | C  | Dm   | C  |
+   Dm | Am | Am   | Dm |
+|  Am | Dm | Am   | C  |
+   Dm | Dm | AmEm | Am |
+   Am | C  | Am   | C  |
+   Am | Am | Dm   | Am |

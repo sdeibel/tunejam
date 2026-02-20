@@ -14,7 +14,7 @@ M:3/4
 g>g bg dB | c2/B/c/ d/e/d/c/ Ac | 
 GA|B>B cc BB |  Ad d4| B>B cc BB | 
 --
-|: G   | C-D | GC- | D 
+|: G   | C-D | GC- | D    |
    G   | C-D | GC- | GD- :|
-|: GC- | D   | GC- | D 
+|: GC- | D   | GC- | D    |
    GC- | D   | GC- | DG- :|

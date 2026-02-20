@@ -17,7 +17,7 @@ M:4/4
 GE|DEGA BG G2 | AGEF G2AB | 
 Bc|(d2d)B(c2c)A) | B2BA GABc | 
 --
-|: G  | G    | C   | C
-   G  | G    | C   | D :|
-|: DC | Em   | G   | C
-   GD | Em   | C   | D :|
+|: G  | G  | C | C  |
+   G  | G  | C | D :|
+|: DC | Em | G | C  |
+   GD | Em | C | D :|

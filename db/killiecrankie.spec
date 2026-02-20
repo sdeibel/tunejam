@@ -18,7 +18,7 @@ M:4/4
 EF|G3AG2EF|GEGAG2G2|
 ef|g3ag2ef|gegag2g2|
 --
-| C   | C   | C  | C   |
-  Am  | Am  | F  | F   |
-| CF  |  CF | CF | C   |
-  Am  | AmF | CF | GC  |
+|  C  | C   | C  | C  |
+   Am | Am  | F  | F  |
+|  CF | CF  | CF | C  |
+   Am | AmF | CF | GC |

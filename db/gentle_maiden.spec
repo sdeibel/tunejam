@@ -14,11 +14,11 @@ M:3/4
 F|GAG FED|d2d efg|
 d|def g2g|g3 gfe|
 --
-| G | D7 | G  | C  |
-  G | Am | Am | Am |
-  G | D7 | G  | C  |
-  G | Am | Am | Am |
-| G | G  | G  | C  |
-  G | Am | Am | D7 |
-  G | D7 | G  | C  |
-  G | D7 | G  | G  |
+|  G | D7 | G  | C  |
+   G | Am | Am | Am |
+   G | D7 | G  | C  |
+   G | Am | Am | Am |
+|  G | G  | G  | C  |
+   G | Am | Am | D7 |
+   G | D7 | G  | C  |
+   G | D7 | G  | G  |

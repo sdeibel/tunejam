@@ -10,7 +10,7 @@ M:4/4
 BA|GEED EFGA | BE (3EEE c2 BA | 
 D2|GABc dBcA | }GABc d2 Bd | 
 --
-|: Em | EmC | Em  | AmBm 
+|: Em | EmC | Em  | AmBm  |
    Em | EmC | Em  | CD   :|
-|: G  | GEm | CBm | AmD 
+|: G  | GEm | CBm | AmD   |
    G  | GEm | CBm | AmD  :|

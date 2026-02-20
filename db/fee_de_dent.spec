@@ -11,7 +11,7 @@ M:6/8
 B2D- DGA | Bdc BAG |
 e3 ecd | egf edB |
 --
-|: G  | G  | C   | D   | 
-   G  | Em | CAm | DG :|
-|: C  | C  | Bm  | Bm  | 
-   C  | D  | CAm | DG :|
+|: G | G  | C   | D   |
+   G | Em | CAm | DG :|
+|: C | C  | Bm  | Bm  |
+   C | D  | CAm | DG :|

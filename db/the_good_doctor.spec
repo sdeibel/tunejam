@@ -13,7 +13,7 @@ M:3/4
 e|a2g|c2e/f/|
 A/A/|B2E|EAB|
 --
-|: A | E    | BmE | AE |
-   A | BmE  | BmE | A :|
-|: E | A    | EmE | AE |
-   E | AF#m | BmE | A :|
+|: A | E    | BmE | AE  |
+   A | BmE  | BmE | A  :|
+|: E | A    | EmE | AE  |
+   E | AF#m | BmE | A  :|

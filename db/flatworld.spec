@@ -14,9 +14,9 @@ M:3/4
 e de|ce Be Ac|F2 AB cA|
 AB cA ag|f2 fe dc|Bc dB gf|
 --
-|: Am | F  | Dm  | G   |
-   Am | F  | G   | Am :|
-|  Am | F  | G   | C   |
-   F  | Dm | Bm  | E7  |
-   Am | F  | G   | C   |
-   F  | Dm | E7  | Am  |
+|: Am | F  | Dm | G   |
+   Am | F  | G  | Am :|
+|  Am | F  | G  | C   |
+   F  | Dm | Bm | E7  |
+   Am | F  | G  | C   |
+   F  | Dm | E7 | Am  |

@@ -18,9 +18,9 @@ M:4/4
 DE| G2DE GDEG| DEGA B2AB|
 ef| g2ed edB2| BABG E2DE|
 --
-|: G     | GD7   | GEm   | Am7D7 |
-   GD    | GBm   | AmD   | GCG  :|
-|  Em    | G7C   | GEm   | AmD7  |
-   Em    | G7C   | G     | GCG   |
-   Em    | G7C   | GEm   | AmD7  |
-   G     | GBm   | AmD   | G     |
+|: G  | GD7 | GEm | Am7D7  |
+   GD | GBm | AmD | GCG   :|
+|  Em | G7C | GEm | AmD7   |
+   Em | G7C | G   | GCG    |
+   Em | G7C | GEm | AmD7   |
+   G  | GBm | AmD | G      |

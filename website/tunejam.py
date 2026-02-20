@@ -1527,6 +1527,7 @@ def tune_save(tune):
     stripped = line.strip()
     has_open = stripped.startswith('|:')
     has_close = stripped.endswith(':|')
+    has_bar = not has_open and stripped.startswith('|')
 
     # Extract inner content between repeat markers / outer bars
     inner = stripped
@@ -1536,7 +1537,7 @@ def tune_save(tune):
       inner = inner[:-2]
     elif inner.endswith('|'):
       inner = inner[:-1]
-    if not has_open and inner.startswith('|'):
+    if has_bar:
       inner = inner[1:]
 
     # Split by | to get chord cells
@@ -1552,12 +1553,12 @@ def tune_save(tune):
         new_chords.append(c)
       chord_index += 1
 
-    line_data.append((has_open, has_close, new_chords))
+    line_data.append((has_open, has_close, has_bar, new_chords))
 
   # Compute max width per column across all lines
-  max_cols = max(len(d[2]) for d in line_data)
+  max_cols = max(len(d[3]) for d in line_data)
   col_widths = [0] * max_cols
-  for _, _, chords in line_data:
+  for _, _, _, chords in line_data:
     for i, c in enumerate(chords):
       col_widths[i] = max(col_widths[i], len(c))
 
@@ -1570,9 +1571,11 @@ def tune_save(tune):
   if header_text:
     result_lines.append(header_text)
 
-  for has_open, has_close, chords in line_data:
+  for has_open, has_close, has_bar, chords in line_data:
     if has_open:
       prefix = '|:'
+    elif has_bar:
+      prefix = '| '
     else:
       prefix = '  '
 

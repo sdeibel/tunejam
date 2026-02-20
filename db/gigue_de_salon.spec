@@ -11,9 +11,9 @@ M:6/8
 EAB c2e | d2e cBA | 
 e>fe cBA | e3 cBA |  BcAB3 | 
 --
-|: A   | A    | D | E
+|: A   | A    | D | E   |
    A   | A    | D | EA :|
-|  A   | F#m  | D | E
-   A   | F#m  | D | EA
-   A   | F#m  | D | E
-   F#m | F#mE | D | EA |
+|  A   | F#m  | D | E   |
+   A   | F#m  | D | EA  |
+   A   | F#m  | D | E   |
+   F#m | F#mE | D | EA  |

@@ -15,9 +15,9 @@ M:6/8
 GE|D2B BAG|BdB ABA|
 Bd|e2e edB|ege edB|
 --
-|: G | CD | GEm | AmD |
-   G | GD | GD | G :|
-| Em | Em  | D  | D |
-  G  | CBm | GD | G |
-  Em | Em  | D  | D |
-  G  | CBm | CD | G |
+|: G  | CD  | GEm | AmD  |
+   G  | GD  | GD  | G   :|
+|  Em | Em  | D   | D    |
+   G  | CBm | GD  | G    |
+   Em | Em  | D   | D    |
+   G  | CBm | CD  | G    |

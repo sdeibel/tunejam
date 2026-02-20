@@ -19,7 +19,7 @@ M:3/4
 D2|G4D2|G4AB|
 Bc|d2Bcd2|d2Bcd2|
 --
-|: G    | Am   | D7   | D7  |
-   G    | CAm  | D7   | G  :|
-|: GG7  | G6G  | CC7  | AmD |
-   GC   | D    | GD7  | G  :|
+|: G   | Am  | D7  | D7   |
+   G   | CAm | D7  | G   :|
+|: GG7 | G6G | CC7 | AmD  |
+   GC  | D   | GD7 | G   :|

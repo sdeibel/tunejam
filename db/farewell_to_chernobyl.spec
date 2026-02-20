@@ -13,9 +13,9 @@ M:4/4
 D2 DF ADFA|DFAD GFEC|A,3
 d2 fd gdfd|d2 fd gfec|d3
 --
-|: Dm | Dm | Am | Am   |
-   Gm | Gm | C  | CAm :|
-|  Dm | Dm | Bb | C    |
-   Gm | Gm | Bb | C    | 
-   Dm | Dm | Bb | C    |
-   Dm | Bb | C  | GmAm |
+|: Dm | Dm | Am | Am    |
+   Gm | Gm | C  | CAm  :|
+|  Dm | Dm | Bb | C     |
+   Gm | Gm | Bb | C     |
+   Dm | Dm | Bb | C     |
+   Dm | Bb | C  | GmAm  |

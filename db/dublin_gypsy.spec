@@ -21,21 +21,21 @@ d4|de!accent!f2 ef!accent!g2|fg!accent!a2 aba2|
 A|de!accent!f2e2d2|f2!accent!e2AA2A|
 a2^g2a2|f2e2f2|
 --
-| Dm  | A  | Dm | Csup9 | 
-  C7  | Gm | Dm | ADm   |
-|: Dm | Dm | Dm | A     |
-   Dm | Dm | A  | Dm   :|
-|: Dm | Dm | Gm | Gm    | 
-   A  | Dm | A  | Dm   :|
-|: Dm | Dm | Dm | A     |
-   Dm | Dm | A  | Dm   :|
-|: Dm | Dm | Dm | A     |
-   Dm | Dm | A  | Dm   :|
-|: Dm | Dm | Dm | Dm    |
-   Gm | Gm | Dm | Dm   :|
-|: Dm | A  | Dm | A     |
-   Dm | A  | A  | Dm   :|
-|: Dm | Dm | Dm | Dm    |
-   Gm | Gm | Dm | Dm    |
-   Gm | Gm | Dm | Dm    |
-   A  | A  | Dm | Dm   :|
+|  Dm | A  | Dm | Csup9  |
+   C7 | Gm | Dm | ADm    |
+|: Dm | Dm | Dm | A      |
+   Dm | Dm | A  | Dm    :|
+|: Dm | Dm | Gm | Gm     |
+   A  | Dm | A  | Dm    :|
+|: Dm | Dm | Dm | A      |
+   Dm | Dm | A  | Dm    :|
+|: Dm | Dm | Dm | A      |
+   Dm | Dm | A  | Dm    :|
+|: Dm | Dm | Dm | Dm     |
+   Gm | Gm | Dm | Dm    :|
+|: Dm | A  | Dm | A      |
+   Dm | A  | A  | Dm    :|
+|: Dm | Dm | Dm | Dm     |
+   Gm | Gm | Dm | Dm     |
+   Gm | Gm | Dm | Dm     |
+   A  | A  | Dm | Dm    :|

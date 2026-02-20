@@ -15,11 +15,11 @@ M:6/8
 |dBd gdB|AGA BGE|
 |dBd g2f|ede gdc|
 --
-|: G | G   | C       | D     |
-   G | G   | CD      | G    :|
-|  G | AmD | GC      | GD    |
-   G | CD  | 9/8CCD  | 6/8G  |
-   G | AmD | GC      | GD    |
-   G | CD  | GC      | DG    |
-|: G | C   | G       | D     |
-   G | C   | GD      | G    :|
+|: G | G   | C      | D     |
+   G | G   | CD     | G    :|
+|  G | AmD | GC     | GD    |
+   G | CD  | 9/8CCD | 6/8G  |
+   G | AmD | GC     | GD    |
+   G | CD  | GC     | DG    |
+|: G | C   | G      | D     |
+   G | C   | GD     | G    :|

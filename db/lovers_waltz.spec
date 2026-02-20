@@ -15,11 +15,11 @@ M:3/4
 DGB|d3 d BG|E3 D CB,|
 GF|G4 GF|G4 GF|
 --
-| G  | C   | G  | G  |
-  G  | C   | Am | D7 |
-  Am | C   | G  | G  |
-  C  | Am  | D  | D  |
-| G  | Am7 | G  | C  |
-  G  | Em  | Am | D7 |
-  C  | D   | Em | Em |
-  C  | D7  | G  | G  |
+|  G  | C   | G  | G  |
+   G  | C   | Am | D7 |
+   Am | C   | G  | G  |
+   C  | Am  | D  | D  |
+|  G  | Am7 | G  | C  |
+   G  | Em  | Am | D7 |
+   C  | D   | Em | Em |
+   C  | D7  | G  | G  |

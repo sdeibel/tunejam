@@ -22,6 +22,6 @@ M:3/4
 |E3 FE2|B3 cd2|A3 FD2|
 |e3 fe2|g3 fe2|d2 dB G2|
 --
-|: Em | Em | D | D  | Em | Em | D | C | C :|
-|  Em | Em | G | D  | Em | Em | G | C | C  |
-   Em | Em | G | D  | Em | Em | D | C | C  |
+|: Em | Em | D | D | Em | Em | D | C | C :|
+|  Em | Em | G | D | Em | Em | G | C | C  |
+   Em | Em | G | D | Em | Em | D | C | C  |

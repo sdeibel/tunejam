@@ -14,5 +14,5 @@ M:4/4
 B|c<c c2 d<d d2|d>f g>e d>B A>G|
 --
 |: Am- | AG | AF  | Am/EAm :|
-|  CG  | CG | AmG | AE       |
-   CG  | CG | AmG | EAm      |
+|  CG  | CG | AmG | AE      |
+   CG  | CG | AmG | EAm     |

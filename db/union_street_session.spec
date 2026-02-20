@@ -13,8 +13,7 @@ M:4/4
 d2 AG FDDF | EA, A,2  GFED |
 A|d2 fd g2 f2 | eA A/A/A cdec | 
 --
-|: D | A | DG | E7A
-   D | A | DG | AD :|
-|: D | A | DG | A 
-   D | A | GE | AD :|
-   
+|: D | A | DG | E7A  |
+   D | A | DG | AD  :|
+|: D | A | DG | A    |
+   D | A | GE | AD  :|
