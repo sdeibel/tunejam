@@ -1272,7 +1272,7 @@ def tune(tune):
   parts = []
   editor = CheckPassword()
   parts.extend(CreateTuneHTML(tune, metadata=True, editor=editor))
-  return PageWrapper(parts)
+  return PageWrapper(parts, 'index', show_eye_candy=False)
 
 @app.route('/tune/<tune>/edit')
 def tune_edit(tune):
@@ -1356,7 +1356,7 @@ def tune_edit(tune):
 
   parts.append(CForm(form_body, action='/tune/%s/save' % tune, method='POST'))
 
-  return PageWrapper(parts)
+  return PageWrapper(parts, 'index', show_eye_candy=False)
 
 @app.route('/tune/<tune>/save', methods=['POST'])
 def tune_save(tune):
