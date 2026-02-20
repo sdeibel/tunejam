@@ -2129,10 +2129,10 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
   if not event.title:
     parts.extend([
       CParagraph("This event has been deleted"),
-      CBreak(2), 
+      CBreak(2),
       CText('Return to event list', href='/events'),
     ])
-    return PageWrapper(parts, 'event')
+    return PageWrapper(parts, 'event', show_eye_candy=False)
     
   parts.extend(EventReloader(sid))
   
@@ -2271,7 +2271,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
     parts.append(CBreak())
     parts.append(LoginButton('/event/%s' % event.name))
 
-  return PageWrapper(parts, 'event')
+  return PageWrapper(parts, 'event', show_eye_candy=False)
 
 @app.route('/watch/<sid>')
 @app.route('/watch/<type>/<sid>')
@@ -2341,7 +2341,7 @@ def authorize(target):
     ], action='/login', method='POST'), 
   ])
   
-  return PageWrapper(parts, 'event')
+  return PageWrapper(parts, 'event', show_eye_candy=False)
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -2435,7 +2435,7 @@ def LogoutButton(target):
       CBreak(2), 
     ], action='/logout%s' % target, method='GET')
   
-def PageWrapper(body, section=None, refresh=None):
+def PageWrapper(body, section=None, refresh=None, show_eye_candy=True):
   
   # Build html head
   title = "Cambridge NY Traditional Music"
@@ -2472,7 +2472,7 @@ def PageWrapper(body, section=None, refresh=None):
       'session': ('sessions', 41),
     }
     eye_candy = ''
-    if section in kEyeCandySections:
+    if show_eye_candy and section in kEyeCandySections:
       img_name, img_width = kEyeCandySections[section]
       img_path = os.path.join(utils.kImageDir, 'eye-candy', img_name + '.jpeg')
       if os.path.exists(img_path):
