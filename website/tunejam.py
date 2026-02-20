@@ -358,7 +358,7 @@ def _index_title_html(obj, title):
 def index_sheet(stype='title'):
 
   parts = [
-    CH("Sheet Music for Locally Written Tunes", 2),
+    CH("Sheet Music for Locally Written Tunes", 1),
     CParagraph("This site is mostly about learning by ear, but we have some sheet music "
                "for locally written tunes, available both for screen display and printing, "
                "and in the ABC encoding:"),
@@ -1711,6 +1711,9 @@ padding:0;
 font-family: varela_round, "Trebuchet MS", Arial, Verdana, sans-serif;
 line-height:140%;
 }
+body {
+background-color: #f7f6f3;
+}
 p {
 font-size:110%;
 padding-top:0.5em;
@@ -1723,8 +1726,10 @@ font-size:110%;
 overflow:hidden;
 }
 #main-menu {
-padding-top:0.4em;
-padding-bottom:0.8em;
+background-color: #e8f0e8;
+padding: 8px 12px;
+border-bottom: 1px solid #88aa88;
+margin: 0 -12px 12px;
 }
 .menu-item {
 text-decoration:none;
@@ -1813,10 +1818,18 @@ color:#004400;
 }
 a {
 outline-style:none;
+color:#005511;
 }
 #body {
 margin:12px;
 max-width:1079px;
+background-color: #ffffff;
+}
+#footer {
+background-color: #e8f0e8;
+padding: 8px 12px;
+margin: 12px -12px 0;
+border-top: 1px solid #88aa88;
 }
 div.tune-break {
 clear:both;
@@ -1883,7 +1896,7 @@ float:left;
 margin-top:2vw;
 }
 tr.even {
-background:#DDDDDD;
+background:#e8f0e8;
 }
 td {
 padding-right:1.0em;
@@ -2482,8 +2495,7 @@ def PageWrapper(body, section=None, refresh=None):
       CDiv(items, id='main-menu'),
     ] + body + [
       CBreak(2),
-      CHR(),
-      CText('Site Version %s - Maintained by Stephan Deibel' % kSiteVersion),
+      CDiv([CText('Site Version %s - Maintained by Stephan Deibel' % kSiteVersion)], id='footer'),
     ]
   
   body_div = CBody([CDiv(body, id="body")])
