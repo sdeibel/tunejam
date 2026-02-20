@@ -1716,6 +1716,12 @@ line-height:140%;
 body {
 background-color: #f7f6f3;
 }
+input[type="submit"], input[type="button"], input[type="reset"] {
+padding: 2px 8px;
+}
+select {
+padding: 2px 4px;
+}
 p {
 font-size:110%;
 padding-top:0.5em;
