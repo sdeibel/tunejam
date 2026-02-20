@@ -1584,9 +1584,10 @@ def doprint(format=None, bookname=None):
       
     parts.extend([
       CBreak(),
-      CText("Sheet Music for Local Tunes", href='/sheet/all')
+      CText("Sheet Music for Local Tunes", href='/sheet/all'),
+      CDiv(style='clear:both'),
     ])
-    
+
   elif format == 'all-by-section':
     import allbook
     book = allbook.CAllBookBySection()
@@ -1683,10 +1684,14 @@ def recording(tune):
     return Response()
   return send_file(filename, mimetype=mimetype)
 
-@app.route('/image/<image>')
+@app.route('/image/<path:image>')
 def image(image):
   img_file = os.path.join(utils.kImageDir, image)
-  return send_file(img_file, mimetype='image/png')
+  if image.endswith('.jpeg') or image.endswith('.jpg'):
+    mimetype = 'image/jpeg'
+  else:
+    mimetype = 'image/png'
+  return send_file(img_file, mimetype=mimetype)
   
 @app.route('/js/<path:filename>')
 def js(filename):
@@ -1914,8 +1919,14 @@ float:left;
 }
 }
 
+@media only screen and (max-width: 640px) {
+img.eye-candy {
+display:none;
+}
+}
+
 """
-  
+
   if media == 'print':
     css += """
 /*Preferable but does not work in Firefox 36.0.1 (the latest)*/
@@ -1972,13 +1983,14 @@ def events(delete=None, undelete=None):
     
   if not editor:
     parts.append(LoginButton('/events'))
+    parts.append(CDiv(style='clear:both'))
     return PageWrapper(parts, 'event')
 
   parts.append(CForm([
     CBreak(), 
     CText("Create a New Event:", bold=1),
     CBreak(1),
-    CText("Title:"), CInput(type='TEXT', name='title', id='event-title', size=100, maxlength=200), 
+    CText("Title:"), CInput(type='TEXT', name='title', id='event-title', maxlength=200, style='width:55%'),
     CBreak(2),
     CInput(type='SUBMIT', value='Create'), 
   ], action='/event', method='POST', id="event-form"))
@@ -1997,8 +2009,8 @@ def events(delete=None, undelete=None):
       ])
   
   parts.append(LogoutButton('/events'))
-  parts.append(CBreak())
-  
+  parts.append(CDiv(style='clear:both'))
+
   return PageWrapper(parts, 'event')
 
 @app.route('/event', methods=['POST'])
@@ -2439,11 +2451,37 @@ def PageWrapper(body, section=None, refresh=None):
       items.append(CText(title, href=url, hclass=iclass))
       items.append(CNBSP(3))
   
+    # Check for eye-candy image matching this section
+    # Maps section name to (image filename, width percentage)
+    kEyeCandySections = {
+      'home': ('home', 37), 'index': ('index', 41), 'local': ('local', 37),
+      'dev': ('dev', 47), 'print': ('books', 33), 'event': ('events', 41),
+      'session': ('sessions', 41),
+    }
+    eye_candy = ''
+    if section in kEyeCandySections:
+      img_name, img_width = kEyeCandySections[section]
+      img_path = os.path.join(utils.kImageDir, 'eye-candy', img_name + '.jpeg')
+      if os.path.exists(img_path):
+        eye_candy = CImage(src='/image/eye-candy/%s.jpeg' % img_name,
+                           hclass='eye-candy',
+                           style='float:right; width:%d%%; margin:0 0 10px 15px' % img_width)
+
+    # Insert eye-candy image after the first CH heading so it
+    # appears below the title rather than beside it
+    if eye_candy and body:
+      insert_at = 0
+      for idx, item in enumerate(body):
+        if isinstance(item, CH):
+          insert_at = idx + 1
+          break
+      body = body[:insert_at] + [eye_candy] + body[insert_at:]
+
     body = [
-      CDiv([CImage(src='/image/header.jpg')], id='header'), 
-      CDiv(items, id='main-menu')
+      CDiv([CImage(src='/image/header.jpg')], id='header'),
+      CDiv(items, id='main-menu'),
     ] + body + [
-      CBreak(2), 
+      CBreak(2),
       CHR(),
       CText('Site Version %s - Maintained by Stephan Deibel' % kSiteVersion),
     ]
