@@ -455,7 +455,7 @@ def index_sheet(stype='title'):
 
   parts.append(CBreak(2))
 
-  parts.append(CParagraph(["&#9834; Also available:", CText("Sheet Music for Local Tunes", href='/sheet/all')]))
+  parts.append(CParagraph(["&#9834; Also available: ", CText("Printable Local Tunes Sheet Music Book", href='/sheet/all')]))
 
   return PageWrapper(parts, 'local')
 
@@ -600,7 +600,7 @@ def dev():
 
   editor = CheckPassword()
   if editor:
-    parts.append(CH("Cache Management", 2))
+    parts.append(CH("&#9834; Cache Management", 2))
     parts.append(CParagraph("Clear cached generated files to force regeneration:"))
     parts.append(CList([
       CItem([CText("Clear Tune Cache", href='/dev/clear-cache/tune'),
