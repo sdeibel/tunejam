@@ -181,9 +181,9 @@ def index_type():
       title += ' - ' + obj.GetKeyString()
       title_html = _index_title_html(obj, title)
       parts.extend(title_html)
-        
+
   parts.append(CBreak(2))
-  return PageWrapper(parts, 'index')
+  return PageWrapper(parts, 'index', eye_candy_image='index-type')
 
 @app.route('/index/meter')
 def index_meter():
@@ -214,9 +214,9 @@ def index_meter():
     tunes = time_sigs[t]
     for title, title_html in sorted(tunes):
       parts.extend(title_html)
-    
+
   parts.append(CBreak(2))
-  return PageWrapper(parts, 'index')
+  return PageWrapper(parts, 'index', eye_candy_image='index-time')
 
 @app.route('/index/origin')
 def index_origin():
@@ -244,9 +244,9 @@ def index_origin():
     parts.append(CH(origin, 2))
     for title, title_html in sorted(origins[origin]):
       parts.extend(title_html)
-    
+
   parts.append(CBreak(2))
-  return PageWrapper(parts, 'index')
+  return PageWrapper(parts, 'index', eye_candy_image='index-origin')
 
 @app.route('/index/key')
 def index_key():
@@ -280,7 +280,7 @@ def index_key():
       parts.extend(title_html)
 
   parts.append(CBreak(2))
-  return PageWrapper(parts, 'index')
+  return PageWrapper(parts, 'index', eye_candy_image='index-key')
 
 @app.route('/index')
 @app.route('/index/title')
@@ -309,9 +309,9 @@ def index_title():
   titles.sort()
   for title, title_html in titles:
     parts.extend(title_html)
-    
+
   parts.append(CBreak(2))
-  return PageWrapper(parts, 'index')
+  return PageWrapper(parts, 'index', eye_candy_image='index-title')
 
 @app.route('/index/author')
 def index_author():
@@ -342,9 +342,9 @@ def index_author():
     parts.append(CH(author, 2))
     for title, title_html in sorted(authors[author]):
       parts.extend(title_html)
-    
+
   parts.append(CBreak(2))
-  return PageWrapper(parts, 'index')
+  return PageWrapper(parts, 'index', eye_candy_image='index-author')
 
 def _index_title_html(obj, title):
   title_html = []
@@ -2456,7 +2456,7 @@ def LogoutButton(target):
       CBreak(2), 
     ], action='/logout%s' % target, method='GET')
   
-def PageWrapper(body, section=None, refresh=None, show_eye_candy=True):
+def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy_image=None):
   
   # Build html head
   title = "Cambridge NY Traditional Music"
@@ -2488,13 +2488,17 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True):
     # Check for eye-candy image matching this section
     # Maps section name to (image filename, width percentage)
     kEyeCandySections = {
-      'home': ('home', 37), 'index': ('index', 41), 'local': ('local', 37),
+      'home': ('home', 37), 'local': ('local', 37),
       'dev': ('dev', 47), 'print': ('books', 33), 'event': ('events', 41),
       'session': ('sessions', 41),
     }
     eye_candy = ''
-    if show_eye_candy and section in kEyeCandySections:
-      img_name, img_width = kEyeCandySections[section]
+    if show_eye_candy and (eye_candy_image or section in kEyeCandySections):
+      if eye_candy_image:
+        img_name = eye_candy_image
+        img_width = kEyeCandySections.get(section, (None, 41))[1]
+      else:
+        img_name, img_width = kEyeCandySections[section]
       img_path = os.path.join(utils.kImageDir, 'eye-candy', img_name + '.jpeg')
       if os.path.exists(img_path):
         eye_candy = CImage(src='/image/eye-candy/%s.jpeg' % img_name,
