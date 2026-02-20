@@ -447,18 +447,17 @@ M:%(meter)s
         return target
         
     def MakeNotesPNGFile(self, density=600):
-        
+
         eps_file = self.MakeNotesEPSFile()
         png_file, up_to_date = self._GetCacheFile('notes.png')
         if up_to_date:
             return png_file
-        
-        bin_dir = '%s/bin' % kBaseDir
-        cmd = 'PATH=$PATH:%s convert -density %i -depth 8 -monochrome %s %s' % (bin_dir, density, eps_file, png_file)
+
+        cmd = 'gs -dBATCH -dNOPAUSE -q -sDEVICE=pngmono -r%i -dEPSCrop -sOutputFile=%s %s' % (density, png_file, eps_file)
         os.system(cmd)
-        
+
         return png_file
-        
+
     def MakeSheetMusicPNGFile(self, density=600):
 
         eps_file = self.MakeSheetMusicEPSFile()
@@ -466,8 +465,7 @@ M:%(meter)s
         if up_to_date:
             return png_file
 
-        bin_dir = '%s/bin' % kBaseDir
-        cmd = 'PATH=$PATH:%s convert -density %i -depth 8 -monochrome %s %s' % (bin_dir, density, eps_file, png_file)
+        cmd = 'gs -dBATCH -dNOPAUSE -q -sDEVICE=pngmono -r%i -dEPSCrop -sOutputFile=%s %s' % (density, png_file, eps_file)
         os.system(cmd)
 
         return png_file
