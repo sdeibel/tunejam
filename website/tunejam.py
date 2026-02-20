@@ -20,7 +20,7 @@ else:
   
 import utils
 
-from flask import Flask, Response, request, send_file, make_response, redirect
+from flask import Flask, Response, request, send_file, make_response, redirect, session
 app = Flask(__name__)
 app.secret_key = 'TunejamIsAtHubbardHallEachTuesday'
 app.config['SESSION_TYPE'] = 'filesystem'
@@ -165,6 +165,7 @@ def _index_header(itype):
   
 @app.route('/index/type')
 def index_type():
+  session['index_sort'] = 'type'
   tunes = utils.GetTuneIndex(False)
 
   parts = _index_header('type')
@@ -187,7 +188,8 @@ def index_type():
 
 @app.route('/index/meter')
 def index_meter():
-  
+  session['index_sort'] = 'meter'
+
   parts = _index_header('meter')
 
   tunes = utils.GetTuneIndex(False)
@@ -220,7 +222,8 @@ def index_meter():
 
 @app.route('/index/origin')
 def index_origin():
-  
+  session['index_sort'] = 'origin'
+
   parts = _index_header('origin')
 
   tunes = utils.GetTuneIndex(False)
@@ -250,6 +253,7 @@ def index_origin():
 
 @app.route('/index/key')
 def index_key():
+  session['index_sort'] = 'key'
 
   parts = _index_header('key')
 
@@ -285,7 +289,12 @@ def index_key():
 @app.route('/index')
 @app.route('/index/title')
 def index_title():
-  
+  if request.path in ('/index', '/index/'):
+    saved = session.get('index_sort')
+    if saved and saved != 'title':
+      return redirect('/index/' + saved, code=302)
+  session['index_sort'] = 'title'
+
   parts = _index_header('title')
 
   tunes = utils.GetTuneIndex(False)
@@ -315,7 +324,8 @@ def index_title():
 
 @app.route('/index/author')
 def index_author():
-  
+  session['index_sort'] = 'author'
+
   parts = _index_header('author')
 
   tunes = utils.GetTuneIndex(False)
@@ -356,6 +366,11 @@ def _index_title_html(obj, title):
 @app.route('/index/sheet')
 @app.route('/index/sheet/<stype>')
 def index_sheet(stype='title'):
+  if request.path in ('/index/sheet', '/index/sheet/'):
+    saved = session.get('sheet_sort')
+    if saved and saved != 'title':
+      return redirect('/index/sheet/' + saved, code=302)
+  session['sheet_sort'] = stype
 
   parts = [
     CH("Sheet Music for Locally Written Tunes", 1),
