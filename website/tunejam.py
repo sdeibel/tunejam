@@ -1845,6 +1845,7 @@ outline-style:none;
 color:#005511;
 }
 #body {
+position:relative;
 margin:12px;
 max-width:1079px;
 background-color: #ffffff;
