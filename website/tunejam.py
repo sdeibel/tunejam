@@ -2051,7 +2051,7 @@ border:0px;  /* For Chrome and Safari */
 border-left:2px solid #000;
 border-right:2px solid #000;
 margin-left:4px;
-margin-top:30px;
+margin-top:50px;
 margin-bottom:15px;
 float:right;
 width:48%;
