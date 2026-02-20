@@ -1098,7 +1098,8 @@ padding-bottom:0.5em;
   if error:
     parts.append(CParagraph([CText("Error: ", bold=1), error], style="background-color:#FFFF00; padding-left:5px;"))
   parts.append("""<p class="desktop-instructions">Drag one or more songs from the Available list """
-               """to the Selected list, or press 'Random 3' to select three random tunes.  """
+               """to the Selected list, double-click to move a song between lists, """
+               """or press 'Random 3' to select three random tunes.  """
                """Then press Create Set to generate the set:</p>""")
   parts.append("""<p class="mobile-instructions">Tap a song to move it to the Selected list.  """
                """Tap it again to move it back.  Drag to reorder songs in the Selected list.  """
