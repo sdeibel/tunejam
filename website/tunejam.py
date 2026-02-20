@@ -1945,6 +1945,17 @@ float:left;
 img.eye-candy {
 display:none;
 }
+.section-index img.eye-candy {
+display:block;
+}
+}
+.section-index img.eye-candy {
+width: min(41%, calc(100% - 510px)) !important;
+}
+@media only screen and (max-width: 735px) {
+.section-index img.eye-candy {
+display:none !important;
+}
 }
 
 """
@@ -2508,7 +2519,7 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True):
       CDiv([CText('Site Version %s - Maintained by Stephan Deibel' % kSiteVersion)], id='footer'),
     ]
   
-  body_div = CBody([CDiv(body, id="body")])
+  body_div = CBody([CDiv(body, id="body", hclass='section-%s' % section if section else None)])
   
   html = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">"""
   html += str(CHTML([head, body_div], xmlns="http://www.w3.org/1999/xhtml"))
