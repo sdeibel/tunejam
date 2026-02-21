@@ -1,3 +1,15 @@
+/* Element.closest polyfill for older browsers */
+if (!Element.prototype.closest) {
+  Element.prototype.closest = function(s) {
+    var el = this;
+    do {
+      if (el.matches ? el.matches(s) : el.msMatchesSelector(s)) return el;
+      el = el.parentElement || el.parentNode;
+    } while (el !== null && el.nodeType === 1);
+    return null;
+  };
+}
+
 /* Floating audio player - intercepts recording links and plays in-page */
 (function() {
   var audio = null;

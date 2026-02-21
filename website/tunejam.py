@@ -2221,7 +2221,12 @@ align-items:center;
 padding:8px 12px;
 box-sizing:border-box;
 box-shadow:0 -2px 8px rgba(0,0,0,0.3);
-gap:10px;
+}
+#audio-player > * {
+margin-left:10px;
+}
+#audio-player > *:first-child {
+margin-left:0;
 }
 #audio-player button {
 background:none;
