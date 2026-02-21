@@ -8,6 +8,9 @@ import tempfile
 import datetime
 import random
 import collections
+import hashlib
+import smtplib
+from email.mime.text import MIMEText
 
 try:
   import wingdbstub
@@ -21,12 +24,37 @@ else:
   
 import utils
 
-from flask import Flask, Response, request, send_file, make_response, redirect, session
+from datetime import timedelta
+from flask import Flask, Response, request, send_file, make_response, redirect, session, jsonify
 app = Flask(__name__)
 app.secret_key = 'TunejamIsAtHubbardHallEachTuesday'
 app.config['SESSION_TYPE'] = 'filesystem'
+app.permanent_session_lifetime = timedelta(days=30)
 
 kSiteVersion = '3.0'
+
+# Email config file path (src/config/email.conf)
+kEmailConf = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'email.conf')
+
+# Token storage directory (auto-created)
+kTokenDir = os.path.join(os.path.dirname(__file__), 'tokens')
+if not os.path.exists(kTokenDir):
+  os.makedirs(kTokenDir)
+
+# Session and token lifetimes
+kSessionLifetimeDays = 30
+kTokenExpirySeconds = 3600
+
+# Capability constants
+kCapManageEvents = 'manage_events'
+kCapEditTunes = 'edit_tunes'
+kCapManageCache = 'manage_cache'
+
+# Permission levels
+kPermissions = {
+  'regular': {kCapManageEvents},
+  'admin': {kCapManageEvents, kCapEditTunes, kCapManageCache},
+}
 
 kMenu = [
   ('Home', '/', 'home'), 
@@ -614,7 +642,7 @@ def dev():
                           "contact me</a> for help. I am currently the only developer, and would "
                           "improve packaging and docs if anyone else wants to join in the effort."))
 
-  editor = CheckPassword()
+  editor = HasCapability(kCapManageCache)
   if editor:
     parts.append(CH("&#9834; Cache Management", 2))
     parts.append(CParagraph("Clear cached generated files to force regeneration:"))
@@ -630,10 +658,9 @@ def dev():
       CItem([CText("Rebuild All Books", href='/dev/rebuild-books'),
              CText(" -- Regenerate all book PDFs (runs in background)")]),
     ]))
-    parts.append(LogoutButton('/dev'))
   else:
     parts.append(CBreak())
-    parts.append(LoginButton('/dev', label=None))
+    parts.append(LoginButton('/dev', label="Admin login required"))
 
   parts.append(CBreak(2))
   return PageWrapper(parts, 'dev')
@@ -642,7 +669,7 @@ def dev():
 def clear_cache(cache_type):
   import shutil
 
-  editor = CheckPassword()
+  editor = HasCapability(kCapManageCache)
   if not editor:
     return redirect('/authorize/dev', code=303)
 
@@ -683,7 +710,7 @@ def rebuild_books():
   import threading
   import crontask
 
-  editor = CheckPassword()
+  editor = HasCapability(kCapManageCache)
   if not editor:
     return redirect('/authorize/dev', code=303)
 
@@ -707,8 +734,8 @@ def rebuild_books():
 @app.route('/sets/sid/<sid>')
 @app.route('/sets/sid/<sid>/edit/<spec>')
 def sets(spec=None, sid=None):
-  
-  editor = CheckPassword()
+
+  editor = HasCapability(kCapManageEvents)
   
   error = None
   preload_tunes = []
@@ -1286,13 +1313,13 @@ padding-bottom:0.5em;
 @app.route('/tune/<tune>')
 def tune(tune):
   parts = []
-  editor = CheckPassword()
+  editor = HasCapability(kCapEditTunes)
   parts.extend(CreateTuneHTML(tune, metadata=True, editor=editor))
   return PageWrapper(parts, 'index', show_eye_candy=False)
 
 @app.route('/tune/<tune>/edit')
 def tune_edit(tune):
-  if not CheckPassword():
+  if not HasCapability(kCapEditTunes):
     return redirect('/authorize/tune/%s/edit' % tune, code=303)
 
   obj = utils.CTune(tune)
@@ -1495,7 +1522,7 @@ function validateChords() {
 
 @app.route('/tune/<tune>/save', methods=['POST'])
 def tune_save(tune):
-  if not CheckPassword():
+  if not HasCapability(kCapEditTunes):
     return redirect('/authorize/tune/%s/edit' % tune, code=303)
 
   obj = utils.CTune(tune)
@@ -2030,6 +2057,32 @@ border-top: 1px solid #88aa88;
 font-size: 85%;
 color: #556655;
 }
+.footer-auth {
+float:right;
+margin-top:-4px;
+}
+.footer-auth b, .footer-auth span {
+font-size:100%;
+}
+.footer-logout {
+padding:1px 6px;
+font-size:75%;
+background-color:#3a6a3a;
+color:#ffffff;
+border:1px solid #1a3a1a;
+border-radius:3px;
+cursor:pointer;
+}
+.footer-logout:hover {
+background-color:#4a7a4a;
+}
+@media only screen and (max-width: 500px) {
+.footer-auth {
+float:none;
+display:block;
+margin-top:8px;
+}
+}
 div.tune-break {
 clear:both;
 height:20px;
@@ -2292,6 +2345,100 @@ display:none;
 }
 }
 
+/* Login popup overlay */
+#login-overlay {
+position:fixed;
+top:0; left:0; right:0; bottom:0;
+background:rgba(0,0,0,0.5);
+z-index:2000;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+#login-popup {
+background:#ffffff;
+border-radius:8px;
+max-width:400px;
+width:90%;
+padding:30px;
+box-shadow:0 4px 20px rgba(0,0,0,0.3);
+position:relative;
+}
+#login-close {
+position:absolute;
+top:10px; right:14px;
+background:none;
+border:none;
+font-size:24px;
+cursor:pointer;
+color:#666;
+padding:0;
+line-height:1;
+}
+#login-close:hover {
+color:#333;
+}
+#login-popup h2 {
+margin:0 0 10px 0;
+padding:0;
+color:#004400;
+}
+.login-instructions {
+font-size:100%;
+color:#555;
+margin-bottom:15px;
+}
+#login-email {
+width:100%;
+padding:8px 10px;
+font-size:100%;
+border:1px solid #ccc;
+border-radius:4px;
+box-sizing:border-box;
+margin-bottom:12px;
+}
+#login-submit {
+padding:8px 20px;
+background-color:#3a6a3a;
+color:#ffffff;
+border:1px solid #1a3a1a;
+border-radius:4px;
+cursor:pointer;
+font-size:100%;
+width:100%;
+}
+#login-submit:hover {
+background-color:#4a7a4a;
+}
+#login-message {
+margin-top:12px;
+font-size:95%;
+min-height:1.4em;
+}
+#login-message.error {
+color:#cc0000;
+}
+#login-message.success {
+color:#006600;
+}
+button.login-trigger {
+padding:4px 14px;
+background-color:#3a6a3a;
+color:#ffffff;
+border:1px solid #1a3a1a;
+border-radius:3px;
+cursor:pointer;
+font-size:95%;
+}
+button.login-trigger:hover {
+background-color:#4a7a4a;
+}
+.user-email-display {
+font-style:italic;
+color:#666;
+font-size:90%;
+}
+
 """
 
   if media == 'print':
@@ -2309,6 +2456,12 @@ display:none;
 #audio-player {
 display:none !important;
 }
+#login-overlay {
+display:none !important;
+}
+.footer-auth {
+display:none !important;
+}
     """
   return Response(css, mimetype='text/css')
 
@@ -2316,8 +2469,8 @@ display:none !important;
 @app.route('/events/delete/<delete>')
 @app.route('/events/undelete/<undelete>')
 def events(delete=None, undelete=None):
-  
-  editor = CheckPassword()
+
+  editor = HasCapability(kCapManageEvents)
    
   if delete and editor:
     utils.DeleteEvent(delete)
@@ -2379,7 +2532,6 @@ def events(delete=None, undelete=None):
         CBreak(), 
       ])
   
-  parts.append(LogoutButton('/events'))
   parts.append(CDiv(style='clear:both'))
 
   return PageWrapper(parts, 'event')
@@ -2394,7 +2546,7 @@ def events(delete=None, undelete=None):
 @app.route('/event/<sid>/select/<selector>')
 def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, selector=None):
 
-  editor = CheckPassword()
+  editor = HasCapability(kCapManageEvents)
   
   def get_set_title(s):
     titles = []
@@ -2621,9 +2773,8 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
   ])
   if editor:
     parts.extend([
-      CBreak(), 
+      CBreak(),
       CText('Delete this event', href='/events/delete/%s' % event.name),
-      LogoutButton('/event/%s' % event.name),
     ])
   else:
     parts.append(CBreak())
@@ -2678,47 +2829,72 @@ def watch(sid, type=None):
   
   return PageWrapper(parts)
 
-@app.route('/authorize/<path:target>')
-def authorize(target):
+@app.route('/auth/send', methods=['POST'])
+def auth_send():
+  """AJAX endpoint: validate email, generate token, send magic link."""
+  email = request.form.get('email', '').strip().lower()
+  target = request.form.get('target', '/events')
 
-  editor = CheckPassword()
-  if editor:
-    return redirect('/'+target, code=303)
-    
-  parts = []
+  if not email or '@' not in email:
+    return jsonify(ok=False, message='Please enter a valid email address.')
 
-  parts.extend([
-    CH("Please Enter Password", 2), 
-    CParagraph("You need to prove you're human to use this part of the site.  The password is 'tunejam'."),
-    CForm([
-      CText("Password:"),
-      CInput(type="HIDDEN", name='target', value=target), 
-      CInput(type='PASSWORD', name='pw', size=30, maxlength=60, autofocus=1), 
-      CBreak(2),
-      CInput(type='SUBMIT', value='Submit'), 
-    ], action='/login', method='POST'), 
-  ])
-  
-  return PageWrapper(parts, 'event', show_eye_candy=False)
+  # For admin targets, check if email is in admin list before sending
+  admin_targets = ('/dev',)
+  needs_admin = any(target.startswith(t) for t in admin_targets)
+  if needs_admin and email not in GetAdminEmails():
+    return jsonify(ok=False, message='Admin login required. This email is not authorized for admin access.')
 
-@app.route('/login', methods=['POST'])
-def login():
+  login_type = 'admin' if needs_admin else GetPermissionLevel(email)
+  token = GenerateToken(email, target, login_type)
 
-  from flask import session
-  
-  pw = request.form['pw'].lower()
-  target = request.form['target']
-  
-  if 'tune'not in pw or 'jam' not in pw:
-    CheckPassword()
-    return authorize(target)
-  
-  session['password'] = pw
-  
+  try:
+    SendMagicLink(email, token, target)
+  except Exception as e:
+    return jsonify(ok=False, message='Failed to send email. Please try again.')
+
+  CleanExpiredTokens()
+
+  return jsonify(ok=True, message='Check your email for a login link.')
+
+@app.route('/auth/<token>')
+def auth_verify(token):
+  """Validate token, create session, redirect to target."""
+  result = ValidateToken(token)
+  if result is None:
+    parts = [
+      CH("Login Link Expired", 2),
+      CParagraph("This login link has expired or has already been used."),
+      CParagraph("Please request a new login link."),
+      CBreak(),
+      CText("Return Home", href='/'),
+    ]
+    return PageWrapper(parts, 'event', show_eye_candy=False)
+
+  email, target, level = result
+  session.permanent = True
+  session['email'] = email
+  session['permission_level'] = level
+  session['login_time'] = time.time()
+
   return redirect(target, code=303)
 
+@app.route('/authorize/<path:target>')
+def authorize(target):
+  """Compatibility route: redirect if logged in, otherwise show login popup via JS."""
+  if IsLoggedIn():
+    return redirect('/'+target, code=303)
+
+  parts = [
+    CH("Login Required", 2),
+    CParagraph("Please log in to access this page."),
+    '<script>document.addEventListener("DOMContentLoaded",function(){showLoginPopup("/%s");});</script>' % target,
+  ]
+  return PageWrapper(parts, 'event', show_eye_candy=False)
+
+@app.route('/logout')
+@app.route('/logout/')
 @app.route('/logout/<path:target>')
-def logout(target):
+def logout(target=''):
   Logout()
   return redirect('/'+target, code=303)
 
@@ -2728,20 +2904,130 @@ def ajax_event_current(sid):
   s.ReadEvent()
   return s.current_set + '&' + str(len(s.sets))
 
-def CheckPassword():
-  
-  from flask import session
-  pw = session.get('password', '').lower()
-  if 'tune' in pw and 'jam' in pw:
-    return True
-  else:
+def ReadEmailConfig():
+  """Read email config file, return dict of key=value pairs."""
+  config = {}
+  if not os.path.exists(kEmailConf):
+    return config
+  with open(kEmailConf) as f:
+    for line in f:
+      line = line.strip()
+      if '=' in line and not line.startswith('#'):
+        key, val = line.split('=', 1)
+        config[key.strip()] = val.strip()
+  return config
+
+def GetAdminEmails():
+  """Return list of admin email addresses from config."""
+  config = ReadEmailConfig()
+  raw = config.get('admin_emails', '')
+  return [e.strip().lower() for e in raw.split(',') if e.strip()]
+
+def GetPermissionLevel(email):
+  """Return 'admin' or 'regular' based on email."""
+  if email.lower() in GetAdminEmails():
+    return 'admin'
+  return 'regular'
+
+def IsLoggedIn():
+  """Check if current session has a valid logged-in user."""
+  email = session.get('email')
+  login_time = session.get('login_time')
+  if not email or not login_time:
     return False
+  elapsed = time.time() - login_time
+  if elapsed > kSessionLifetimeDays * 86400:
+    return False
+  return True
+
+def HasCapability(capability):
+  """Check if current session has a specific capability."""
+  if not IsLoggedIn():
+    return False
+  level = session.get('permission_level', 'regular')
+  caps = kPermissions.get(level, set())
+  return capability in caps
+
+def GetUserEmail():
+  """Return logged-in user's email, or None."""
+  if IsLoggedIn():
+    return session.get('email')
+  return None
 
 def Logout():
-  
-  from flask import session
-  if 'password' in session:
-    del session['password']
+  """Clear auth session keys."""
+  for key in ('email', 'permission_level', 'login_time'):
+    session.pop(key, None)
+
+def GenerateToken(email, target, login_type):
+  """Create a token file, return the token string.
+  login_type is 'admin' or 'regular'."""
+  raw = '%s-%s-%s' % (email, time.time(), os.urandom(16).encode('hex'))
+  token = hashlib.sha256(raw.encode('utf-8')).hexdigest()
+  path = os.path.join(kTokenDir, token + '.token')
+  with open(path, 'w') as f:
+    f.write('%s\n%s\n%s\n%s\n' % (email, target, time.time(), login_type))
+  return token
+
+def ValidateToken(token):
+  """Read and delete token file. Return (email, target, level) or None."""
+  path = os.path.join(kTokenDir, token + '.token')
+  if not os.path.exists(path):
+    return None
+  with open(path) as f:
+    lines = f.read().strip().split('\n')
+  os.remove(path)
+  if len(lines) < 4:
+    return None
+  email, target, created, level = lines[0], lines[1], float(lines[2]), lines[3]
+  if time.time() - created > kTokenExpirySeconds:
+    return None
+  return (email, target, level)
+
+def CleanExpiredTokens():
+  """Remove expired token files."""
+  now = time.time()
+  for fn in os.listdir(kTokenDir):
+    if not fn.endswith('.token'):
+      continue
+    path = os.path.join(kTokenDir, fn)
+    try:
+      with open(path) as f:
+        lines = f.read().strip().split('\n')
+      if len(lines) >= 3:
+        created = float(lines[2])
+        if now - created > kTokenExpirySeconds:
+          os.remove(path)
+    except:
+      pass
+
+def SendMagicLink(email, token, target):
+  """Send a magic link email via SMTP."""
+  config = ReadEmailConfig()
+  if not config.get('host'):
+    raise Exception('Email not configured')
+
+  if sys.platform == 'darwin':
+    base_url = 'http://localhost:60080'
+  else:
+    base_url = 'http://music.cambridgeny.net'
+
+  link = '%s/auth/%s' % (base_url, token)
+
+  msg = MIMEText(
+    'Click the link below to log in to Cambridge NY Traditional Music:\n\n'
+    '%s\n\n'
+    'This link expires in 1 hour and can only be used once.\n' % link
+  )
+  msg['Subject'] = 'Your Login Link - Cambridge NY Traditional Music'
+  msg['From'] = config.get('from_address', config['username'])
+  msg['To'] = email
+
+  server = smtplib.SMTP(config['host'], int(config.get('port', 587)))
+  server.starttls()
+  server.login(config['username'], config['password'])
+  server.sendmail(msg['From'], [email], msg.as_string())
+  server.quit()
   
 def EventReloader(sid):
 
@@ -2795,16 +3081,22 @@ def LoginButton(target, label="Log in to create or edit events"):
   parts = [CBreak()]
   if label:
     parts.extend([CText(label, bold=1), CBreak(2)])
-  parts.extend([CInput(type='SUBMIT', value="Login"), CBreak(2)])
-  return CForm(parts, action='/authorize%s' % target, method='GET')
-  
-def LogoutButton(target):
-  
-  return CForm([
-      CBreak(2),
-      CInput(type='SUBMIT', value="Logout"),
-      CBreak(2), 
-    ], action='/logout%s' % target, method='GET')
+  parts.append('<button type="button" class="login-trigger" data-login-target="%s">Login</button>' % target)
+  parts.append(CBreak(2))
+  return CDiv(parts)
+
+def FooterAuth():
+  """Return auth status display for the footer, or empty string."""
+  email = GetUserEmail()
+  if not email:
+    return ''
+  return CSpan([
+    CText('Logged in as: ', bold=1),
+    CSpan(email, hclass='user-email-display'),
+    CSpan(' (admin)', hclass='user-email-display') if session.get('permission_level') == 'admin' else '',
+    CNBSP(2),
+    '<button class="footer-logout" type="button" onclick="location.href=\'/logout\'+location.pathname">Logout</button>',
+  ], hclass='footer-auth')
   
 def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy_image=None):
   
@@ -2819,6 +3111,7 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
     '<link rel="stylesheet" type="text/css" href="/css/screen" media="screen" />',
     '<link rel="stylesheet" type="text/css" href="/css/print" media="print" />',
     '<script src="/js/player.js"></script>',
+    '<script src="/js/login.js"></script>',
   ]
   if refresh is not None:
     head.append(CMeta(str(refresh), http_equiv="refresh"))
@@ -2873,7 +3166,8 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
       CDiv(items, id='main-menu'),
     ] + body + [
       CDiv('', style='clear:both; height:20px'),
-      CDiv([CText('Site Version %s - Maintained by Stephan Deibel' % kSiteVersion)], id='footer'),
+      CDiv([CText('Site Version %s - Maintained by Stephan Deibel' % kSiteVersion),
+            FooterAuth()], id='footer'),
     ]
   
   body_div = CBody([CDiv(body, id="body", hclass='section-%s' % section if section else None),
@@ -2884,6 +3178,17 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
 <span class="ap-time">0:00 / 0:00</span>
 <select class="ap-speed"><option value="1.0" selected>1.0x</option><option value="0.9">0.9x</option><option value="0.8">0.8x</option><option value="0.7">0.7x</option><option value="0.6">0.6x</option><option value="0.5">0.5x</option></select>
 <button class="ap-close">&times;</button>
+</div>""",
+    """<div id="login-overlay" style="display:none">
+<div id="login-popup">
+<button id="login-close">&times;</button>
+<h2>Login</h2>
+<p class="login-instructions">Enter your email address and we'll send you a login link.</p>
+<input type="email" id="login-email" placeholder="your@email.com" />
+<button id="login-submit">Send Login Link</button>
+<p id="login-message"></p>
+<input type="hidden" id="login-target" value="" />
+</div>
 </div>""",
   ])
   
