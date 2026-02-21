@@ -2,6 +2,7 @@
 #coding:utf-8
 import sys, os
 import time
+import struct
 from html import *
 import tempfile
 import datetime
@@ -2141,6 +2142,7 @@ min-width:0 !important;
 img.eye-candy {
 opacity:0;
 transition:opacity 0.4s ease-in;
+height:auto;
 }
 img.eye-candy.loaded {
 opacity:1;
@@ -2731,6 +2733,19 @@ $(document).ready(function() {
   
   return parts
 
+def _jpeg_dimensions(path):
+  """Read width and height from a JPEG file header."""
+  with open(path, 'rb') as f:
+    f.read(2)  # SOI marker
+    while True:
+      marker, size = struct.unpack('>HH', f.read(4))
+      if marker == 0xFFC0 or marker == 0xFFC2:  # SOF0 or SOF2
+        f.read(1)  # precision
+        height, width = struct.unpack('>HH', f.read(4))
+        return width, height
+      f.read(size - 2)
+  return None, None
+
 def LoginButton(target, label="Log in to create or edit events"):
 
   parts = [CBreak()]
@@ -2793,8 +2808,10 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
         img_name, img_width = kEyeCandySections[section]
       img_path = os.path.join(utils.kImageDir, 'eye-candy', img_name + '.jpeg')
       if os.path.exists(img_path):
+        nat_w, nat_h = _jpeg_dimensions(img_path)
         eye_candy = CImage(src='/image/eye-candy/%s.jpeg' % img_name,
                            hclass='eye-candy',
+                           width=nat_w, height=nat_h,
                            onload="this.classList.add('loaded')",
                            style='float:right; width:%d%%; margin:0 0 10px 15px' % img_width)
 
