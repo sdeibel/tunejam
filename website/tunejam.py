@@ -2156,6 +2156,87 @@ display:none !important;
 }
 }
 
+#audio-player {
+display:none;
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+z-index:1000;
+background:#2a4a2a;
+color:#e0e8e0;
+font-family:'Trebuchet MS', Trebuchet, Arial, sans-serif;
+font-size:14px;
+align-items:center;
+padding:8px 12px;
+box-sizing:border-box;
+box-shadow:0 -2px 8px rgba(0,0,0,0.3);
+gap:10px;
+}
+#audio-player button {
+background:none;
+border:none;
+color:#e0e8e0;
+cursor:pointer;
+font-size:18px;
+padding:0 4px;
+line-height:1;
+}
+#audio-player button:hover {
+color:#ffffff;
+}
+#audio-player .ap-title {
+flex:0 1 auto;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+min-width:60px;
+max-width:300px;
+font-weight:bold;
+}
+#audio-player .ap-progress-track {
+flex:1 1 auto;
+height:6px;
+background:#1a3a1a;
+border-radius:3px;
+cursor:pointer;
+min-width:60px;
+}
+#audio-player .ap-progress-fill {
+height:100%;
+background:#6cb06c;
+border-radius:3px;
+width:0%;
+pointer-events:none;
+}
+#audio-player .ap-time {
+white-space:nowrap;
+font-size:12px;
+min-width:80px;
+text-align:right;
+}
+#audio-player .ap-speed {
+background:#1a3a1a;
+color:#e0e8e0;
+font-family:'Trebuchet MS', Trebuchet, Arial, sans-serif;
+font-size:12px;
+border:1px solid #6cb06c;
+border-radius:3px;
+padding:2px 4px;
+cursor:pointer;
+}
+#audio-player .ap-close {
+font-size:20px;
+}
+@media only screen and (max-width: 500px) {
+#audio-player .ap-title {
+max-width:120px;
+}
+#audio-player .ap-time {
+display:none;
+}
+}
+
 """
 
   if media == 'print':
@@ -2169,6 +2250,9 @@ margin:0.5in;
 }
 img.action-icon {
 display:none;
+}
+#audio-player {
+display:none !important;
 }
     """
   return Response(css, mimetype='text/css')
@@ -2664,8 +2748,9 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
     CMeta("text/html; charset=utf-8", http_equiv="Content-Type"),
     CMeta("Copyright (c) 1999-%s Stephan Deibel" % year, name="Copyright"),
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
-    '<link rel="stylesheet" type="text/css" href="/css/screen" media="screen" />', 
-    '<link rel="stylesheet" type="text/css" href="/css/print" media="print" />', 
+    '<link rel="stylesheet" type="text/css" href="/css/screen" media="screen" />',
+    '<link rel="stylesheet" type="text/css" href="/css/print" media="print" />',
+    '<script src="/js/player.js"></script>',
   ]
   if refresh is not None:
     head.append(CMeta(str(refresh), http_equiv="refresh"))
@@ -2721,7 +2806,16 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
       CDiv([CText('Site Version %s - Maintained by Stephan Deibel' % kSiteVersion)], id='footer'),
     ]
   
-  body_div = CBody([CDiv(body, id="body", hclass='section-%s' % section if section else None)])
+  body_div = CBody([CDiv(body, id="body", hclass='section-%s' % section if section else None),
+    """<div id="audio-player">
+<button class="ap-play">&#x25B6;</button>
+<span class="ap-title"></span>
+<div class="ap-progress-track"><div class="ap-progress-fill"></div></div>
+<span class="ap-time">0:00 / 0:00</span>
+<select class="ap-speed"><option value="1.0" selected>1.0x</option><option value="0.9">0.9x</option><option value="0.8">0.8x</option><option value="0.7">0.7x</option><option value="0.6">0.6x</option><option value="0.5">0.5x</option></select>
+<button class="ap-close">&times;</button>
+</div>""",
+  ])
   
   html = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">"""
   html += str(CHTML([head, body_div], xmlns="http://www.w3.org/1999/xhtml"))
