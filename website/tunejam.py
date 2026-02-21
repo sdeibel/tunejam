@@ -2138,6 +2138,15 @@ width:auto !important;
 min-width:0 !important;
 }
 }
+img.eye-candy {
+opacity:0;
+transition:opacity 0.4s ease-in;
+}
+img.eye-candy.loaded {
+opacity:1;
+border:3px solid white;
+outline:2px solid black;
+}
 
 @media only screen and (max-width: 640px) {
 img.eye-candy {
@@ -2786,7 +2795,8 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
       if os.path.exists(img_path):
         eye_candy = CImage(src='/image/eye-candy/%s.jpeg' % img_name,
                            hclass='eye-candy',
-                           style='float:right; width:%d%%; margin:0 0 10px 15px; border:3px solid white; outline:2px solid black' % img_width)
+                           onload="this.classList.add('loaded')",
+                           style='float:right; width:%d%%; margin:0 0 10px 15px' % img_width)
 
     # Insert eye-candy image after the first CH heading so it
     # appears below the title rather than beside it
