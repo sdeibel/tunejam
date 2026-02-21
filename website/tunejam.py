@@ -1866,10 +1866,19 @@ font-family: varela_round, "Trebuchet MS", Arial, Verdana, sans-serif;
 line-height:140%;
 }
 body {
-background-color: #f7f6f3;
+background-color: #e8e6e0;
 }
 input[type="submit"], input[type="button"], input[type="reset"] {
-padding: 2px 8px;
+padding: 4px 14px;
+background-color: #3a6a3a;
+color: #ffffff;
+border: 1px solid #1a3a1a;
+border-radius: 3px;
+cursor: pointer;
+font-size: 95%;
+}
+input[type="submit"]:hover, input[type="button"]:hover, input[type="reset"]:hover {
+background-color: #4a7a4a;
 }
 select {
 padding: 2px 4px;
@@ -1910,6 +1919,10 @@ text-decoration:none;
 color:#005511;
 padding-bottom:0.5em;
 }
+.menu-item:hover, .menu-item-current:hover {
+color:#993333;
+text-decoration:none;
+}
 .menu-item-current {
 color:#dd1111;
 text-decoration:none;
@@ -1941,7 +1954,7 @@ list-style-type:none;
 padding-left:0.1em;
 }
 h1 {
-color:#044300;
+color:#004400;
 }
 h1.tune-title {
 clear:both;
@@ -1997,6 +2010,10 @@ a {
 outline-style:none;
 color:#005511;
 }
+a:hover {
+color:#993333;
+text-decoration:underline;
+}
 #body {
 position:relative;
 margin:12px auto;
@@ -2007,9 +2024,11 @@ background-color: #ffffff;
 #footer {
 clear:both;
 background-color: #e8f0e8;
-padding: 8px 12px;
+padding: 14px 12px;
 margin: 0 -12px 0;
 border-top: 1px solid #88aa88;
+font-size: 85%;
+color: #556655;
 }
 div.tune-break {
 clear:both;
@@ -2177,6 +2196,9 @@ display:block;
 }
 .section-index img.eye-candy {
 width: min(41%, calc(100% - 510px)) !important;
+}
+.section-index h2 ~ a, .section-index h2 ~ span {
+line-height: 200%;
 }
 @media only screen and (max-width: 735px) {
 .section-index img.eye-candy {
