@@ -41,9 +41,18 @@ kTokenDir = os.path.join(os.path.dirname(__file__), 'tokens')
 if not os.path.exists(kTokenDir):
   os.makedirs(kTokenDir)
 
+# Login log
+kLogDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'log')
+if not os.path.exists(kLogDir):
+  os.makedirs(kLogDir)
+kLoginLog = os.path.join(kLogDir, 'logins.log')
+
 # Session and token lifetimes
 kSessionLifetimeDays = 30
 kTokenExpirySeconds = 3600
+kLoginLogMaxBytes = 1024 * 1024  # 1MB
+kMaxEmailsPerHour = 3
+kMaxGlobalEmailsPerHour = 60
 
 # Capability constants
 kCapManageEvents = 'manage_events'
@@ -2144,7 +2153,6 @@ margin-bottom:15px;
 float:right;
 width:48%;
 table-layout:fixed;
-margin-right:10px;
 }
 table.chords td.first {
 width:1.2em;
@@ -2432,6 +2440,21 @@ font-size:95%;
 }
 button.login-trigger:hover {
 background-color:#4a7a4a;
+}
+a.green-button {
+display:inline-block;
+padding:4px 14px;
+background-color:#3a6a3a;
+color:#ffffff;
+border:1px solid #1a3a1a;
+border-radius:3px;
+font-size:95%;
+text-decoration:none;
+}
+a.green-button:hover {
+background-color:#4a7a4a;
+color:#ffffff;
+text-decoration:none;
 }
 .user-email-display {
 font-style:italic;
@@ -2845,12 +2868,21 @@ def auth_send():
     return jsonify(ok=False, message='Admin login required. This email is not authorized for admin access.')
 
   login_type = 'admin' if needs_admin else GetPermissionLevel(email)
+
+  LogLogin('link-request', email, login_type)
+
   token = GenerateToken(email, target, login_type)
 
-  try:
-    SendMagicLink(email, token, target)
-  except Exception as e:
-    return jsonify(ok=False, message='Failed to send email. Please try again.')
+  if IsRateLimited(email):
+    # Pretend we sent the email, with a delay to mask the difference
+    LogLogin('rate-limited', email, login_type)
+    time.sleep(random.uniform(1.0, 2.5))
+  else:
+    try:
+      SendMagicLink(email, token, target)
+      LogLogin('link-sent', email, login_type)
+    except Exception as e:
+      return jsonify(ok=False, message='Failed to send email. Please try again.')
 
   CleanExpiredTokens()
 
@@ -2864,7 +2896,7 @@ def auth_verify(token):
     parts = [
       CH("Login Link Expired", 2),
       CParagraph("This login link has expired or has already been used."),
-      CParagraph("Please request a new login link."),
+      LoginButton('/'),
       CBreak(),
       CText("Return Home", href='/'),
     ]
@@ -2875,6 +2907,8 @@ def auth_verify(token):
   session['email'] = email
   session['permission_level'] = level
   session['login_time'] = time.time()
+
+  LogLogin('login', email, level)
 
   return redirect(target, code=303)
 
@@ -3028,7 +3062,56 @@ def SendMagicLink(email, token, target):
   server.login(config['username'], config['password'])
   server.sendmail(msg['From'], [email], msg.as_string())
   server.quit()
-  
+
+def LogLogin(action, email, level=None):
+  """Append a line to the login log, truncating if over 1MB."""
+  timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+  if level == 'admin':
+    label = '%s (admin)' % email
+  else:
+    label = email
+  line = '%s  %-12s  %s\n' % (timestamp, action, label)
+
+  # Truncate if over limit: keep the last half
+  try:
+    if os.path.exists(kLoginLog) and os.path.getsize(kLoginLog) > kLoginLogMaxBytes:
+      with open(kLoginLog, 'r') as f:
+        data = f.read()
+      with open(kLoginLog, 'w') as f:
+        f.write(data[len(data) // 2:])
+  except:
+    pass
+
+  with open(kLoginLog, 'a') as f:
+    f.write(line)
+
+def IsRateLimited(email):
+  """Return True if per-user or global rate limit exceeded in the last hour."""
+  if not os.path.exists(kLoginLog):
+    return False
+  cutoff = time.time() - 3600
+  user_count = 0
+  global_count = 0
+  try:
+    with open(kLoginLog, 'r') as f:
+      for line in f:
+        if 'link-sent' not in line:
+          continue
+        parts = line.split('  ', 1)
+        if len(parts) < 2:
+          continue
+        try:
+          t = time.mktime(time.strptime(parts[0].strip(), '%Y-%m-%d %H:%M:%S'))
+          if t >= cutoff:
+            global_count += 1
+            if email in line:
+              user_count += 1
+        except:
+          pass
+  except:
+    pass
+  return user_count >= kMaxEmailsPerHour or global_count >= kMaxGlobalEmailsPerHour
+
 def EventReloader(sid):
 
   e = utils.CEvent(sid)
@@ -3323,7 +3406,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, editor=False):
     refs = ''
     
   if editor and obj.chords:
-    edit_link = CDiv(CText("Edit Chords", href='/tune/%s/edit' % name), style='clear:both; text-align:right')
+    edit_link = CDiv('<a href="/tune/%s/edit" class="green-button">Edit Chords</a>' % name, style='clear:right; float:right; margin-top:4px')
   else:
     edit_link = ''
 
