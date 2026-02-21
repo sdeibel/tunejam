@@ -1973,18 +1973,6 @@ border:1px solid #ff0000;
 .bottom-menu-right {
 float:right;
 }
-div.chord-group {
-float:right;
-width:48%;
-margin-top:70px;
-margin-bottom:15px;
-}
-div.chord-group table.chords {
-float:none;
-width:100%;
-margin-top:0;
-margin-bottom:0;
-}
 @media only screen and (max-width: 589px) {
 .bottom-menu-left {
 float:left;
@@ -2172,11 +2160,36 @@ width:1.2em;
 table.chords td.last {
 width:1.2em;
 }
+div.chord-group {
+float:right;
+width:48%;
+margin-top:70px;
+margin-bottom:15px;
+}
+div.chord-group table.chords {
+float:none;
+width:100%;
+margin-top:0;
+margin-bottom:0;
+margin-left:0;
+}
+div.chord-group-only {
+clear:both;
+float:left;
+width:95%;
+margin-top:2vw;
+font-size:min(5.0vw, 54px);
+}
+div.chord-group-only table.chords-only {
+float:none;
+width:100%;
+margin-top:0;
+}
 table.chords-only {
 clear:both;
 left:0in;
 right:none;
-font-size:5.0vw;
+font-size:min(5.0vw, 54px);
 width:95%;
 float:left;
 margin-top:2vw;
@@ -3609,14 +3622,20 @@ def ChordsToHTML(chords, tclass='chords'):
     if not header_text and not footer_text:
         return table
 
-    note_style = 'font-size:min(2.5vw, 21px); text-align:center; overflow-wrap:break-word'
+    if tclass == 'chords':
+        note_style = 'font-size:min(3vw, 26px); text-align:left; overflow-wrap:break-word'
+        note_class = 'chord-note'
+    else:
+        note_style = 'text-align:left; overflow-wrap:break-word'
+        note_class = 'chord-note-only'
     parts = []
     if header_text:
-        parts.append(CDiv(CText(header_text, italic=1), hclass='chord-note', style=note_style))
+        parts.append(CDiv(CText(header_text, italic=1), hclass=note_class, style=note_style))
     parts.append(table)
     if footer_text:
-        parts.append(CDiv(CText(footer_text, italic=1), hclass='chord-note', style=note_style))
-    return CDiv(parts, hclass='chord-group')
+        parts.append(CDiv(CText(footer_text, italic=1), hclass=note_class, style=note_style))
+    group_class = 'chord-group' if tclass == 'chords' else 'chord-group-only'
+    return CDiv(parts, hclass=group_class)
   
 gTuneCountCache = {}
 def TuneCount(include_incomplete):
