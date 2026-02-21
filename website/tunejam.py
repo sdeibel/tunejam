@@ -1973,6 +1973,18 @@ border:1px solid #ff0000;
 .bottom-menu-right {
 float:right;
 }
+div.chord-group {
+float:right;
+width:48%;
+margin-top:70px;
+margin-bottom:15px;
+}
+div.chord-group table.chords {
+float:none;
+width:100%;
+margin-top:0;
+margin-bottom:0;
+}
 @media only screen and (max-width: 589px) {
 .bottom-menu-left {
 float:left;
@@ -2224,9 +2236,9 @@ table.chords td.last {
 width:1.2em;
 }
 div.chord-group {
-clear:both;
 float:left;
-max-width:100%;
+width:calc(100% - 5px);
+margin-top:5px;
 }
 div.chord-note {
 font-size:4vw !important;
@@ -3597,14 +3609,14 @@ def ChordsToHTML(chords, tclass='chords'):
     if not header_text and not footer_text:
         return table
 
-    note_style = 'font-size:min(2.5vw, 21px); width:0; min-width:100%; overflow-wrap:break-word'
+    note_style = 'font-size:min(2.5vw, 21px); text-align:center; overflow-wrap:break-word'
     parts = []
     if header_text:
         parts.append(CDiv(CText(header_text, italic=1), hclass='chord-note', style=note_style))
     parts.append(table)
     if footer_text:
         parts.append(CDiv(CText(footer_text, italic=1), hclass='chord-note', style=note_style))
-    return CDiv(parts, hclass='chord-group', style='float:right; display:grid; grid-template-columns:1fr')
+    return CDiv(parts, hclass='chord-group')
   
 gTuneCountCache = {}
 def TuneCount(include_incomplete):
