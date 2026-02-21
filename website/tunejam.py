@@ -3036,7 +3036,9 @@ def CleanExpiredTokens():
       pass
 
 def SendMagicLink(email, token, target):
-  """Send a magic link email via SMTP."""
+  """Send a magic link email via SMTP.
+  On Linux, shells out to system Python 3 for SSL support since the
+  Python 2.7 virtualenv lacks it."""
   config = ReadEmailConfig()
   if not config.get('host'):
     raise Exception('Email not configured')
@@ -3048,20 +3050,47 @@ def SendMagicLink(email, token, target):
 
   link = '%s/auth/%s' % (base_url, token)
 
-  msg = MIMEText(
-    'Click the link below to log in to Cambridge NY Traditional Music:\n\n'
-    '%s\n\n'
-    'This link expires in 1 hour and can only be used once.\n' % link
-  )
-  msg['Subject'] = 'Your Login Link - Cambridge NY Traditional Music'
-  msg['From'] = config.get('from_address', config['username'])
-  msg['To'] = email
+  body = ('Click the link below to log in to Cambridge NY Traditional Music:\n\n'
+          '%s\n\n'
+          'This link expires in 1 hour and can only be used once.\n' % link)
+  subject = 'Your Login Link - Cambridge NY Traditional Music'
+  from_addr = config.get('from_address', config['username'])
 
-  server = smtplib.SMTP(config['host'], int(config.get('port', 587)))
-  server.starttls()
-  server.login(config['username'], config['password'])
-  server.sendmail(msg['From'], [email], msg.as_string())
-  server.quit()
+  if sys.platform == 'darwin':
+    # macOS dev: send directly
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = from_addr
+    msg['To'] = email
+    server = smtplib.SMTP(config['host'], int(config.get('port', 587)))
+    server.starttls()
+    server.login(config['username'], config['password'])
+    server.sendmail(from_addr, [email], msg.as_string())
+    server.quit()
+  else:
+    # Linux production: use system Python 3 for SSL support
+    import subprocess
+    script = """
+import smtplib
+from email.mime.text import MIMEText
+msg = MIMEText(%r)
+msg['Subject'] = %r
+msg['From'] = %r
+msg['To'] = %r
+server = smtplib.SMTP(%r, %d)
+server.starttls()
+server.login(%r, %r)
+server.sendmail(%r, [%r], msg.as_string())
+server.quit()
+""" % (body, subject, from_addr, email,
+       config['host'], int(config.get('port', 587)),
+       config['username'], config['password'],
+       from_addr, email)
+    proc = subprocess.Popen(['/usr/bin/python3', '-c', script],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = proc.communicate()
+    if proc.returncode != 0:
+      raise Exception('Email send failed: %s' % err)
 
 def LogLogin(action, email, level=None):
   """Append a line to the login log, truncating if over 1MB."""
