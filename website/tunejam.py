@@ -1885,10 +1885,19 @@ font-size:110%;
 #header {
 overflow:hidden;
 margin:-12px -12px 0 -12px;
+background:#2a4a2a;
 }
 #header img {
 width:100%;
+height:auto;
 display:block;
+}
+#header img.fadein {
+opacity:0;
+transition:opacity 0.4s ease-in;
+}
+#header img.loaded {
+opacity:1;
 }
 #main-menu {
 background-color: #e8f0e8;
@@ -2146,9 +2155,11 @@ min-width:0 !important;
 }
 }
 img.eye-candy {
+height:auto;
+}
+img.eye-candy.fadein {
 opacity:0;
 transition:opacity 0.4s ease-in;
-height:auto;
 }
 img.eye-candy.loaded {
 opacity:1;
@@ -2818,7 +2829,6 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
         eye_candy = CImage(src='/image/eye-candy/%s.jpeg' % img_name,
                            hclass='eye-candy',
                            width=nat_w, height=nat_h,
-                           onload="this.classList.add('loaded')",
                            style='float:right; width:%d%%; margin:0 0 10px 15px' % img_width)
 
     # Insert eye-candy image after the first CH heading so it
@@ -2832,7 +2842,7 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
       body = body[:insert_at] + [eye_candy] + body[insert_at:]
 
     body = [
-      CDiv([CImage(src='/image/header.jpg')], id='header'),
+      CDiv([CImage(src='/image/header.jpg', width=1090, height=100)], id='header'),
       CDiv(items, id='main-menu'),
     ] + body + [
       CDiv('', style='clear:both; height:20px'),

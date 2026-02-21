@@ -147,9 +147,29 @@
     return m + ':' + (sec < 10 ? '0' : '') + sec;
   }
 
+  // Fade in uncached images; show cached images immediately
+  function initImageFadeIn() {
+    var imgs = document.querySelectorAll('#header img, img.eye-candy');
+    for (var i = 0; i < imgs.length; i++) {
+      var img = imgs[i];
+      if (img.complete) {
+        img.classList.add('loaded');
+      } else {
+        img.classList.add('fadein');
+        img.addEventListener('load', function() {
+          this.classList.add('loaded');
+        });
+      }
+    }
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function() {
+      init();
+      initImageFadeIn();
+    });
   } else {
     init();
+    initImageFadeIn();
   }
 })();
