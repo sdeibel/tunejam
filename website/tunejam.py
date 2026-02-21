@@ -1884,6 +1884,11 @@ font-size:110%;
 }
 #header {
 overflow:hidden;
+margin:-12px -12px 0 -12px;
+}
+#header img {
+width:100%;
+display:block;
 }
 #main-menu {
 background-color: #e8f0e8;
@@ -1985,7 +1990,8 @@ color:#005511;
 }
 #body {
 position:relative;
-margin:12px;
+margin:12px auto;
+padding:0 12px;
 max-width:1079px;
 background-color: #ffffff;
 }
