@@ -2190,7 +2190,10 @@ function parseAbcLine(line) {
   while (i < len) {
     var c = line[i];
     // Whitespace
-    if (c === ' ' || c === '\\t') { i++; continue; }
+    if (c === ' ' || c === '\\t') {
+      if (elements.length > 0) elements[elements.length - 1].spaceAfter = true;
+      i++; continue;
+    }
     // Bar lines
     if (c === '|' || c === ':') {
       var bar = '';
@@ -2370,7 +2373,10 @@ function parseSlurGroup(line, startIdx) {
   while (i < line.length && depth > 0) {
     if (line[i] === ')') { depth--; i++; continue; }
     if (line[i] === '(') { depth++; i++; continue; }
-    if (line[i] === ' ' || line[i] === '\\t') { i++; continue; }
+    if (line[i] === ' ' || line[i] === '\\t') {
+      if (elems.length > 0) elems[elems.length - 1].spaceAfter = true;
+      i++; continue;
+    }
     if (line[i] === '|') {
       elems.push({type:'bar', subtype:'|'}); i++; continue;
     }
@@ -2433,6 +2439,7 @@ function modelToAbc(model) {
       } else if (el.type === 'bar') {
         line += el.subtype || '|';
       }
+      if (el.spaceAfter) line += ' ';
     }
     if (inSlur) line += ')';
     lines.push(line);
@@ -2496,6 +2503,8 @@ function activateSelectTool() {
   currentTool = null;
   var selBtn = document.getElementById('ve-select-tool');
   if (selBtn) selBtn.classList.add('ve-tool-active');
+  var editorEl = document.querySelector('.edit-form');
+  if (editorEl) editorEl.classList.remove('ve-scissors-active');
 }
 
 // Convert a selectable index (from elementPositions, which excludes bars
@@ -2932,6 +2941,68 @@ function toolToDuration(toolName) {
   return '/' + Math.round(1/ratio);
 }
 
+// Halve a duration string. Returns null if result would be too short (< 1/8 unit).
+function halfDuration(durStr) {
+  if (durStr === undefined || durStr === null) durStr = '';
+  // Parse duration string into numerator/denominator ratio relative to unit
+  var num = 1, den = 1;
+  var m = durStr.match(/^(\\d+)\\/(\\d+)$/);
+  if (m) { num = parseInt(m[1]); den = parseInt(m[2]); }
+  else {
+    m = durStr.match(/^\\/(\\d+)$/);
+    if (m) { num = 1; den = parseInt(m[1]); }
+    else {
+      m = durStr.match(/^(\\d+)$/);
+      if (m) { num = parseInt(m[1]); den = 1; }
+      // else: empty string means 1/1
+    }
+  }
+  // Halve: multiply denominator by 2
+  den *= 2;
+  // Simplify
+  var g = gcd(num, den);
+  num /= g; den /= g;
+  // Check minimum: don't go below 1/8 of a unit
+  if (num / den < 1/8 - 0.001) return null;
+  // Convert back to ABC duration string
+  if (num === 1 && den === 1) return '';
+  if (den === 1) return '' + num;
+  if (num === 1) return '/' + den;
+  return '' + num + '/' + den;
+}
+
+function gcd(a, b) { while (b) { var t = b; b = a %% b; a = t; } return a; }
+
+// Split a note element in the model at the given index, inserting a second note after it.
+// Returns true if split was performed, false if duration can't be halved further.
+function splitNoteElement(part, elemIdx) {
+  var el = part.elements[elemIdx];
+  if (el.type !== 'note' && el.type !== 'rest') return false;
+  if (el.grace) return false;
+  var half = halfDuration(el.duration || '');
+  if (half === null) return false;
+  // Create the second element (copy of original)
+  var newEl = {type: el.type, duration: half};
+  if (el.type === 'note') {
+    newEl.pitch = el.pitch;
+    newEl.octave = el.octave;
+    if (el.accidental) newEl.accidental = el.accidental;
+    // Transfer slurEnd and tied from original to new element
+    if (el.slurEnd) { newEl.slurEnd = true; el.slurEnd = false; }
+    if (el.tied) { newEl.tied = true; el.tied = false; }
+    // Transfer spaceAfter from original to new element
+    if (el.spaceAfter) { newEl.spaceAfter = true; el.spaceAfter = false; }
+  } else {
+    // rest: transfer spaceAfter
+    if (el.spaceAfter) { newEl.spaceAfter = true; el.spaceAfter = false; }
+  }
+  // Update original element's duration to half
+  el.duration = half;
+  // Insert new element after original
+  part.elements.splice(elemIdx + 1, 0, newEl);
+  return true;
+}
+
 // --- Render Integration ---
 var origDoRenderAbc = null;
 
@@ -3086,6 +3157,21 @@ function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEven
   if (isDragging) return;  // Suppress during palette drag
   if (partIdx === undefined) partIdx = 0;
 
+  // Scissors tool: split the clicked note/rest
+  if (currentTool === 'scissors') {
+    var mapped = mapAbcElemToModel(abcElem, partIdx);
+    if (mapped && mapped.partIdx >= 0) {
+      var part = notationModel.parts[mapped.partIdx];
+      var el = part.elements[mapped.elemIdx];
+      if ((el.type === 'note' || el.type === 'rest') && !el.grace) {
+        pushUndo();
+        splitNoteElement(part, mapped.elemIdx);
+        syncModelToTextarea();
+      }
+    }
+    return;
+  }
+
   // Check if click was actually on a bar line — handle before abcjs note selection
   if (mouseEvent) {
     var barEl = findBarAncestor(mouseEvent.target);
@@ -3221,6 +3307,7 @@ function modelToAbcPart(part) {
     } else if (el.type === 'bar') {
       line += el.subtype || '|';
     }
+    if (el.spaceAfter) line += ' ';
   }
   if (inSlur) line += ')';
   return line;
@@ -3239,8 +3326,9 @@ function charOffsetToElemIdx(abcText, offset, elements) {
 }
 
 function elementAbcLength(el) {
-  if (el.type === 'bar') return (el.subtype || '|').length;
-  if (el.type === 'rest') return 1 + (el.duration || '').length;
+  var extra = el.spaceAfter ? 1 : 0;
+  if (el.type === 'bar') return (el.subtype || '|').length + extra;
+  if (el.type === 'rest') return 1 + (el.duration || '').length + extra;
   if (el.type === 'note') {
     var len = 0;
     if (el.slurStart) len += 1;
@@ -3256,9 +3344,9 @@ function elementAbcLength(el) {
     if (el.grace) len += 1; // }
     if (el.tied) len += 1;
     if (el.slurEnd) len += 1;
-    return len;
+    return len + extra;
   }
-  return 1;
+  return 1 + extra;
 }
 
 // --- Selection Highlighting ---
@@ -3723,6 +3811,44 @@ function setupToolbar() {
           return;
         }
 
+        // Scissors tool: modal tool for splitting notes / breaking beams
+        if (tool === 'scissors') {
+          if (currentTool === 'scissors') {
+            // Toggle off — return to select
+            activateSelectTool();
+            var editorEl = document.querySelector('.edit-form');
+            if (editorEl) editorEl.classList.remove('ve-scissors-active');
+          } else if (selectedElements.length > 0) {
+            // If notes are selected, split them immediately
+            pushUndo();
+            var sortedSel = selectedElements.slice().sort(function(a, b) { return a.elemIdx - b.elemIdx; });
+            var offset = 0;
+            for (var si = 0; si < sortedSel.length; si++) {
+              var sel = sortedSel[si];
+              var part = notationModel.parts[sel.partIdx];
+              var idx = sel.elemIdx + offset;
+              if (splitNoteElement(part, idx)) {
+                offset++; // account for inserted element
+              }
+            }
+            syncModelToTextarea();
+            selectedElements = [];
+            highlightSelected();
+          } else {
+            // Activate scissors mode
+            clearToolSelection();
+            currentTool = 'scissors';
+            btn.classList.add('ve-tool-active');
+            selectedElements = [];
+            highlightSelected();
+            hidePropertyPanel();
+            var editorEl = document.querySelector('.edit-form');
+            if (editorEl) editorEl.classList.add('ve-scissors-active');
+          }
+          e.preventDefault();
+          return;
+        }
+
         // Special tools act on selection immediately
         if (tool === 'slur' || tool === 'sharp' || tool === 'flat' || tool === 'natural' || tool === 'grace') {
           // Immediate action for slur on selected range (toggle)
@@ -3932,6 +4058,22 @@ function addBeamHitAreas(svg, partIdx) {
       // (redirecting pointerup/click away). stopPropagation prevents both.
       hitRect.addEventListener('pointerdown', function(e) {
         if (veMode !== 'visual') return;
+        // Scissors tool: break/join beam at click point
+        if (currentTool === 'scissors') {
+          e.stopPropagation();
+          e.preventDefault();
+          var cutResult = findBeamCutPoint(e.clientX, e.clientY, partIdx);
+          if (cutResult) {
+            pushUndo();
+            var cutEl = notationModel.parts[cutResult.partIdx].elements[cutResult.elemIdx];
+            // Toggle: break if not broken, join if already broken
+            cutEl.spaceAfter = !cutEl.spaceAfter;
+            syncModelToTextarea();
+          }
+          isDragging = true;
+          setTimeout(function() { isDragging = false; }, 300);
+          return;
+        }
         if (currentTool) return;
         e.stopPropagation();
         e.preventDefault();
@@ -4041,6 +4183,73 @@ function findBeamGroupAtPoint(clientX, clientY) {
   return null;
 }
 
+// Find the beam cut point: the note boundary within a beam group closest to click X.
+// Returns {partIdx, elemIdx} of the note just BEFORE the cut point, or null.
+function findBeamCutPoint(clientX, clientY, hintPartIdx) {
+  var staff = getStaffAtPoint(clientX, clientY);
+  if (!staff) return null;
+  var pr = null;
+  for (var pi = 0; pi < partRenderings.length; pi++) {
+    if (partRenderings[pi].partIdx === staff.partIdx) { pr = partRenderings[pi]; break; }
+  }
+  if (!pr || !pr.beamGroups || pr.beamGroups.length === 0) return null;
+  var positions = pr.elementPositions || [];
+  var part = notationModel.parts[pr.partIdx];
+  if (!part || positions.length === 0) return null;
+  var svg = pr.renderTarget ? pr.renderTarget.querySelector('svg') : null;
+  if (!svg) return null;
+  var clickSvgX = clientToSvgCoords(svg, clientX, clientY).x;
+  // Find the closest element to the click
+  var closestSelIdx = -1;
+  var closestDist = Infinity;
+  for (var i = 0; i < positions.length; i++) {
+    var dist = Math.abs(positions[i].centerX - clickSvgX);
+    if (dist < closestDist) { closestDist = dist; closestSelIdx = i; }
+  }
+  if (closestSelIdx < 0 || closestDist > 40) return null;
+  var clickedModelIdx = selectableIdxToModelIdx(part, closestSelIdx);
+  // Find which beam group contains this element
+  for (var bi = 0; bi < pr.beamGroups.length; bi++) {
+    var bg = pr.beamGroups[bi];
+    var posInGroup = -1;
+    for (var ni = 0; ni < bg.elemIndices.length; ni++) {
+      if (bg.elemIndices[ni] === clickedModelIdx) { posInGroup = ni; break; }
+    }
+    if (posInGroup < 0) continue;
+    // Find the boundary between adjacent notes closest to the click X.
+    // Each boundary is between position[n] and position[n+1] in the group.
+    // We want to set spaceAfter on the note just before the boundary.
+    var bestBoundaryIdx = -1;
+    var bestBoundaryDist = Infinity;
+    for (var bj = 0; bj < bg.elemIndices.length - 1; bj++) {
+      // Get SVG positions for these two elements
+      var modelIdx1 = bg.elemIndices[bj];
+      var modelIdx2 = bg.elemIndices[bj + 1];
+      // Find selectable indices for these model indices
+      var selIdx1 = -1, selIdx2 = -1;
+      var sc = 0;
+      for (var mi = 0; mi < part.elements.length; mi++) {
+        if (part.elements[mi].type === 'bar' || part.elements[mi].grace) continue;
+        if (mi === modelIdx1) selIdx1 = sc;
+        if (mi === modelIdx2) selIdx2 = sc;
+        sc++;
+      }
+      if (selIdx1 >= 0 && selIdx2 >= 0 && selIdx1 < positions.length && selIdx2 < positions.length) {
+        var midX = (positions[selIdx1].centerX + positions[selIdx2].centerX) / 2;
+        var dist = Math.abs(midX - clickSvgX);
+        if (dist < bestBoundaryDist) {
+          bestBoundaryDist = dist;
+          bestBoundaryIdx = bj;
+        }
+      }
+    }
+    if (bestBoundaryIdx >= 0) {
+      return {partIdx: pr.partIdx, elemIdx: bg.elemIndices[bestBoundaryIdx]};
+    }
+  }
+  return null;
+}
+
 // --- Staff Click-to-Place ---
 function setupStaffClick() {
   // Use event delegation on the preview container so it works with
@@ -4101,7 +4310,6 @@ function setupStaffClick() {
   preview.addEventListener('click', function(e) {
     if (veMode !== 'visual') return;
     if (isDragging) return;
-    if (selectedElements.length === 0) return;
     // Check if the click target is inside an abcjs note/rest SVG element —
     // if so, the abcjs callback or bar handler will handle it
     var t = e.target;
@@ -4111,6 +4319,12 @@ function setupStaffClick() {
           cls.indexOf('abcjs-bar') >= 0 || cls.indexOf('ve-bar-hitarea') >= 0) return;
       t = t.parentElement;
     }
+    // Clicking empty area deactivates scissors tool
+    if (currentTool === 'scissors') {
+      activateSelectTool();
+      return;
+    }
+    if (selectedElements.length === 0) return;
     selectedElements = [];
     highlightSelected();
     hidePropertyPanel();
@@ -4860,6 +5074,12 @@ def _build_notes_section(obj, tune, meter_options, unit_options):
       '</button>',
       '<button type="button" class="ve-tool-btn" data-tool="grace" title="Grace note (acciaccatura)">'
       '<svg viewBox="0 0 20 28" width="16" height="22"><ellipse cx="8" cy="16" rx="3.5" ry="2.5" fill="currentColor" transform="rotate(-15,8,16)"/><line x1="11" y1="15" x2="11" y2="3" stroke="currentColor" stroke-width="1.5"/><path d="M11,3 Q13.5,5.5 15,9" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>'
+      '</button>',
+    ], hclass='ve-tool-group'),
+    # Scissors (split note / break beam)
+    CDiv([
+      '<button type="button" class="ve-tool-btn" data-tool="scissors" title="Scissors: split note or break/join beam">'
+      '<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="7" cy="17" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="17" cy="17" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="9.1" y1="15.2" x2="17" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="14.9" y1="15.2" x2="7" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
       '</button>',
     ], hclass='ve-tool-group'),
   ], hclass='ve-toolbar', id='ve-toolbar')
@@ -6463,6 +6683,12 @@ border:1px dashed #4A90D9;
 background:rgba(74, 144, 217, 0.1);
 pointer-events:none;
 z-index:1000;
+}
+.ve-scissors-active #ve-preview-container {
+cursor:crosshair;
+}
+.ve-scissors-active #ve-preview-container svg {
+cursor:crosshair;
 }
 .edit-form .ve-tool-del {
 font-size:11px;
