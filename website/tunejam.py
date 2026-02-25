@@ -3071,8 +3071,8 @@ function veDoRenderAbc() {
       var svgMapResult = buildElemSvgMap(pr.tuneObj, pr.partIdx);
       pr.elemSvgMap = svgMapResult.map;
       pr.beamGroups = svgMapResult.beams;
-      // Add wider hit areas to thin bar lines for easier clicking
-      if (partSvg) addBarHitAreas(partSvg);
+      // Add wider hit areas to thin bar lines and beam bars for easier clicking
+      if (partSvg) { addBarHitAreas(partSvg); addBeamHitAreas(partSvg, pr.partIdx); }
     }
     updatePartHeaders();
     highlightSelected();
@@ -3905,6 +3905,66 @@ function addBarHitAreas(svg) {
   }
 }
 
+function addBeamHitAreas(svg, partIdx) {
+  // Add invisible wider hit-area rects over beam bars so they're easier to click.
+  // Beam bars are thin filled paths with class abcjs-beam-elem.
+  // Each hit area gets its own click handler since abcjs stops event
+  // propagation on SVG clicks, preventing delegation to parent elements.
+  var beams = svg.querySelectorAll('path[class*="abcjs-beam-elem"]');
+  for (var i = 0; i < beams.length; i++) {
+    var beam = beams[i];
+    try {
+      var bbox = beam.getBBox();
+      // Only add hit areas for beam bars (wide and thin), not stems
+      if (bbox.width < 5 || bbox.height > bbox.width) continue;
+      var hitRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      hitRect.setAttribute('class', 've-beam-hitarea');
+      hitRect.setAttribute('x', bbox.x);
+      hitRect.setAttribute('y', bbox.y - 4);
+      hitRect.setAttribute('width', bbox.width);
+      hitRect.setAttribute('height', bbox.height + 8);
+      hitRect.setAttribute('fill', 'transparent');
+      hitRect.setAttribute('pointer-events', 'all');
+      hitRect.style.cursor = 'pointer';
+      svg.appendChild(hitRect);
+      // Use pointerdown — abcjs intercepts click events in the capture phase,
+      // and the rubber-band handler captures the pointer on pointerdown
+      // (redirecting pointerup/click away). stopPropagation prevents both.
+      hitRect.addEventListener('pointerdown', function(e) {
+        if (veMode !== 'visual') return;
+        if (currentTool) return;
+        e.stopPropagation();
+        e.preventDefault();
+        var beamSel = findBeamGroupAtPoint(e.clientX, e.clientY);
+        if (!beamSel || beamSel.length === 0) return;
+        selectedElements = beamSel;
+        highlightSelected();
+        setTimeout(highlightSelected, 20);
+        showPropertyPanel(beamSel[0].partIdx, beamSel[0].elemIdx);
+        // Suppress deselect handlers that fire on subsequent click/pointerup
+        isDragging = true;
+        setTimeout(function() { isDragging = false; }, 300);
+      });
+      // Stop click and pointerup from propagating — prevents abcjs
+      // capture-phase click handler and deselect handlers from firing
+      hitRect.addEventListener('click', function(e) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }, true);  // capture phase
+      hitRect.addEventListener('click', function(e) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      });  // bubble phase
+      hitRect.addEventListener('pointerup', function(e) {
+        e.stopImmediatePropagation();
+      }, true);
+      hitRect.addEventListener('pointerup', function(e) {
+        e.stopImmediatePropagation();
+      });
+    } catch(ex) {}
+  }
+}
+
 function findPartForSvgElement(svgEl) {
   // Find which part rendering contains this SVG element
   for (var i = 0; i < partRenderings.length; i++) {
@@ -3937,6 +3997,48 @@ function findBarModelIndex(partIdx, barSvgEl) {
     }
   }
   return -1;
+}
+
+// --- Beam Group Lookup by Click Position ---
+// Given a click at (clientX, clientY), find the beam group at that position
+// and return its selected elements array, or null if no beam group found.
+function findBeamGroupAtPoint(clientX, clientY) {
+  var staff = getStaffAtPoint(clientX, clientY);
+  if (!staff) return null;
+  var pr = null;
+  for (var pi = 0; pi < partRenderings.length; pi++) {
+    if (partRenderings[pi].partIdx === staff.partIdx) { pr = partRenderings[pi]; break; }
+  }
+  if (!pr || !pr.beamGroups || pr.beamGroups.length === 0) return null;
+  var positions = pr.elementPositions || [];
+  var part = notationModel.parts[pr.partIdx];
+  if (!part || positions.length === 0) return null;
+  var svg = pr.renderTarget ? pr.renderTarget.querySelector('svg') : null;
+  if (!svg) return null;
+  var clickSvgX = clientToSvgCoords(svg, clientX, clientY).x;
+  // Find the closest element position to the click
+  var closestSelIdx = -1;
+  var closestDist = Infinity;
+  for (var i = 0; i < positions.length; i++) {
+    var dist = Math.abs(positions[i].centerX - clickSvgX);
+    if (dist < closestDist) { closestDist = dist; closestSelIdx = i; }
+  }
+  if (closestSelIdx < 0 || closestDist > 30) return null;
+  var clickedModelIdx = selectableIdxToModelIdx(part, closestSelIdx);
+  // Find which beam group contains this element
+  for (var bi = 0; bi < pr.beamGroups.length; bi++) {
+    var bg = pr.beamGroups[bi];
+    for (var ni = 0; ni < bg.elemIndices.length; ni++) {
+      if (bg.elemIndices[ni] === clickedModelIdx) {
+        var result = [];
+        for (var j = 0; j < bg.elemIndices.length; j++) {
+          result.push({partIdx: pr.partIdx, elemIdx: bg.elemIndices[j]});
+        }
+        return result;
+      }
+    }
+  }
+  return null;
 }
 
 // --- Staff Click-to-Place ---
@@ -3987,50 +4089,13 @@ function setupStaffClick() {
   preview.addEventListener('dblclick', function(e) {
     if (veMode !== 'visual') return;
     if (currentTool) return;  // Only in selection mode
-    // Find which part and note the double-click landed on
-    var staff = getStaffAtPoint(e.clientX, e.clientY);
-    if (!staff) return;
-    var pr = null;
-    for (var pi = 0; pi < partRenderings.length; pi++) {
-      if (partRenderings[pi].partIdx === staff.partIdx) { pr = partRenderings[pi]; break; }
-    }
-    if (!pr || !pr.beamGroups || pr.beamGroups.length === 0) return;
-    // Find which note was clicked by X position
-    var positions = pr.elementPositions || [];
-    var part = notationModel.parts[pr.partIdx];
-    if (!part || positions.length === 0) return;
-    var svg = pr.renderTarget ? pr.renderTarget.querySelector('svg') : null;
-    if (!svg) return;
-    var clickSvgX = clientToSvgCoords(svg, e.clientX, e.clientY).x;
-    // Find the closest element position to the click
-    var closestSelIdx = -1;
-    var closestDist = Infinity;
-    for (var i = 0; i < positions.length; i++) {
-      var dist = Math.abs(positions[i].centerX - clickSvgX);
-      if (dist < closestDist) { closestDist = dist; closestSelIdx = i; }
-    }
-    if (closestSelIdx < 0 || closestDist > 30) return;
-    var clickedModelIdx = selectableIdxToModelIdx(part, closestSelIdx);
-    // Find which beam group contains this element
-    for (var bi = 0; bi < pr.beamGroups.length; bi++) {
-      var bg = pr.beamGroups[bi];
-      for (var ni = 0; ni < bg.elemIndices.length; ni++) {
-        if (bg.elemIndices[ni] === clickedModelIdx) {
-          // Found it — select all notes in this beam group
-          selectedElements = [];
-          for (var j = 0; j < bg.elemIndices.length; j++) {
-            selectedElements.push({partIdx: pr.partIdx, elemIdx: bg.elemIndices[j]});
-          }
-          highlightSelected();
-          setTimeout(highlightSelected, 20);
-          if (selectedElements.length > 0) {
-            showPropertyPanel(selectedElements[0].partIdx, selectedElements[0].elemIdx);
-          }
-          e.preventDefault();
-          return;
-        }
-      }
-    }
+    var beamSel = findBeamGroupAtPoint(e.clientX, e.clientY);
+    if (!beamSel) return;
+    selectedElements = beamSel;
+    highlightSelected();
+    setTimeout(highlightSelected, 20);
+    showPropertyPanel(beamSel[0].partIdx, beamSel[0].elemIdx);
+    e.preventDefault();
   });
   // Deselect when clicking empty area (not on a note/rest/bar)
   preview.addEventListener('click', function(e) {
@@ -6510,10 +6575,16 @@ pointer-events:none;
 fill:#cc3333 !important;
 stroke:#cc3333 !important;
 }
-.ve-bar-hitarea {
+#ve-preview-container .abcjs-note,
+#ve-preview-container .abcjs-rest {
+cursor:pointer;
+}
+.ve-bar-hitarea,
+.ve-beam-hitarea {
 pointer-events:all;
 fill:transparent !important;
 stroke:none !important;
+cursor:pointer;
 }
 .ve-note-highlight,
 .ve-note-highlight * {
