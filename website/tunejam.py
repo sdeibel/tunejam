@@ -2370,43 +2370,39 @@ def _build_chord_tables(chord_parts, num_columns):
 def _chord_notation_guide():
   """Return the chord notation guide div."""
   return CDiv([
-    CH("Chord Notation Guide", 3),
+    CH("Chord Notation Reference", 3),
     CParagraph([
-      "Use uppercase letters A through G for notes (H can be used for the German Bb). "
-      "Add ", CText("b", bold=1), " for flat, ", CText("#", bold=1), " for sharp, ",
-      CText("+", bold=1), " for augmented, or ", CText("m", bold=1), " for minor after any note. "
-      "Examples: ", CText("Am  Bb  F#m  C+  Eb", italic=1),
-      ". When a measure has two or more chords, just write them together in one cell, like ",
-      CText("AmG", italic=1), ", ", CText("F#mE", italic=1), ", or ", CText("DGA", italic=1), ".",
+      "Chords A through G and H for German Bb. ", 
+      CText("b", bold=1), "=flat, ", CText("#", bold=1), "=sharp, ",
+      CText("+", bold=1), "=augmented, ", CText("m", bold=1), "=minor "
+      "like: ", CText("Am  Bb  F#m  C+  Eb", italic=1),
+      ". For 2+ chords in a measure, write them together like: ",
+      CText("AmG F#mE DGA", italic=1),
     ]),
     CParagraph([
-      "For extended chords, add ", CText("7", bold=1), ", ", CText("6", bold=1), ", or ",
-      CText("9", bold=1), " after any chord. ",
-      "Use ", CText("Dim", bold=1), " for diminished and ", CText("sup", bold=1), " for suspended. "
-      "Examples: ", CText("A7  Em6  Bbm7  C#Dim  Csup9", italic=1),
+      "Add", CText("7", bold=1), ", ", CText("6", bold=1), ", or ",
+      CText("9", bold=1), " extend chords. ",
+      "", CText("Dim", bold=1), "=diminished, ", CText("sup", bold=1), "=suspended "
+      "like: ", CText("A7  Em6  Bbm7  C#Dim  Csup9", italic=1),
     ]),
     CParagraph([
-      "Use ", CText("-", bold=1), " to show that a chord sustains for more than one beat in a measure. "
-      "This is especially useful in slip jigs (9/8) where each measure has three beats. "
-      "Examples: ", CText("G-D", italic=1), " (G for two beats, D for one), ",
-      CText("D-Am", italic=1), ", ", CText("Em-G", italic=1), ", ",
-      CText("A--", italic=1), " (A sustained for all three beats).",
+      "Use ", CText("-", bold=1), " to explicitely sustain chords. "
+      "like: ", CText("G-D", italic=1), " (G two beats, D for one), ",
+      CText("A--", italic=1), " (A for three beats).",
     ]),
     CParagraph([
-      "Use ", CText("1:", bold=1), " ", CText("2:", bold=1), " ", CText("3:", bold=1),
-      " at the start of a line to mark alternate endings. "
-      "You can also use / and () to indicate alternative chords within a measure, like ",
+      CText("1:", bold=1), " ", CText("2:", bold=1), " ", CText("3:", bold=1),
+      " at line start for alternate endings. "
+      "Or use / and () for alternative/optional chords, like: ",
       CText("A(G/B)", italic=1), ", but ", CText("1:", italic=1), " or ", CText("2:", italic=1),
       " endings are clearer. "
-      "A time signature change is noted by including the new time signature, like ",
-      CText("7/8", italic=1), " or ", CText("9/8", italic=1), ".",
+      "Including the new time signature, like: ",
+      CText("7/8", italic=1), " or ", CText("9/8", italic=1), " for time signature change.",
     ]),
     CParagraph([
-      "The ", CText("Notes", bold=1), " fields above and below the chord chart are for "
-      "free text about playing style, form, or anything unusual. For example: ",
-      CText("\"Play the A part 3x\"", italic=1), " or ",
-      CText("\"B-part only has 7 bars!\"", italic=1),
-      " Notes are not validated and won't appear if left blank.",
+      "Header and footer notes for playing style, form, or anything unusual like: ",
+      "\"Play the A part 3x\"", " and ",
+      "\"B-part only has 7 bars!\""
     ]),
   ], style='padding-top:20px')
 
