@@ -2491,6 +2491,26 @@ function clearToolSelection() {
   currentTool = null;
 }
 
+function activateSelectTool() {
+  clearToolSelection();
+  currentTool = null;
+  var selBtn = document.getElementById('ve-select-tool');
+  if (selBtn) selBtn.classList.add('ve-tool-active');
+}
+
+// Convert a selectable index (from elementPositions, which excludes bars
+// and grace notes) back to a model element index.
+function selectableIdxToModelIdx(part, selIdx) {
+  var selectableCount = 0;
+  for (var j = 0; j < part.elements.length; j++) {
+    if (part.elements[j].type === 'bar') continue;
+    if (part.elements[j].grace) continue;
+    if (selectableCount === selIdx) return j;
+    selectableCount++;
+  }
+  return part.elements.length;
+}
+
 // --- SVG Coordinate Helpers ---
 // Convert a point from an element's local coordinate space to the SVG root
 // coordinate space (accounting for all parent <g> transforms).
@@ -2733,6 +2753,15 @@ function buildElemSvgMap(tuneObj, partIdx) {
           for (var k = 0; k < sa.absEl.elemset.length; k++) {
             map[e].push(sa.absEl.elemset[k]);
           }
+          // When abcjs folds a grace note with its following note into
+          // one selectable, also map the SVG elements to the next
+          // (main) note so highlighting works for both elements.
+          if (part.elements[e].grace && e + 1 < part.elements.length) {
+            if (!map[e + 1]) map[e + 1] = [];
+            for (var k = 0; k < sa.absEl.elemset.length; k++) {
+              map[e + 1].push(sa.absEl.elemset[k]);
+            }
+          }
           matchedIdx = e;
           break;
         }
@@ -2864,14 +2893,7 @@ function xToInsertionIndex(dropX, partIdx) {
   // grace notes, which abcjs folds into the following note)
   var part = notationModel.parts[partIdx];
   if (!part) return posIdx;
-  var selectableCount = 0;
-  for (var j = 0; j < part.elements.length; j++) {
-    if (part.elements[j].type === 'bar') continue;
-    if (part.elements[j].grace) continue;
-    if (selectableCount === posIdx) return j;
-    selectableCount++;
-  }
-  return part.elements.length;
+  return selectableIdxToModelIdx(part, posIdx);
 }
 
 // --- Duration Mapping ---
@@ -3694,6 +3716,13 @@ function setupToolbar() {
         var tool = btn.getAttribute('data-tool');
         if (!tool) return;
 
+        // Select tool: activate selection mode
+        if (tool === 'select') {
+          activateSelectTool();
+          e.preventDefault();
+          return;
+        }
+
         // Special tools act on selection immediately
         if (tool === 'slur' || tool === 'sharp' || tool === 'flat' || tool === 'natural' || tool === 'grace') {
           // Immediate action for slur on selected range (toggle)
@@ -3750,7 +3779,7 @@ function setupToolbar() {
 
         // Note/rest/bar tools: toggle selection or start drag
         if (currentTool === tool) {
-          clearToolSelection();
+          activateSelectTool();
           e.preventDefault();
           return;
         }
@@ -3766,6 +3795,8 @@ function setupToolbar() {
       });
     })(btns[i]);
   }
+  // Select tool active by default on page load
+  activateSelectTool();
 }
 
 // --- Palette Drag ---
@@ -3984,6 +4015,144 @@ function setupStaffClick() {
   });
 }
 
+// --- Rubber-Band Drag Selection ---
+function setupRubberBandSelection() {
+  var preview = document.getElementById('ve-preview-container');
+  if (!preview) return;
+  var rbStartX, rbStartY, rbPartIdx, isRubberBanding;
+  var rbDiv = null;
+  var rbPointerId = null;
+
+  preview.addEventListener('pointerdown', function(e) {
+    if (veMode !== 'visual') return;
+    if (currentTool !== null) return;  // Only in selection mode
+    // Don't start rubber-band on toolbar buttons
+    var t = e.target;
+    while (t && t !== preview) {
+      var cls = (t.getAttribute && t.getAttribute('class')) || '';
+      if (cls.indexOf('ve-tool') >= 0 || cls.indexOf('ve-mode') >= 0 ||
+          cls.indexOf('ve-prop') >= 0) return;
+      // Don't start on existing notes/rests/bars — let normal click handle those
+      if (cls.indexOf('abcjs-note') >= 0 || cls.indexOf('abcjs-rest') >= 0 ||
+          cls.indexOf('abcjs-bar') >= 0 || cls.indexOf('ve-bar-hitarea') >= 0) return;
+      t = t.parentElement;
+    }
+    // Determine which part we're starting in
+    var staff = getStaffAtPoint(e.clientX, e.clientY);
+    if (!staff) return;
+    rbStartX = e.clientX;
+    rbStartY = e.clientY;
+    rbPartIdx = staff.partIdx;
+    isRubberBanding = false;
+    rbPointerId = e.pointerId;
+    preview.setPointerCapture(e.pointerId);
+  });
+
+  preview.addEventListener('pointermove', function(e) {
+    if (rbPointerId === null || e.pointerId !== rbPointerId) return;
+    var dx = e.clientX - rbStartX;
+    var dy = e.clientY - rbStartY;
+    if (!isRubberBanding && (dx * dx + dy * dy) < 25) return;  // 5px threshold
+    isRubberBanding = true;
+
+    // Create or update rubber-band div
+    var left = Math.min(rbStartX, e.clientX);
+    var top = Math.min(rbStartY, e.clientY);
+    var width = Math.abs(e.clientX - rbStartX);
+    var height = Math.abs(e.clientY - rbStartY);
+    if (!rbDiv) {
+      rbDiv = document.createElement('div');
+      rbDiv.className = 've-rubber-band';
+      document.body.appendChild(rbDiv);
+    }
+    rbDiv.style.left = left + 'px';
+    rbDiv.style.top = top + 'px';
+    rbDiv.style.width = width + 'px';
+    rbDiv.style.height = height + 'px';
+
+    // Hit-test elements in the target part against the rubber-band rectangle
+    var rbLeft = left, rbRight = left + width, rbTop = top, rbBottom = top + height;
+    var newSelected = [];
+    var rbPart = (rbPartIdx < partRenderings.length) ? notationModel.parts[partRenderings[rbPartIdx].partIdx] : null;
+    if (rbPartIdx < partRenderings.length) {
+      var pr = partRenderings[rbPartIdx];
+      var positions = pr.elementPositions || [];
+      var svg = pr.renderTarget ? pr.renderTarget.querySelector('svg') : null;
+      if (svg && positions.length > 0) {
+        var ctm = svg.getScreenCTM();
+        if (ctm) {
+          for (var i = 0; i < positions.length; i++) {
+            var pos = positions[i];
+            // Convert SVG coords to client coords using the CTM
+            var elLeft = ctm.a * pos.x + ctm.e;
+            var elRight = ctm.a * (pos.x + pos.w) + ctm.e;
+            // Check horizontal overlap with rubber-band
+            if (elRight >= rbLeft && elLeft <= rbRight) {
+              // Use vertical overlap too — check against SVG bounds
+              var svgRect = svg.getBoundingClientRect();
+              if (svgRect.bottom >= rbTop && svgRect.top <= rbBottom) {
+                var modelIdx = rbPart ? selectableIdxToModelIdx(rbPart, i) : i;
+                newSelected.push({partIdx: pr.partIdx, elemIdx: modelIdx});
+              }
+            }
+          }
+        }
+      }
+    }
+    // Expand selection to include grace note partners: if a main note
+    // is selected, also select its preceding grace note, and vice versa.
+    if (rbPart && newSelected.length > 0) {
+      var selSet = {};
+      for (var si = 0; si < newSelected.length; si++) {
+        selSet[newSelected[si].elemIdx] = true;
+      }
+      var toAdd = [];
+      for (var si = 0; si < newSelected.length; si++) {
+        var idx = newSelected[si].elemIdx;
+        var el = rbPart.elements[idx];
+        // If this is a grace note, also select the following main note
+        if (el && el.grace && idx + 1 < rbPart.elements.length && !selSet[idx + 1]) {
+          toAdd.push({partIdx: newSelected[si].partIdx, elemIdx: idx + 1});
+          selSet[idx + 1] = true;
+        }
+        // If preceding element is a grace note, also select it
+        if (idx > 0 && rbPart.elements[idx - 1].grace && !selSet[idx - 1]) {
+          toAdd.push({partIdx: newSelected[si].partIdx, elemIdx: idx - 1});
+          selSet[idx - 1] = true;
+        }
+      }
+      for (var ai = 0; ai < toAdd.length; ai++) {
+        newSelected.push(toAdd[ai]);
+      }
+    }
+    selectedElements = newSelected;
+    highlightSelected();
+  });
+
+  function endRubberBand(e) {
+    if (rbPointerId === null || e.pointerId !== rbPointerId) return;
+    if (rbDiv) {
+      rbDiv.parentNode.removeChild(rbDiv);
+      rbDiv = null;
+    }
+    var wasRubberBanding = isRubberBanding;
+    rbPointerId = null;
+    try { preview.releasePointerCapture(e.pointerId); } catch(ex) {}
+    if (wasRubberBanding) {
+      // Suppress the click handler from deselecting
+      isDragging = true;
+      setTimeout(function() { isDragging = false; }, 50);
+      // Show property panel for first selected element
+      if (selectedElements.length > 0) {
+        showPropertyPanel(selectedElements[0].partIdx, selectedElements[0].elemIdx);
+      }
+    }
+  }
+
+  preview.addEventListener('pointerup', endRubberBand);
+  preview.addEventListener('pointercancel', endRubberBand);
+}
+
 // --- Place Element on Staff ---
 function placeElementOnStaff(tool, overStaff, clientX) {
   var partIdx = overStaff.partIdx;
@@ -4171,6 +4340,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Setup toolbar
   setupToolbar();
   setupStaffClick();
+  setupRubberBandSelection();
   setupKeyboardShortcuts();
 
   // Start in visual mode
@@ -4503,6 +4673,12 @@ def _build_notes_section(obj, tune, meter_options, unit_options):
 
   # Toolbar palette (shown in visual mode)
   toolbar = CDiv([
+    # Selection tool (default mode)
+    CDiv([
+      '<button type="button" class="ve-tool-btn" data-tool="select" id="ve-select-tool" title="Selection tool">'
+      '<svg viewBox="0 0 20 24" width="16" height="20"><path d="M4,2 L4,18 L8,14 L12,20 L14,19 L10,13 L16,13 Z" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"/></svg>'
+      '</button>',
+    ], hclass='ve-tool-group'),
     # Duration tools
     CDiv([
       # Whole note
@@ -6165,6 +6341,13 @@ color:white;
 }
 .edit-form .ve-tool-btn svg {
 display:block;
+}
+.ve-rubber-band {
+position:fixed;
+border:1px dashed #4A90D9;
+background:rgba(74, 144, 217, 0.1);
+pointer-events:none;
+z-index:1000;
 }
 .edit-form .ve-tool-del {
 font-size:11px;
