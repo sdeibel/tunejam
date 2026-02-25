@@ -2859,13 +2859,15 @@ function xToInsertionIndex(dropX, partIdx) {
   for (var i = 0; i < sorted.length; i++) {
     if (dropX < sorted[i].centerX) { posIdx = i; break; }
   }
-  // Convert selectable index to model index, skipping bar elements
-  // (bars are in the model but not in abcjs selectables)
+  // Convert selectable index to model index, skipping elements
+  // that are in the model but not in abcjs selectables (bars and
+  // grace notes, which abcjs folds into the following note)
   var part = notationModel.parts[partIdx];
   if (!part) return posIdx;
   var selectableCount = 0;
   for (var j = 0; j < part.elements.length; j++) {
     if (part.elements[j].type === 'bar') continue;
+    if (part.elements[j].grace) continue;
     if (selectableCount === posIdx) return j;
     selectableCount++;
   }
@@ -3119,6 +3121,14 @@ function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEven
           // Different parts: just add to selection
           selectedElements.push({partIdx: mapped.partIdx, elemIdx: mapped.elemIdx});
         }
+      } else if (selectedElements.length === 1 &&
+                 selectedElements[0].partIdx === mapped.partIdx &&
+                 selectedElements[0].elemIdx === mapped.elemIdx) {
+        // Click on already-selected element: deselect it
+        selectedElements = [];
+        highlightSelected();
+        hidePropertyPanel();
+        return;
       } else {
         selectedElements = [{partIdx: mapped.partIdx, elemIdx: mapped.elemIdx}];
       }
@@ -3130,12 +3140,10 @@ function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEven
     }
   }
 
-  // Deselect if clicking empty area with no placement tool active
-  if (!currentTool) {
-    selectedElements = [];
-    highlightSelected();
-    hidePropertyPanel();
-  }
+  // Deselect if clicking empty area
+  selectedElements = [];
+  highlightSelected();
+  hidePropertyPanel();
 }
 
 // --- Map abcjs element to model ---
@@ -3749,6 +3757,9 @@ function setupToolbar() {
         clearToolSelection();
         currentTool = tool;
         btn.classList.add('ve-tool-active');
+        selectedElements = [];
+        highlightSelected();
+        hidePropertyPanel();
 
         // Start drag from palette
         startPaletteDrag(e, btn, tool);
@@ -3939,6 +3950,24 @@ function setupStaffClick() {
     highlightSelected();
     setTimeout(highlightSelected, 20);
     showPropertyPanel(barPartIdx, modelIdx);
+  });
+  // Deselect when clicking empty area (not on a note/rest/bar)
+  preview.addEventListener('click', function(e) {
+    if (veMode !== 'visual') return;
+    if (isDragging) return;
+    if (selectedElements.length === 0) return;
+    // Check if the click target is inside an abcjs note/rest SVG element —
+    // if so, the abcjs callback or bar handler will handle it
+    var t = e.target;
+    while (t && t !== preview) {
+      var cls = (t.getAttribute && t.getAttribute('class')) || '';
+      if (cls.indexOf('abcjs-note') >= 0 || cls.indexOf('abcjs-rest') >= 0 ||
+          cls.indexOf('abcjs-bar') >= 0 || cls.indexOf('ve-bar-hitarea') >= 0) return;
+      t = t.parentElement;
+    }
+    selectedElements = [];
+    highlightSelected();
+    hidePropertyPanel();
   });
   preview.addEventListener('pointerup', function(e) {
     if (veMode !== 'visual') return;
