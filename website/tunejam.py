@@ -1468,6 +1468,8 @@ function toggleTypeMenu() {
   var dd = document.getElementById('type-menu-dropdown');
   dd.classList.toggle('open');
 }
+// Priority order by number of tunes of each type in the database
+var typePriority = ['reel','jig','waltz','air','polka','march','hornpipe','other','slide','slip','rag','polska','strathspey','rant'];
 function updateTypeLabel() {
   var checks = document.querySelectorAll('#type-menu-dropdown input[type="checkbox"]:checked');
   var labels = [];
@@ -1477,7 +1479,30 @@ function updateTypeLabel() {
   }
   var span = document.getElementById('type-menu-label');
   span.textContent = labels.length > 0 ? labels.join(', ') : 'Select Type...';
+  updateMeterUnit();
   formChanged = true;
+}
+function updateMeterUnit() {
+  // Only update if notes textarea is entirely empty
+  var notes = document.getElementById('raw-notes-textarea');
+  if (!notes || notes.value.trim() !== '') return;
+  var checks = document.querySelectorAll('#type-menu-dropdown input[type="checkbox"]:checked');
+  if (checks.length === 0) return;
+  // Find the checked type with highest priority (most tunes)
+  var bestType = null;
+  var bestPri = 999;
+  for (var i = 0; i < checks.length; i++) {
+    var ttype = checks[i].name.replace('klass_', '');
+    var pri = typePriority.indexOf(ttype);
+    if (pri === -1) pri = 998;
+    if (pri < bestPri) { bestPri = pri; bestType = ttype; }
+  }
+  if (bestType && tuneDefaults[bestType]) {
+    var meterSel = document.getElementById('field-meter');
+    if (meterSel) meterSel.value = tuneDefaults[bestType].meter;
+    var unitField = document.querySelector('input[name="unit"]');
+    if (unitField) unitField.value = tuneDefaults[bestType].unit;
+  }
 }
 // Close the type menu when clicking outside
 document.addEventListener('click', function(e) {
@@ -2112,7 +2137,7 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
     ], hclass='field-row', style='margin-top:4px'),
 
     # Notes (ABC)
-    CDiv('Notes (ABC Melody Reminder):', hclass='section-header'),
+    CDiv('Melody Reminder (ABC Format):', hclass='section-header'),
     CDiv(_build_notes_section(obj, tune, meter_options), hclass='notes-section', id='notes-section'),
 
     # Chords
@@ -2294,7 +2319,7 @@ def _build_notes_section(obj, tune, meter_options):
     preview_content = '<img src="/png/%s" style="max-width:100%%" id="notes-image"/>' % tune
   else:
     preview_content = CDiv(CText("Notes not yet available", italic=1), id='notes-image',
-                           style='color:#666; padding:20px 0')
+                           style='color:#666')
   preview_pane = CDiv(preview_content, hclass='notes-preview-pane')
 
   return [CDiv([editor_pane, preview_pane], hclass='notes-layout')]
@@ -3646,6 +3671,9 @@ font-size:95%;
 .edit-form .notes-preview-pane {
 flex:1;
 min-width:300px;
+display:flex;
+align-items:center;
+justify-content:center;
 }
 .edit-form .notes-preview-pane img {
 max-width:100%;

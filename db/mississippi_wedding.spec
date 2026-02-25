@@ -8,7 +8,7 @@ H:on the upper Mississippi River in Minnesota.
 R:Collected from Author
 K:G
 L:1/8
-M:C|
+M:C
 --
 |G,B,DG FDB,G,|G,B,DG FDB,G,|
 |dgdg cfcf|BeBe dBAG|
