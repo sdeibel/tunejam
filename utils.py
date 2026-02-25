@@ -71,6 +71,23 @@ kSections = [
 kSectionTitles = {name: title for name, title, class_name in kSections}
 kSectionClasses = {name: class_name for name, title, class_name in kSections}
 
+kDefaultsByType = {
+    'reel':       {'meter': '4/4', 'unit': '1/8', 'measures': 8, 'rows': 2},
+    'jig':        {'meter': '6/8', 'unit': '1/8', 'measures': 8, 'rows': 2},
+    'slip':       {'meter': '9/8', 'unit': '1/8', 'measures': 8, 'rows': 2},
+    'waltz':      {'meter': '3/4', 'unit': '1/4', 'measures': 16, 'rows': 4},
+    'polka':      {'meter': '2/4', 'unit': '1/8', 'measures': 8, 'rows': 2},
+    'march':      {'meter': '4/4', 'unit': '1/8', 'measures': 16, 'rows': 4},
+    'hornpipe':   {'meter': '4/4', 'unit': '1/8', 'measures': 8, 'rows': 2},
+    'strathspey': {'meter': '4/4', 'unit': '1/8', 'measures': 8, 'rows': 2},
+    'polska':     {'meter': '3/4', 'unit': '1/8', 'measures': 8, 'rows': 2},
+    'slide':      {'meter': '6/8', 'unit': '1/8', 'measures': 8, 'rows': 2},
+    'rag':        {'meter': '4/4', 'unit': '1/8', 'measures': 8, 'rows': 2},
+    'rant':       {'meter': '4/4', 'unit': '1/8', 'measures': 8, 'rows': 2},
+    'air':        {'meter': '4/4', 'unit': '1/8', 'measures': 8, 'rows': 2},
+    'other':      {'meter': '4/4', 'unit': '1/8', 'measures': 8, 'rows': 2},
+}
+
 kTimeSignatures = [
     ('2/4 and 4/4', ('reel', 'rag', 'march', 'hornpipe', 'polka', 'strathspey')),
     ('6/8', ('jig',)),
@@ -95,6 +112,7 @@ class CTune:
         self.unit = ''
         self.meter = ''
         self.notes = ''
+        self.raw_notes = ''
         self.chords = ''
         self.sheet = ''
         
@@ -167,6 +185,7 @@ class CTune:
                     error("Invalid line: %s: %s" % (fullpath, line))
                     
             elif part == 1:
+                self.raw_notes += line
                 spec = '"%s part"' % kPartMap[notes_part]
                 if self.key.find('/') > 0:
                     keys = self.key.split('/')
@@ -230,6 +249,72 @@ class CTune:
 
         # Update in-memory chords
         self.chords = new_chords_text.rstrip() + '\n'
+
+    def WriteSpec(self):
+        """Write the entire .spec file from in-memory state."""
+
+        fullpath = self._GetSpecFile()
+        if fullpath is None:
+            # New tune: create the file
+            fn = self.name + '.spec'
+            fullpath = os.path.join(kDatabaseDir, fn)
+
+        lines = []
+
+        # Metadata section
+        if self.title:
+            lines.append('T:%s\n' % self.title)
+        if self.klass:
+            lines.append('C:%s\n' % self.klass)
+        if self.structure:
+            lines.append('S:%s\n' % self.structure)
+        if self.author:
+            lines.append('A:%s\n' % self.author)
+        if self.origin:
+            lines.append('O:%s\n' % self.origin)
+        if self.history:
+            for h_line in self.history.split('\n'):
+                lines.append('H:%s\n' % h_line)
+        if self.url:
+            for u_line in self.url.split('\n'):
+                if u_line.strip():
+                    lines.append('U:%s\n' % u_line.strip())
+        if self.ref:
+            for r_line in self.ref.split('\n'):
+                if r_line.strip():
+                    lines.append('R:%s\n' % r_line.strip())
+        if self.key:
+            lines.append('K:%s\n' % self.key)
+        if self.unit:
+            lines.append('L:%s\n' % self.unit)
+        if self.meter:
+            lines.append('M:%s\n' % self.meter)
+
+        # Notes section
+        lines.append('--\n')
+        if self.raw_notes:
+            for n_line in self.raw_notes.rstrip('\n').split('\n'):
+                lines.append(n_line + '\n')
+
+        # Chords section
+        lines.append('--\n')
+        if self.chords:
+            for c_line in self.chords.rstrip('\n').split('\n'):
+                lines.append(c_line + '\n')
+
+        f = open(fullpath, 'w')
+        f.writelines(lines)
+        f.close()
+
+    def InvalidateCaches(self):
+        """Remove cached files for this tune to force regeneration."""
+        cache_dir = os.path.join(kCacheLoc, 'tune')
+        if not os.path.exists(cache_dir):
+            return
+        prefix = self.name + '-'
+        for fn in os.listdir(cache_dir):
+            if fn.startswith(prefix):
+                os.remove(os.path.join(cache_dir, fn))
 
     def _GetSpecFile(self):
 

@@ -164,6 +164,9 @@ def _index_header(itype):
   
   parts = []
 
+  if HasCapability(kCapEditTunes):
+    parts.append(CDiv('<a href="/tune/new" class="green-button">New Tune</a>', style='float:right'))
+
   parts.append(CText('&#9834; Sort Index By:', bold=1))
   parts.append(CNBSP())
   parts.append(CText('Title', href='/index/title', bold=itype=='title'))
@@ -211,7 +214,8 @@ def index_type():
   sections = tunes.keys()
   sections.sort()
   for section in sections:
-    parts.append(CH(utils.kSectionTitles[section], 2))
+    parts.append(CH(utils.kSectionTitles[section], 2, hclass='index-section'))
+    group_items = []
     for title, tune in tunes[section]:
       obj = utils.CTune(tune)
       obj.ReadDatabase()
@@ -219,7 +223,8 @@ def index_type():
         title += ' (by {})'.format(obj.author)
       title += ' - ' + obj.GetKeyString()
       title_html = _index_title_html(obj, title)
-      parts.extend(title_html)
+      group_items.extend(title_html)
+    parts.append(CDiv(group_items, hclass='index-group'))
 
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index', eye_candy_image='index-type')
@@ -250,10 +255,12 @@ def index_meter():
   times = time_sigs.keys()
   times.sort()
   for t in time_sigs:
-    parts.append(CH(t, 2))
+    parts.append(CH(t, 2, hclass='index-section'))
+    group_items = []
     tunes = time_sigs[t]
     for title, title_html in sorted(tunes):
-      parts.extend(title_html)
+      group_items.extend(title_html)
+    parts.append(CDiv(group_items, hclass='index-group'))
 
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index', eye_candy_image='index-time')
@@ -282,9 +289,11 @@ def index_origin():
       origins[origin].add((title, tuple([str(t) for t in title_html])))
       
   for origin in sorted(origins):
-    parts.append(CH(origin, 2))
+    parts.append(CH(origin, 2, hclass='index-section'))
+    group_items = []
     for title, title_html in sorted(origins[origin]):
-      parts.extend(title_html)
+      group_items.extend(title_html)
+    parts.append(CDiv(group_items, hclass='index-group'))
 
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index', eye_candy_image='index-origin')
@@ -317,9 +326,11 @@ def index_key():
       return 'zzz'
     return k.replace('Minor', '1').replace('Major', '2').replace('Modal', '3')
   for key in sorted(keys, key=key_sort):
-    parts.append(CH(key, 2))
+    parts.append(CH(key, 2, hclass='index-section'))
+    group_items = []
     for title, title_html in sorted(keys[key]):
-      parts.extend(title_html)
+      group_items.extend(title_html)
+    parts.append(CDiv(group_items, hclass='index-group'))
 
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index', eye_candy_image='index-key')
@@ -354,8 +365,10 @@ def index_title():
       titles.append((title, title_html))
       
   titles.sort()
+  group_items = []
   for title, title_html in titles:
-    parts.extend(title_html)
+    group_items.extend(title_html)
+  parts.append(CDiv(group_items, hclass='index-group'))
 
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index', eye_candy_image='index-title')
@@ -387,9 +400,11 @@ def index_author():
       authors[author].add((title, tuple([str(t) for t in title_html])))
       
   for author in sorted(authors):
-    parts.append(CH(author, 2))
+    parts.append(CH(author, 2, hclass='index-section'))
+    group_items = []
     for title, title_html in sorted(authors[author]):
-      parts.extend(title_html)
+      group_items.extend(title_html)
+    parts.append(CDiv(group_items, hclass='index-group'))
 
   parts.append(CBreak(2))
   return PageWrapper(parts, 'index', eye_candy_image='index-author')
@@ -1319,6 +1334,98 @@ padding-bottom:0.5em;
     
   return PageWrapper(parts, section, show_eye_candy=(section != 'event'))
 
+@app.route('/tune/new')
+def tune_new():
+  if not HasCapability(kCapEditTunes):
+    return redirect('/authorize/tune/new', code=303)
+
+  # Create a blank tune object with defaults
+  obj = utils.CTune('new')
+  obj.title = ''
+  obj.klass = ''
+  obj.key = ''
+  obj.meter = '4/4'
+  obj.unit = '1/8'
+  obj.author = None
+  obj.origin = None
+  obj.structure = None
+  obj.ref = None
+  obj.history = None
+  obj.url = None
+  obj.raw_notes = ''
+  obj.chords = ''
+
+  return _build_tune_form(obj, 'new', 'New Tune', '/tune/new/create', '/index')
+
+@app.route('/tune/new/create', methods=['POST'])
+def tune_new_create():
+  if not HasCapability(kCapEditTunes):
+    return redirect('/authorize/tune/new', code=303)
+
+  title = request.form.get('title', '').strip()
+  if not title:
+    return redirect('/tune/new', code=303)
+
+  # Auto-compute filename from title
+  import re
+  filename = title.lower()
+  filename = re.sub(r'[^a-z0-9\s]', '', filename)
+  filename = re.sub(r'\s+', '_', filename)
+  filename = re.sub(r'_+', '_', filename)
+  filename = filename.strip('_')
+
+  if not filename:
+    return redirect('/tune/new', code=303)
+
+  # Check for existing spec file
+  spec_path = os.path.join(utils.kDatabaseDir, filename + '.spec')
+  if os.path.exists(spec_path):
+    return redirect('/tune/new', code=303)
+
+  # Create the tune object and populate from form
+  obj = utils.CTune(filename)
+  obj.title = title
+  obj.key = request.form.get('key', '').strip()
+  obj.meter = request.form.get('meter', '4/4').strip()
+  obj.unit = request.form.get('unit', '1/8').strip()
+  obj.author = request.form.get('author', '').strip() or None
+  obj.origin = request.form.get('origin', '').strip() or None
+  obj.structure = request.form.get('structure', '').strip() or None
+  obj.ref = request.form.get('ref', '').strip() or None
+  obj.history = request.form.get('history', '').strip() or None
+
+  # Collect tune types from checkboxes
+  types = []
+  for sname, stitle, slabel in utils.kSections:
+    if sname == 'incomplete':
+      continue
+    if request.form.get('klass_%s' % sname):
+      types.append(sname)
+  obj.klass = ','.join(types) if types else 'other'
+
+  # Collect URLs
+  urls = []
+  for key in sorted(request.form.keys()):
+    if key.startswith('url_'):
+      val = request.form.get(key, '').strip()
+      if val:
+        urls.append(val)
+  obj.url = '\n'.join(urls) if urls else None
+
+  # Notes (ABC)
+  raw_notes = request.form.get('raw_notes', '')
+  if raw_notes.strip():
+    obj.raw_notes = raw_notes.rstrip('\n') + '\n'
+  else:
+    obj.raw_notes = ''
+
+  # Reconstruct chords from structured form
+  obj.chords = _ReconstructChords(request.form)
+
+  obj.WriteSpec()
+
+  return redirect('/tune/%s' % filename, code=303)
+
 @app.route('/tune/<tune>')
 def tune(tune):
   parts = []
@@ -1326,109 +1433,500 @@ def tune(tune):
   parts.extend(CreateTuneHTML(tune, metadata=True, editor=editor))
   return PageWrapper(parts, 'index', show_eye_candy=False)
 
-@app.route('/tune/<tune>/edit')
-def tune_edit(tune):
-  if not HasCapability(kCapEditTunes):
-    return redirect('/authorize/tune/%s/edit' % tune, code=303)
+def _build_editor_js(tune, chord_parts, url_count=1):
+  """Build the JavaScript for the tune editor page."""
 
-  obj = utils.CTune(tune)
-  try:
-    obj.ReadDatabase()
-    title = obj.title
-  except SystemExit:
-    title = "Unknown Tune"
+  # Pass defaults to JS
+  defaults_js = '{\n'
+  for ttype, vals in utils.kDefaultsByType.items():
+    defaults_js += '    "%s": {meter:"%s", unit:"%s", measures:%d, rows:%d},\n' % (
+      ttype, vals['meter'], vals['unit'], vals['measures'], vals['rows'])
+  defaults_js += '  }'
 
-  if not obj.chords:
-    return redirect('/tune/%s' % tune, code=303)
-
-  # Separate header/footer text from chord chart lines
-  chord_lines = obj.chords.strip().splitlines()
-  header_lines = []
-  footer_lines = []
-  chart_lines = []
-  in_chart = False
-  past_chart = False
-  for line in chord_lines:
-    if '|' in line:
-      in_chart = True
-      past_chart = False
-      chart_lines.append(line)
-    elif in_chart:
-      past_chart = True
-      in_chart = False
-      footer_lines.append(line)
-    elif past_chart:
-      footer_lines.append(line)
-    else:
-      header_lines.append(line)
-  header_text = '\n'.join(header_lines)
-  footer_text = '\n'.join(footer_lines)
-
-  chart_text = '\n'.join(chart_lines)
-  parsed = utils.ParseChords(chart_text)
-  target_columns = GetNumColumns(parsed)
-
-  parts = []
-  parts.append(CH("Edit Chords: %s" % title, 2))
-
-  # Build the form with input fields for each chord cell
-  rows = []
-  part_class = 'even'
-  chord_index = 0
-  for part_num, part in enumerate(parsed):
-    row = []
-    for i, measure in enumerate(part):
-      if measure != '|:' and not row:
-        row.append(CTD('', hclass='first'))
-      if measure == '|:':
-        row.append(CTD(' :', hclass='first'))
-      elif measure == ':|':
-        row.append(CTD(': ', hclass='last'))
-      else:
-        hclass = None
-        if not row:
-          hclass = 'first'
-        elif len(row) == target_columns:
-          hclass = 'last-chord'
-        field_name = 'chord_%d' % chord_index
-        inp = CInput(type='text', name=field_name, value=measure,
-                     size=max(6, len(measure) + 2))
-        row.append(CTD(inp, hclass=hclass))
-        chord_index += 1
-      if len(row) == target_columns + 1 and (i + 1 >= len(part) or part[i + 1] != ':|'):
-        row.append(CTD('', hclass='last'))
-        rows.append(CTR(row, hclass=part_class))
-        row = []
-      elif len(row) == target_columns + 2:
-        rows.append(CTR(row, hclass=part_class))
-        row = []
-    if row:
-      rows.append(CTR(row, hclass=part_class))
-
-    if part_class == 'even':
-      part_class = 'odd'
-    else:
-      part_class = 'even'
-
-  # Pad rows to same length
-  max_line_len = 0
-  for row in rows:
-    max_line_len = max(max_line_len, len(row.body))
-  for row in rows:
-    while len(row.body) < max_line_len:
-      row.append(CTD(''))
-
-  table = CTable(rows, width=None, hclass='chords', style='float:left; margin-left:0; margin-top:5px')
-
-  validate_js = """
+  return """
 <script>
-function validateChords() {
-  var n = parseInt(document.querySelector('input[name=num_chords]').value);
-  for (var i = 0; i < n; i++) {
-    var field = document.querySelector('input[name=chord_' + i + ']');
-    if (!field) continue;
-    var val = field.value;
-    // Validate each character
+var tuneDefaults = %s;
+var formChanged = false;
+
+document.addEventListener('DOMContentLoaded', function() {
+  var form = document.querySelector('form.edit-form');
+  if (form) {
+    form.addEventListener('change', function() { formChanged = true; });
+    form.addEventListener('input', function() { formChanged = true; });
+  }
+});
+
+window.addEventListener('beforeunload', function(e) {
+  if (formChanged) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// Type popup menu
+function toggleTypeMenu() {
+  var dd = document.getElementById('type-menu-dropdown');
+  dd.classList.toggle('open');
+}
+function updateTypeLabel() {
+  var checks = document.querySelectorAll('#type-menu-dropdown input[type="checkbox"]:checked');
+  var labels = [];
+  for (var i = 0; i < checks.length; i++) {
+    var lbl = checks[i].parentNode.textContent.trim();
+    labels.push(lbl);
+  }
+  var span = document.getElementById('type-menu-label');
+  span.textContent = labels.length > 0 ? labels.join(', ') : 'Select Type...';
+  formChanged = true;
+}
+// Close the type menu when clicking outside
+document.addEventListener('click', function(e) {
+  var container = document.getElementById('type-menu-container');
+  if (container && !container.contains(e.target)) {
+    var dd = document.getElementById('type-menu-dropdown');
+    if (dd) dd.classList.remove('open');
+  }
+  var keyContainer = document.getElementById('key-editor-container');
+  if (keyContainer && !keyContainer.contains(e.target)) {
+    var kdd = document.getElementById('key-editor-dropdown');
+    if (kdd) kdd.classList.remove('open');
+  }
+});
+
+// Key editor
+function toggleKeyEditor() {
+  var dd = document.getElementById('key-editor-dropdown');
+  dd.classList.toggle('open');
+  if (dd.classList.contains('open')) {
+    // If no key rows exist, add one defaulting to G Major
+    var container = document.getElementById('key-rows-container');
+    if (container.querySelectorAll('.key-editor-row').length === 0) {
+      container.insertAdjacentHTML('beforeend', keyRowHtml(0, 'G', '', true));
+      updateKeyValue();
+    }
+  }
+}
+
+function keyRowHtml(idx, letter, mode, showRemove) {
+  var letters = ['A','B','C','D','E','F','G','H'];
+  var modes = [['','Major'],['m','Minor'],['mix','Modal']];
+  var html = '<div class="key-editor-row">';
+  html += '<select class="key-letter" onchange="updateKeyValue()">';
+  for (var i = 0; i < letters.length; i++) {
+    var sel = letters[i] === letter ? ' selected' : '';
+    html += '<option value="' + letters[i] + '"' + sel + '>' + letters[i] + '</option>';
+  }
+  html += '</select> ';
+  html += '<select class="key-mode" onchange="updateKeyValue()">';
+  for (var i = 0; i < modes.length; i++) {
+    var sel = modes[i][0] === mode ? ' selected' : '';
+    html += '<option value="' + modes[i][0] + '"' + sel + '>' + modes[i][1] + '</option>';
+  }
+  html += '</select>';
+  if (showRemove) {
+    html += ' <button type="button" class="url-remove-btn" style="font-size:85%%; padding:1px 6px" onclick="removeKeyPart(this)">X</button>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function updateKeyValue() {
+  var container = document.getElementById('key-rows-container');
+  var rows = container.querySelectorAll('.key-editor-row');
+  if (rows.length === 0) {
+    document.getElementById('field-key').value = '';
+    document.getElementById('key-display-label').textContent = 'Select Key';
+    formChanged = true;
+    return;
+  }
+  var parts = [];
+  var displayParts = [];
+  for (var i = 0; i < rows.length; i++) {
+    var letter = rows[i].querySelector('.key-letter').value;
+    var mode = rows[i].querySelector('.key-mode').value;
+    parts.push(letter + mode);
+    var modeLabel = mode === 'm' ? ' Minor' : mode === 'mix' ? ' Modal' : ' Major';
+    displayParts.push(letter + modeLabel);
+  }
+  document.getElementById('field-key').value = parts.join('/');
+  document.getElementById('key-display-label').textContent = displayParts.join(' / ');
+  formChanged = true;
+}
+
+function addKeyPart() {
+  var container = document.getElementById('key-rows-container');
+  var rows = container.querySelectorAll('.key-editor-row');
+  container.insertAdjacentHTML('beforeend', keyRowHtml(rows.length, 'D', '', true));
+  updateKeyValue();
+}
+
+function removeKeyPart(btn) {
+  var row = btn.parentNode;
+  var container = row.parentNode;
+  container.removeChild(row);
+  var rows = container.querySelectorAll('.key-editor-row');
+  if (rows.length === 0) {
+    // All keys removed — clear value, close popup, show "Select Key"
+    document.getElementById('field-key').value = '';
+    document.getElementById('key-display-label').textContent = 'Select Key';
+    document.getElementById('key-editor-dropdown').classList.remove('open');
+    formChanged = true;
+  } else {
+    updateKeyValue();
+  }
+}
+
+// Initialize key editor rows
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof initialKeyParts !== 'undefined') {
+    var container = document.getElementById('key-rows-container');
+    if (container) {
+      var html = '';
+      for (var i = 0; i < initialKeyParts.length; i++) {
+        html += keyRowHtml(i, initialKeyParts[i][0], initialKeyParts[i][1], true);
+      }
+      container.innerHTML = html;
+    }
+  }
+});
+
+// URL field management
+var urlCounter = %d;
+function addUrlField() {
+  var container = document.getElementById('url-container');
+  var div = document.createElement('div');
+  div.className = 'url-row';
+  div.innerHTML = '<input type="text" name="url_' + urlCounter + '" value="" class="url-field" placeholder="Enter URL here" /> ' +
+                  '<button type="button" class="url-test-btn" onclick="testUrl(this)">Test</button> ' +
+                  '<button type="button" class="url-remove-btn" onclick="removeUrlField(this)">X</button>';
+  container.appendChild(div);
+  urlCounter++;
+  formChanged = true;
+}
+function removeUrlField(btn) {
+  var row = btn.parentNode;
+  row.parentNode.removeChild(row);
+  formChanged = true;
+}
+
+function testUrl(btn) {
+  var row = btn.parentNode;
+  var input = row.querySelector('input[type="text"]');
+  var url = input ? input.value.trim() : '';
+  if (!url) { alert('No URL entered.'); return; }
+  if (url.indexOf('://') === -1) url = 'http://' + url;
+  btn.textContent = '...';
+  btn.disabled = true;
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/check-url?url=' + encodeURIComponent(url), true);
+  xhr.onload = function() {
+    btn.textContent = 'Test';
+    btn.disabled = false;
+    if (xhr.status === 200) {
+      try {
+        var data = JSON.parse(xhr.responseText);
+        if (data.ok) {
+          window.open(url, '_blank');
+        } else {
+          alert('Link appears broken: ' + data.error);
+        }
+      } catch(e) {
+        alert('Error checking URL.');
+      }
+    } else {
+      alert('Error checking URL.');
+    }
+  };
+  xhr.onerror = function() {
+    btn.textContent = 'Test';
+    btn.disabled = false;
+    alert('Error checking URL.');
+  };
+  xhr.send();
+}
+
+// Chord structure management
+var numParts = %d;
+var partLabels = 'ABCDEFGHIJ';
+
+function renumberParts() {
+  // Renumber all parts and their fields after add/remove
+  var container = document.getElementById('chord-parts-container');
+  var wrappers = container.querySelectorAll('.part-wrapper');
+  numParts = wrappers.length;
+  document.querySelector('input[name="num_parts"]').value = numParts;
+  // Remove all old rows_in_part hidden fields
+  var oldHidden = document.querySelectorAll('input[name^="rows_in_part_"]');
+  for (var h = 0; h < oldHidden.length; h++) oldHidden[h].parentNode.removeChild(oldHidden[h]);
+
+  for (var p = 0; p < wrappers.length; p++) {
+    wrappers[p].setAttribute('data-part', p);
+    var label = p < partLabels.length ? partLabels[p] : '' + p;
+    var b = wrappers[p].querySelector('.part-header b');
+    if (b) b.textContent = 'Part ' + label;
+    // Rename repeat checkbox
+    var rep = wrappers[p].querySelector('.part-header input[type="checkbox"]');
+    if (rep) rep.name = 'repeat_' + p;
+    // Rename chord inputs
+    var table = wrappers[p].querySelector('table.edit-chords');
+    if (table) {
+      var rows = table.querySelectorAll('tr');
+      for (var r = 0; r < rows.length; r++) {
+        var inputs = rows[r].querySelectorAll('input[type="text"]');
+        for (var c = 0; c < inputs.length; c++) {
+          inputs[c].name = 'chord_' + p + '_' + r + '_' + c;
+        }
+      }
+      // Add hidden field for rows_in_part
+      var hf = document.createElement('input');
+      hf.type = 'hidden';
+      hf.name = 'rows_in_part_' + p;
+      hf.value = rows.length;
+      document.querySelector('form.edit-form').appendChild(hf);
+    }
+  }
+}
+
+function getDefaultCols() {
+  // Get default columns from first row of first part, or 4
+  var firstRow = document.querySelector('#chord-parts-container table.edit-chords tr');
+  if (firstRow) {
+    return firstRow.querySelectorAll('input[type="text"]').length;
+  }
+  return 4;
+}
+
+function addPart() {
+  var container = document.getElementById('chord-parts-container');
+  var p = numParts;
+  var label = p < partLabels.length ? partLabels[p] : '' + p;
+
+  // Determine rows from tune type defaults
+  var rowsPerPart = 2;
+  var numCols = getDefaultCols();
+  var checks = document.querySelectorAll('#type-menu-dropdown input[type="checkbox"]:checked');
+  if (checks.length > 0) {
+    var ttype = checks[0].name.replace('klass_', '');
+    if (tuneDefaults[ttype]) rowsPerPart = tuneDefaults[ttype].rows;
+  }
+
+  var html = '<div class="part-header">';
+  html += '<button type="button" class="part-remove-btn" onclick="removePart(this)" title="Remove part">X</button> ';
+  html += '<b>Part ' + label + '</b>';
+  html += ' &nbsp; Repeat: <input type="checkbox" name="repeat_' + p + '" value="1" checked />';
+  html += '</div>';
+  html += '<table class="edit-chords" style="margin-bottom:2px">';
+  for (var r = 0; r < rowsPerPart; r++) {
+    html += '<tr>';
+    for (var c = 0; c < numCols; c++) {
+      html += '<td><input type="text" name="chord_' + p + '_' + r + '_' + c + '" value="" size="6" /></td>';
+    }
+    html += '<td><button type="button" class="row-ctl-btn add-measure-btn" onclick="addMeasureToRow(this)" title="Add measure">+</button>';
+    html += '<button type="button" class="row-ctl-btn remove-measure-btn" onclick="removeMeasureFromRow(this)" title="Remove measure">&minus;</button>';
+    html += '<button type="button" class="row-ctl-btn remove-row-btn" onclick="removeRow(this)" title="Remove row">X</button></td>';
+    html += '</tr>';
+  }
+  html += '</table>';
+  html += '<button type="button" class="add-btn" style="font-size:80%%; padding:1px 6px; margin-bottom:8px" onclick="addRowToPart(this)">+ Row</button>';
+
+  var div = document.createElement('div');
+  div.className = 'part-wrapper';
+  div.innerHTML = html;
+  container.appendChild(div);
+
+  renumberParts();
+  formChanged = true;
+  updateChordPreview();
+}
+
+function removePart(btn) {
+  var wrapper = btn.closest('.part-wrapper');
+  if (!wrapper) return;
+  var container = document.getElementById('chord-parts-container');
+  if (container.querySelectorAll('.part-wrapper').length <= 1) {
+    alert('Must have at least one part.');
+    return;
+  }
+  var inputs = wrapper.querySelectorAll('input[type="text"]');
+  var hasData = false;
+  for (var i = 0; i < inputs.length; i++) {
+    if (inputs[i].value.trim()) { hasData = true; break; }
+  }
+  if (hasData && !confirm('This part has chord data. Remove it?')) return;
+  container.removeChild(wrapper);
+  renumberParts();
+  formChanged = true;
+  updateChordPreview();
+}
+
+function addMeasureToRow(btn) {
+  var tr = btn.closest('tr');
+  var chordInputs = tr.querySelectorAll('input[type="text"]');
+  var numCols = chordInputs.length;
+  // Get part and row index from existing input
+  var match = chordInputs[0] ? chordInputs[0].name.match(/chord_(\\d+)_(\\d+)_/) : null;
+  var pIdx = match ? match[1] : 0;
+  var rIdx = match ? match[2] : 0;
+  var td = document.createElement('td');
+  td.innerHTML = '<input type="text" name="chord_' + pIdx + '_' + rIdx + '_' + numCols + '" value="" size="6" />';
+  // Insert before the last td (which has the +/- buttons)
+  var ctlTd = tr.lastElementChild;
+  tr.insertBefore(td, ctlTd);
+  formChanged = true;
+  updateChordPreview();
+}
+
+function removeMeasureFromRow(btn) {
+  var tr = btn.closest('tr');
+  var chordInputs = tr.querySelectorAll('input[type="text"]');
+  if (chordInputs.length <= 1) { alert('Must have at least one measure.'); return; }
+  var lastInput = chordInputs[chordInputs.length - 1];
+  if (lastInput.value.trim() && !confirm('This measure has data. Remove it?')) return;
+  var td = lastInput.parentNode;
+  tr.removeChild(td);
+  // Renumber the inputs in this row
+  var inputs = tr.querySelectorAll('input[type="text"]');
+  var match = inputs[0] ? inputs[0].name.match(/chord_(\\d+)_(\\d+)_/) : null;
+  if (match) {
+    for (var c = 0; c < inputs.length; c++) {
+      inputs[c].name = 'chord_' + match[1] + '_' + match[2] + '_' + c;
+    }
+  }
+  formChanged = true;
+  updateChordPreview();
+}
+
+function addRowToPart(btn) {
+  var wrapper = btn.closest('.part-wrapper');
+  var table = wrapper.querySelector('table.edit-chords');
+  var existingRows = table.querySelectorAll('tr');
+  // Get column count from first row
+  var numCols = existingRows.length > 0 ? existingRows[0].querySelectorAll('input[type="text"]').length : 4;
+  var pIdx = wrapper.getAttribute('data-part');
+  var rIdx = existingRows.length;
+  var tr = document.createElement('tr');
+  var html = '';
+  for (var c = 0; c < numCols; c++) {
+    html += '<td><input type="text" name="chord_' + pIdx + '_' + rIdx + '_' + c + '" value="" size="6" /></td>';
+  }
+  html += '<td><button type="button" class="row-ctl-btn add-measure-btn" onclick="addMeasureToRow(this)" title="Add measure">+</button>';
+  html += '<button type="button" class="row-ctl-btn remove-measure-btn" onclick="removeMeasureFromRow(this)" title="Remove measure">&minus;</button>';
+  html += '<button type="button" class="row-ctl-btn remove-row-btn" onclick="removeRow(this)" title="Remove row">X</button></td>';
+  tr.innerHTML = html;
+  var tbody = table.querySelector('tbody') || table;
+  tbody.appendChild(tr);
+  // Update rows_in_part hidden field
+  var hf = document.querySelector('input[name="rows_in_part_' + pIdx + '"]');
+  if (hf) hf.value = parseInt(hf.value) + 1;
+  formChanged = true;
+  updateChordPreview();
+}
+
+function removeRow(btn) {
+  var tr = btn.closest('tr');
+  var table = tr.closest('table.edit-chords');
+  if (table.querySelectorAll('tr').length <= 1) {
+    alert('Must have at least one row.');
+    return;
+  }
+  var inputs = tr.querySelectorAll('input[type="text"]');
+  var hasData = false;
+  for (var i = 0; i < inputs.length; i++) {
+    if (inputs[i].value.trim()) { hasData = true; break; }
+  }
+  if (hasData && !confirm('This row has data. Remove it?')) return;
+  tr.parentNode.removeChild(tr);
+  // Renumber to fix row indices and update rows_in_part
+  renumberParts();
+  formChanged = true;
+  updateChordPreview();
+}
+
+// Chord preview
+function updateChordPreview() {
+  var preview = document.getElementById('chord-preview-inner');
+  if (!preview) return;
+  var header = document.querySelector('input[name="chord_header"]');
+  var footer = document.querySelector('input[name="chord_footer"]');
+  var headerText = header ? header.value.trim() : '';
+  var footerText = footer ? footer.value.trim() : '';
+
+  var wrappers = document.querySelectorAll('#chord-parts-container .part-wrapper');
+  var html = '';
+  if (headerText) {
+    html += '<div class="chord-note">' + headerText.replace(/</g, '&lt;') + '</div>';
+  }
+  html += '<table class="chords-preview">';
+  var partClass = 'even';
+  for (var p = 0; p < wrappers.length; p++) {
+    var table = wrappers[p].querySelector('table.edit-chords');
+    if (!table) continue;
+    var repCheck = wrappers[p].querySelector('.part-header input[type="checkbox"]');
+    var hasRepeat = repCheck && repCheck.checked;
+    var rows = table.querySelectorAll('tr');
+    for (var r = 0; r < rows.length; r++) {
+      var inputs = rows[r].querySelectorAll('input[type="text"]');
+      var isFirst = (r === 0);
+      var isLast = (r === rows.length - 1);
+      html += '<tr class="' + partClass + '">';
+      // Open repeat marker
+      if (hasRepeat && isFirst) {
+        html += '<td class="first"> :</td>';
+      } else {
+        html += '<td class="first"></td>';
+      }
+      for (var c = 0; c < inputs.length; c++) {
+        var val = inputs[c].value.trim() || '';
+        var cls = (c === inputs.length - 1) ? 'last-chord' : '';
+        html += '<td class="' + cls + '">' + (val ? val.replace(/</g, '&lt;') : '&nbsp;') + '</td>';
+      }
+      // Close repeat marker
+      if (hasRepeat && isLast) {
+        html += '<td class="last">: </td>';
+      } else {
+        html += '<td class="last"></td>';
+      }
+      html += '</tr>';
+    }
+    partClass = (partClass === 'even') ? 'odd' : 'even';
+  }
+  html += '</table>';
+  if (footerText) {
+    html += '<div class="chord-note">' + footerText.replace(/</g, '&lt;') + '</div>';
+  }
+  preview.innerHTML = html;
+}
+
+// Hook up live preview updates
+document.addEventListener('DOMContentLoaded', function() {
+  // Update on any input in chord area
+  var chordContainer = document.getElementById('chord-parts-container');
+  if (chordContainer) {
+    chordContainer.addEventListener('input', updateChordPreview);
+    chordContainer.addEventListener('change', updateChordPreview);
+  }
+  var headerField = document.querySelector('input[name="chord_header"]');
+  if (headerField) headerField.addEventListener('input', updateChordPreview);
+  var footerField = document.querySelector('input[name="chord_footer"]');
+  if (footerField) footerField.addEventListener('input', updateChordPreview);
+  // Initial render
+  updateChordPreview();
+});
+
+// Form validation
+function validateForm() {
+  var title = document.querySelector('input[name="title"]').value.trim();
+  if (!title) {
+    alert('Title is required.');
+    document.querySelector('input[name="title"]').focus();
+    return false;
+  }
+
+  // Validate chord cells
+  var chordInputs = document.querySelectorAll('#chord-parts-container input[type="text"]');
+  for (var i = 0; i < chordInputs.length; i++) {
+    var val = chordInputs[i].value;
+    if (!val) continue;
     for (var j = 0; j < val.length; j++) {
       var c = val[j];
       var prev = j > 0 ? val[j-1] : '';
@@ -1448,45 +1946,405 @@ function validateChords() {
       if (c == 's' && (N.indexOf(prev) >= 0 || prev == 'b' || prev == '#')) continue;
       if (c == 'u' && prev == 's') continue;
       if (c == 'p' && prev == 'u') continue;
-      field.style.backgroundColor = '#ffcccc';
-      field.focus();
-      alert('Invalid chord: ' + val + '\\n\\nCharacter \\'' + c + '\\' at position ' + (j+1) + ' is not allowed here.');
+      chordInputs[i].style.backgroundColor = '#ffcccc';
+      chordInputs[i].focus();
+      alert('Invalid chord: ' + val + '\\nCharacter \\'' + c + '\\' at position ' + (j+1) + ' is not allowed here.');
       return false;
     }
-    field.style.backgroundColor = '';
+    chordInputs[i].style.backgroundColor = '';
   }
+
+  formChanged = false;
   return true;
 }
 </script>
-"""
+""" % (defaults_js, url_count, len(chord_parts))
+
+@app.route('/tune/<tune>/edit')
+def tune_edit(tune):
+  if not HasCapability(kCapEditTunes):
+    return redirect('/authorize/tune/%s/edit' % tune, code=303)
+
+  obj = utils.CTune(tune)
+  try:
+    obj.ReadDatabase()
+  except SystemExit:
+    pass
+
+  return _build_tune_form(obj, tune, 'Edit Tune', '/tune/%s/save' % tune, '/tune/%s' % tune)
+
+def _build_tune_form(obj, tune, heading, save_action, cancel_url):
+  """Build the full tune editor form, shared by edit and new tune pages."""
+
+  # Parse chords into structured form for the editor
+  chord_parts = []  # list of {'rows': [[cell, ...], ...], 'repeat': bool}
+  header_text = ''
+  footer_text = ''
+  num_columns = 4
+
+  if obj.chords and obj.chords.strip():
+    chord_lines = obj.chords.strip().splitlines()
+    header_lines = []
+    footer_lines = []
+    chart_lines = []
+    in_chart = False
+    past_chart = False
+    for line in chord_lines:
+      if '|' in line:
+        in_chart = True
+        past_chart = False
+        chart_lines.append(line)
+      elif in_chart:
+        past_chart = True
+        in_chart = False
+        footer_lines.append(line)
+      elif past_chart:
+        footer_lines.append(line)
+      else:
+        header_lines.append(line)
+    header_text = '\n'.join(header_lines)
+    footer_text = '\n'.join(footer_lines)
+
+    chart_text = '\n'.join(chart_lines)
+    parsed = utils.ParseChords(chart_text)
+    num_columns = GetNumColumns(parsed)
+
+    # Convert parsed chords into structured parts
+    for part in parsed:
+      has_repeat = '|:' in part or ':|' in part
+      cells = [m for m in part if m not in ('|:', ':|')]
+      rows = []
+      row = []
+      for cell in cells:
+        row.append(cell)
+        if len(row) == num_columns:
+          rows.append(row)
+          row = []
+      if row:
+        rows.append(row)
+      chord_parts.append({'rows': rows, 'repeat': has_repeat})
+
+  # If no chord parts, create a default empty structure
+  if not chord_parts:
+    ttype = obj.klass.split(',')[0] if obj.klass else 'reel'
+    defaults = utils.kDefaultsByType.get(ttype, utils.kDefaultsByType['reel'])
+    num_columns = defaults['measures'] / defaults['rows']
+    for p in range(2):
+      rows = []
+      for r in range(defaults['rows']):
+        rows.append([''] * num_columns)
+      chord_parts.append({'rows': rows, 'repeat': True})
+
+  # Current types
+  current_types = set(obj.klass.split(',')) if obj.klass else set()
+
+  # URL list
+  url_list = []
+  if obj.url:
+    url_list = [u.strip() for u in obj.url.split('\n') if u.strip()]
+
+  parts = []
+  parts.append(CH(heading, 2))
+
+  # Build the editor JavaScript
+  editor_js = _build_editor_js(tune, chord_parts, max(len(url_list), 1))
+
+  # Build form fields
+  meter_options = [('C', 'C'), ('5/8', '5/8'), ('6/8', '6/8'), ('7/8', '7/8'), ('9/8', '9/8'), ('2/4', '2/4'), ('3/4', '3/4'), ('4/4', '4/4')]
 
   form_body = [
-    validate_js,
-    CInput(type='HIDDEN', name='num_chords', value=str(chord_index)),
-    CTable([
-      CTR([
-        CTD(CText('Notes:', bold=1), style='vertical-align:top; padding-right:8px'),
-        CTD(CInput(type='text', name='chord_header', value=header_text, size=60)),
-      ]),
-      CTR([
-        CTD(''),
-        CTD([table, CDiv(style='clear:both')], style='padding:10px 0'),
-      ]),
-      CTR([
-        CTD(CText('Notes:', bold=1), style='vertical-align:top; padding-right:8px'),
-        CTD(CInput(type='text', name='chord_footer', value=footer_text, size=60)),
-      ]),
-    ], width=None, style='border:0; margin:0; padding:0'),
+    editor_js,
+
+    # Hidden structural fields
+    CInput(type='HIDDEN', name='num_parts', value=str(len(chord_parts))),
+  ]
+
+  # Hidden fields for rows_in_part and repeat per part
+  for p_idx, cp in enumerate(chord_parts):
+    form_body.append(CInput(type='HIDDEN', name='rows_in_part_%d' % p_idx, value=str(len(cp['rows']))))
+
+  form_body.extend([
+    # Title, Key, Type on one flex row
+    CDiv([
+      CDiv([
+        CInput(type='text', name='title', value=obj.title or '', hclass='title-input', placeholder='Enter title here'),
+      ], hclass='title-field'),
+      CDiv([
+        _build_key_selector(obj.key or ''),
+      ], hclass='key-field'),
+      CDiv([
+        _build_type_selector(current_types),
+      ], hclass='type-field'),
+    ], hclass='title-row'),
+
+    # Structure (e.g. AABBCCBB)
+    CDiv([
+      CInput(type='text', name='structure', value=obj.structure or '', hclass='wide-input', placeholder='Add playing notes here (if any)'),
+    ], hclass='field-row'),
+
+    # Author
+    CDiv([
+      CInput(type='text', name='author', value=obj.author or '', hclass='wide-input', placeholder='Enter author here'),
+    ], hclass='field-row'),
+
+    # Origin
+    CDiv([
+      CInput(type='text', name='origin', value=obj.origin or '', hclass='wide-input', placeholder='Enter origin here'),
+    ], hclass='field-row'),
+
+    # History
+    CDiv('History:', hclass='section-header'),
+    CDiv([
+      CTextArea(obj.history or '', name='history', rows=6, cols=80, hclass='description-field'),
+    ], hclass='field-row'),
+
+    # Notes (ref field — "Collected from Author", etc.)
+    CDiv('Notes:', hclass='section-header'),
+    CDiv([
+      CTextArea(obj.ref or '', name='ref', rows=3, cols=80, hclass='description-field'),
+    ], hclass='field-row'),
+
+    # References (URLs)
+    CDiv('References:', hclass='section-header'),
+    CDiv(_build_url_fields(url_list), id='url-container'),
+    CDiv([
+      '<button type="button" class="add-btn" onclick="addUrlField()">+ Add Reference</button>',
+    ], hclass='field-row', style='margin-top:4px'),
+
+    # Notes (ABC)
+    CDiv('Notes (ABC Melody Reminder):', hclass='section-header'),
+    CDiv(_build_notes_section(obj, tune, meter_options), hclass='notes-section', id='notes-section'),
+
+    # Chords
+    CDiv('Chords:', hclass='section-header'),
+    CDiv([
+      # Left: chord editor
+      CDiv([
+        CDiv([
+          CInput(type='text', name='chord_header', value=header_text, placeholder='Header notes', style='width:100%'),
+        ], hclass='field-row'),
+        CDiv(_build_chord_tables(chord_parts, num_columns), id='chord-parts-container'),
+        CDiv([
+          CInput(type='text', name='chord_footer', value=footer_text, placeholder='Footer notes', style='width:100%'),
+        ], hclass='field-row'),
+        CDiv([
+          '<button type="button" class="add-btn" onclick="addPart()">+ Add Part</button>',
+        ], hclass='chord-structure-controls'),
+      ], hclass='chord-editor-pane'),
+      # Right: live preview
+      CDiv([
+        CDiv('', id='chord-preview-inner'),
+      ], hclass='chord-preview-pane', id='chord-preview-pane'),
+    ], hclass='chord-layout'),
+
+    # Submit
     CBreak(2),
     CInput(type='SUBMIT', value='  Save  '),
     CText(' '),
-    CInput(type='button', value='  Cancel  ', onclick="window.location='/tune/%s'" % tune),
-  ]
+    CInput(type='button', value='  Cancel  ', onclick="window.location='%s'" % cancel_url),
+  ])
 
-  parts.append(CForm(form_body, action='/tune/%s/save' % tune, method='POST',
-                      onsubmit='return validateChords()'))
+  parts.append(CForm(form_body, action=save_action, method='POST',
+                      hclass='edit-form', onsubmit='return validateForm()'))
 
-  parts.append(CDiv([
+  # Chord notation guide
+  parts.append(_chord_notation_guide())
+
+  return PageWrapper(parts, 'index', show_eye_candy=False)
+
+def _build_key_selector(key_str):
+  """Build a clickable key display with popup editor for single or multi-key tunes."""
+  # Parse key string into parts: D -> [('D','')], Em -> [('E','m')], D/G -> [('D',''),('G','')]
+  key_parts = []
+  if key_str.strip():
+    for k in key_str.split('/'):
+      k = k.strip()
+      if k.endswith('mix'):
+        key_parts.append((k[:-3], 'mix'))
+      elif k.endswith('m'):
+        key_parts.append((k[:-1], 'm'))
+      else:
+        key_parts.append((k, ''))
+
+  # Build display label matching GetKeyString() format
+  if key_parts:
+    display_parts = []
+    for letter, mode in key_parts:
+      if mode == 'm':
+        display_parts.append(letter + ' Minor')
+      elif mode == 'mix':
+        display_parts.append(letter + ' Modal')
+      else:
+        display_parts.append(letter + ' Major')
+    display = ' / '.join(display_parts)
+  else:
+    display = 'Select Key'
+
+  # Build key editor rows for the popup
+  letters = 'A B C D E F G H'.split()
+  modes = [('', 'Major'), ('m', 'Minor'), ('mix', 'Modal')]
+
+  rows_html = ''
+  for i, (letter, mode) in enumerate(key_parts):
+    rows_html += _key_editor_row_html(i, letter, mode, letters, modes, True)
+
+  return CDiv([
+    CInput(type='HIDDEN', name='key', value=key_str, id='field-key'),
+    '<button type="button" class="key-display-btn" id="key-display-btn" onclick="toggleKeyEditor()">'
+    '<span id="key-display-label">%s</span> &#9662;</button>' % display,
+    CDiv([
+      CDiv('', id='key-rows-container'),
+      CDiv([
+        '<button type="button" class="add-btn" style="font-size:85%; padding:2px 8px" '
+        'onclick="addKeyPart()">+ Key</button>',
+      ], style='margin-top:4px'),
+    ], hclass='key-editor-dropdown', id='key-editor-dropdown'),
+    '<script>var initialKeyParts = [%s];</script>' % ','.join(['["%s","%s"]' % (l, m) for l, m in key_parts]),
+  ], hclass='key-editor-container', id='key-editor-container')
+
+def _key_editor_row_html(idx, letter, mode, letters, modes, show_remove):
+  """Build HTML for one key editor row (used server-side and pattern for JS)."""
+  letter_opts = ''
+  for l in letters:
+    sel = ' selected' if l == letter else ''
+    letter_opts += '<option value="%s"%s>%s</option>' % (l, sel, l)
+  mode_opts = ''
+  for mv, ml in modes:
+    sel = ' selected' if mv == mode else ''
+    mode_opts += '<option value="%s"%s>%s</option>' % (mv, sel, ml)
+  remove_btn = ''
+  if show_remove:
+    remove_btn = (' <button type="button" class="url-remove-btn" style="font-size:85%; padding:1px 6px" '
+                   'onclick="removeKeyPart(this)">X</button>')
+  return ('<div class="key-editor-row">'
+          '<select class="key-letter" onchange="updateKeyValue()">%s</select> '
+          '<select class="key-mode" onchange="updateKeyValue()">%s</select>'
+          '%s</div>' % (letter_opts, mode_opts, remove_btn))
+
+def _build_type_selector(current_types):
+  """Build a popup multi-select dropdown for tune types."""
+  # Build the summary text from current selections
+  labels = []
+  for sname, stitle, slabel in utils.kSections:
+    if sname == 'incomplete':
+      continue
+    if sname in current_types:
+      labels.append(slabel or sname.capitalize())
+  summary = ', '.join(labels) if labels else 'Select Type...'
+
+  # Build checkbox items for the dropdown
+  items = []
+  for sname, stitle, slabel in utils.kSections:
+    if sname == 'incomplete':
+      continue
+    label = slabel or sname.capitalize()
+    checked_attr = ' checked' if sname in current_types else ''
+    items.append(
+      '<label class="type-menu-item">'
+      '<input type="checkbox" name="klass_%s" value="1"%s onchange="updateTypeLabel()" /> %s'
+      '</label>' % (sname, checked_attr, label)
+    )
+
+  return CDiv([
+    '<button type="button" class="type-menu-btn" id="type-menu-btn" onclick="toggleTypeMenu()">'
+    '<span id="type-menu-label">%s</span> &#9662;</button>' % summary,
+    CDiv('\n'.join(items), hclass='type-menu-dropdown', id='type-menu-dropdown'),
+  ], hclass='type-menu-container', id='type-menu-container')
+
+def _build_url_fields(url_list):
+  """Build URL input rows for the editor."""
+  rows = []
+  for i, url in enumerate(url_list):
+    rows.append(CDiv([
+      CInput(type='text', name='url_%d' % i, value=url, hclass='url-field', placeholder='Enter URL here'),
+      ' <button type="button" class="url-test-btn" onclick="testUrl(this)">Test</button>',
+      ' <button type="button" class="url-remove-btn" onclick="removeUrlField(this)">X</button>',
+    ], hclass='url-row'))
+  if not url_list:
+    rows.append(CDiv([
+      CInput(type='text', name='url_0', value='', hclass='url-field', placeholder='Enter URL here'),
+      ' <button type="button" class="url-test-btn" onclick="testUrl(this)">Test</button>',
+      ' <button type="button" class="url-remove-btn" onclick="removeUrlField(this)">X</button>',
+    ], hclass='url-row'))
+  return rows
+
+def _build_notes_section(obj, tune, meter_options):
+  """Build the notes (ABC) editing section with editor on left and preview on right."""
+  raw = obj.raw_notes.rstrip('\n') if obj.raw_notes else ''
+
+  # Left pane: meter/unit fields and ABC textarea
+  editor_pane = CDiv([
+    CDiv([
+      CSpan([
+        CText('Meter:', bold=1, hclass='edit-label'),
+        CSelect(meter_options, current=obj.meter or '4/4', name='meter', id='field-meter'),
+      ], hclass='inline-fields'),
+      CSpan([
+        CText('Unit:', bold=1, hclass='edit-label'),
+        CInput(type='text', name='unit', value=obj.unit or '', hclass='medium-input'),
+      ], hclass='inline-fields'),
+    ], hclass='field-row', style='margin-bottom:8px'),
+    CTextArea(raw, name='raw_notes', id='raw-notes-textarea', rows=8, cols=40,
+              hclass='notes-textarea', style='font-family:monospace; width:100%'),
+    CDiv("(Preview will update after save)", style='font-style:italic; color:#666; margin-top:4px'),
+  ], hclass='notes-editor-pane')
+
+  # Right pane: rendered notes image
+  if obj.notes:
+    preview_content = '<img src="/png/%s" style="max-width:100%%" id="notes-image"/>' % tune
+  else:
+    preview_content = CDiv(CText("Notes not yet available", italic=1), id='notes-image',
+                           style='color:#666; padding:20px 0')
+  preview_pane = CDiv(preview_content, hclass='notes-preview-pane')
+
+  return [CDiv([editor_pane, preview_pane], hclass='notes-layout')]
+
+def _build_chord_tables(chord_parts, num_columns):
+  """Build chord input tables for each part."""
+  part_labels = 'ABCDEFGHIJ'
+  items = []
+  for p_idx, cp in enumerate(chord_parts):
+    label = part_labels[p_idx] if p_idx < len(part_labels) else str(p_idx)
+    repeat_attrs = dict(type='checkbox', name='repeat_%d' % p_idx, value='1')
+    if cp['repeat']:
+      repeat_attrs['checked'] = 'checked'
+
+    part_rows_html = []
+    for r_idx, row_cells in enumerate(cp['rows']):
+      tds = []
+      for c_idx, cell in enumerate(row_cells):
+        field_name = 'chord_%d_%d_%d' % (p_idx, r_idx, c_idx)
+        tds.append(CTD(CInput(type='text', name=field_name, value=cell,
+                              size=max(6, len(cell) + 2))))
+      # Add +/- measure and remove row buttons at end of row
+      tds.append(CTD([
+        '<button type="button" class="row-ctl-btn add-measure-btn" '
+        'onclick="addMeasureToRow(this)" title="Add measure">+</button>',
+        '<button type="button" class="row-ctl-btn remove-measure-btn" '
+        'onclick="removeMeasureFromRow(this)" title="Remove measure">&minus;</button>',
+        '<button type="button" class="row-ctl-btn remove-row-btn" '
+        'onclick="removeRow(this)" title="Remove row">X</button>',
+      ]))
+      part_rows_html.append(CTR(tds))
+
+    part_content = [
+      CDiv([
+        '<button type="button" class="part-remove-btn" onclick="removePart(this)" title="Remove part">X</button> ',
+        CText('Part %s' % label, bold=1),
+        ' &nbsp; Repeat: ',
+        CInput(**repeat_attrs),
+      ], hclass='part-header'),
+      CTable(part_rows_html, width=None, hclass='edit-chords', style='margin-bottom:2px'),
+      '<button type="button" class="add-btn" style="font-size:80%; padding:1px 6px; margin-bottom:8px" '
+      'onclick="addRowToPart(this)">+ Row</button>',
+    ]
+    items.append(CDiv(part_content, hclass='part-wrapper', data_part=str(p_idx)))
+
+  return items
+
+def _chord_notation_guide():
+  """Return the chord notation guide div."""
+  return CDiv([
     CH("Chord Notation Guide", 3),
     CParagraph([
       "Use uppercase letters A through G for notes (H can be used for the German Bb). "
@@ -1525,9 +2383,7 @@ function validateChords() {
       CText("\"B-part only has 7 bars!\"", italic=1),
       " Notes are not validated and won't appear if left blank.",
     ]),
-  ], style='padding-top:20px'))
-
-  return PageWrapper(parts, 'index', show_eye_candy=False)
+  ], style='padding-top:20px')
 
 @app.route('/tune/<tune>/save', methods=['POST'])
 def tune_save(tune):
@@ -1540,83 +2396,123 @@ def tune_save(tune):
   except SystemExit:
     return redirect('/tune/%s' % tune, code=303)
 
-  if not obj.chords:
-    return redirect('/tune/%s' % tune, code=303)
+  # Update all fields from form
+  obj.title = request.form.get('title', obj.title or '').strip()
+  obj.key = request.form.get('key', obj.key or '').strip()
+  obj.meter = request.form.get('meter', obj.meter or '').strip()
+  obj.unit = request.form.get('unit', obj.unit or '').strip()
+  obj.author = request.form.get('author', '').strip() or None
+  obj.origin = request.form.get('origin', '').strip() or None
+  obj.structure = request.form.get('structure', '').strip() or None
+  obj.ref = request.form.get('ref', '').strip() or None
+  obj.history = request.form.get('history', '').strip() or None
 
-  # Read header/footer text
-  header_text = request.form.get('chord_header', '').strip()
-  footer_text = request.form.get('chord_footer', '').strip()
+  # Collect tune types from checkboxes
+  types = []
+  for sname, stitle, slabel in utils.kSections:
+    if sname == 'incomplete':
+      continue
+    if request.form.get('klass_%s' % sname):
+      types.append(sname)
+  if types:
+    obj.klass = ','.join(types)
+  else:
+    obj.klass = 'other'
 
-  # Read submitted chord values with auto-correction and validation
-  num_chords = int(request.form.get('num_chords', 0))
-  new_chord_values = []
-  for i in range(num_chords):
-    val = request.form.get('chord_%d' % i, '').strip()
-    val = ValidateChord(val)
-    new_chord_values.append(val)
+  # Collect URLs
+  urls = []
+  for key in sorted(request.form.keys()):
+    if key.startswith('url_'):
+      val = request.form.get(key, '').strip()
+      if val:
+        urls.append(val)
+  obj.url = '\n'.join(urls) if urls else None
 
-  # Parse only chart lines (those with |) from original chords
-  orig_lines = obj.chords.strip().splitlines()
-  chart_lines = [line for line in orig_lines if '|' in line]
-  chord_index = 0
+  # Notes (ABC)
+  raw_notes = request.form.get('raw_notes', '')
+  if raw_notes.strip():
+    obj.raw_notes = raw_notes.rstrip('\n') + '\n'
+  else:
+    obj.raw_notes = ''
+
+  # Reconstruct chords from structured form
+  obj.chords = _ReconstructChords(request.form)
+
+  # Write the full spec file and invalidate caches
+  obj.WriteSpec()
+  obj.InvalidateCaches()
+
+  return redirect('/tune/%s' % tune, code=303)
+
+def _ReconstructChords(form):
+  """Reconstruct formatted chord text from the structured edit form fields."""
+  num_parts = int(form.get('num_parts', 0))
+  header_text = form.get('chord_header', '').strip()
+  footer_text = form.get('chord_footer', '').strip()
+
+  if num_parts == 0:
+    return ''
+
+  # Read all part data — each row can have a different number of columns
   line_data = []
-  for line in chart_lines:
-    stripped = line.strip()
-    has_open = stripped.startswith('|:')
-    has_close = stripped.endswith(':|')
-    has_bar = not has_open and stripped.startswith('|')
+  max_columns = 0
+  for p in range(num_parts):
+    num_rows = int(form.get('rows_in_part_%d' % p, 2))
+    has_repeat = form.get('repeat_%d' % p) == '1'
 
-    # Extract inner content between repeat markers / outer bars
-    inner = stripped
-    if has_open:
-      inner = inner[2:]
-    if has_close:
-      inner = inner[:-2]
-    elif inner.endswith('|'):
-      inner = inner[:-1]
-    if has_bar:
-      inner = inner[1:]
+    for r in range(num_rows):
+      # Collect all columns present for this row
+      chords = []
+      c = 0
+      while True:
+        val = form.get('chord_%d_%d_%d' % (p, r, c), None)
+        if val is None:
+          break
+        chords.append(ValidateChord(val.strip()))
+        c += 1
+      if not chords:
+        # Fallback: at least one empty cell
+        chords = ['']
+      if len(chords) > max_columns:
+        max_columns = len(chords)
+      is_first_row = (r == 0)
+      is_last_row = (r == num_rows - 1)
+      has_open = has_repeat and is_first_row
+      has_close = has_repeat and is_last_row
+      line_data.append((has_open, has_close, chords))
 
-    # Split by | to get chord cells
-    cells = [c.strip() for c in inner.split('|')]
-    cells = [c for c in cells if c]
+  # Check if there's any non-empty chord data
+  has_any_chords = False
+  for _, _, chords in line_data:
+    for c in chords:
+      if c:
+        has_any_chords = True
+        break
+    if has_any_chords:
+      break
+  if not has_any_chords and not header_text and not footer_text:
+    return ''
 
-    # Replace with new values
-    new_chords = []
-    for c in cells:
-      if chord_index < len(new_chord_values):
-        new_chords.append(new_chord_values[chord_index])
-      else:
-        new_chords.append(c)
-      chord_index += 1
-
-    line_data.append((has_open, has_close, has_bar, new_chords))
-
-  # Compute max width per column across all lines
-  max_cols = max(len(d[3]) for d in line_data)
-  col_widths = [0] * max_cols
-  for _, _, _, chords in line_data:
+  # Compute max width per column position
+  col_widths = [0] * max_columns
+  for _, _, chords in line_data:
     for i, c in enumerate(chords):
       col_widths[i] = max(col_widths[i], len(c))
 
-  # Build formatted lines with uniform column widths
-  # If any line has a close repeat (:|), non-repeat lines need an extra space
-  # before their closing | so that all ending |'s align vertically
+  # Build formatted lines
   any_close = any(d[1] for d in line_data)
   result_lines = []
 
   if header_text:
     result_lines.append(header_text)
 
-  for has_open, has_close, has_bar, chords in line_data:
+  for has_open, has_close, chords in line_data:
     if has_open:
       prefix = '|:'
-    elif has_bar:
-      prefix = '| '
     else:
       prefix = '  '
 
-    padded = [c.ljust(col_widths[i]) for i, c in enumerate(chords)]
+    padded = [c.ljust(col_widths[i]) if i < len(col_widths) else c for i, c in enumerate(chords)]
     line = prefix + ' ' + ' | '.join(padded)
 
     if has_close:
@@ -1631,11 +2527,40 @@ def tune_save(tune):
   if footer_text:
     result_lines.append(footer_text)
 
-  new_chords_text = '\n'.join(result_lines)
+  return '\n'.join(result_lines)
 
-  obj.WriteChords(new_chords_text)
-
-  return redirect('/tune/%s' % tune, code=303)
+@app.route('/check-url')
+def check_url():
+  """Check if a URL is accessible. Returns JSON with ok/error."""
+  import urllib2
+  import json as json_module
+  url = request.args.get('url', '')
+  if not url:
+    return json_module.dumps({'ok': False, 'error': 'No URL provided'}), 400, {'Content-Type': 'application/json'}
+  try:
+    req = urllib2.Request(url)
+    req.add_header('User-Agent', 'Mozilla/5.0 (compatible; TuneJam link checker)')
+    req.get_method = lambda: 'HEAD'
+    try:
+      resp = urllib2.urlopen(req, timeout=10)
+    except urllib2.HTTPError as e:
+      if e.code == 405:
+        # HEAD not allowed, try GET
+        req = urllib2.Request(url)
+        req.add_header('User-Agent', 'Mozilla/5.0 (compatible; TuneJam link checker)')
+        resp = urllib2.urlopen(req, timeout=10)
+      else:
+        raise
+    code = resp.getcode()
+    if code and code >= 400:
+      return json_module.dumps({'ok': False, 'error': 'HTTP %d' % code}), 200, {'Content-Type': 'application/json'}
+    return json_module.dumps({'ok': True}), 200, {'Content-Type': 'application/json'}
+  except urllib2.HTTPError as e:
+    return json_module.dumps({'ok': False, 'error': 'HTTP %d' % e.code}), 200, {'Content-Type': 'application/json'}
+  except urllib2.URLError as e:
+    return json_module.dumps({'ok': False, 'error': str(e.reason)}), 200, {'Content-Type': 'application/json'}
+  except Exception as e:
+    return json_module.dumps({'ok': False, 'error': str(e)}), 200, {'Content-Type': 'application/json'}
 
 @app.route('/png/<tune>')
 def png(tune):
@@ -2041,6 +2966,14 @@ h2 {
 padding-top:0.7em;
 padding-bottom:0.5em;
 color:#004400;
+}
+h2.index-section {
+padding-top:1.0em;
+padding-bottom:0.36em;
+font-size:166%;
+}
+.index-group, .index-group * {
+line-height:166%;
 }
 a {
 outline-style:none;
@@ -2485,6 +3418,386 @@ text-decoration:none;
 font-style:italic;
 color:#666;
 font-size:90%;
+}
+
+/* Tune editor styles */
+.edit-form label {
+display:inline-block;
+width:100px;
+font-weight:bold;
+vertical-align:top;
+padding-top:4px;
+}
+.edit-form .field-row {
+margin-bottom:8px;
+}
+.edit-form .title-row {
+display:flex;
+align-items:center;
+gap:10px;
+margin-bottom:8px;
+}
+.edit-form .title-field {
+flex:1;
+min-width:0;
+display:flex;
+align-items:center;
+gap:6px;
+}
+.edit-form .title-field .title-input {
+flex:1;
+min-width:0;
+}
+.edit-form .key-field {
+flex:0 0 auto;
+white-space:nowrap;
+}
+.edit-form .key-editor-container {
+position:relative;
+display:inline-block;
+}
+.edit-form .key-display-btn {
+font-size:100%;
+padding:3px 8px;
+border:1px solid #999;
+border-radius:3px;
+background:#fff;
+cursor:pointer;
+min-width:80px;
+text-align:left;
+}
+.edit-form .key-display-btn:hover {
+border-color:#3a6a3a;
+}
+.edit-form .key-editor-dropdown {
+display:none;
+position:absolute;
+top:100%;
+left:0;
+z-index:100;
+background:#fff;
+border:1px solid #999;
+border-radius:3px;
+box-shadow:0 2px 8px rgba(0,0,0,0.15);
+padding:8px;
+min-width:200px;
+}
+.edit-form .key-editor-dropdown.open {
+display:block;
+}
+.edit-form .key-editor-row {
+margin-bottom:4px;
+white-space:nowrap;
+}
+.edit-form .key-editor-row select {
+font-size:95%;
+padding:2px 4px;
+margin-right:4px;
+}
+.edit-form .type-field {
+flex:0 0 auto;
+white-space:nowrap;
+}
+.edit-form input[type="text"],
+.edit-form textarea,
+.edit-form select {
+font-size:100%;
+padding:3px 6px;
+border:1px solid #999;
+border-radius:3px;
+}
+.edit-form input[type="text"]:focus,
+.edit-form textarea:focus,
+.edit-form select:focus {
+border-color:#3a6a3a;
+outline:none;
+}
+.edit-form .wide-input {
+width:60%;
+min-width:280px;
+}
+.edit-form .medium-input {
+width:120px;
+}
+.edit-form textarea.description-field {
+width:80%;
+min-width:280px;
+min-height:100px;
+}
+.edit-form .type-menu-container {
+display:inline-block;
+position:relative;
+}
+.edit-form .type-menu-btn {
+padding:3px 10px;
+font-size:100%;
+border:1px solid #999;
+border-radius:3px;
+background:#fff;
+cursor:pointer;
+min-width:160px;
+text-align:left;
+}
+.edit-form .type-menu-btn:hover {
+border-color:#3a6a3a;
+}
+.edit-form .type-menu-dropdown {
+display:none;
+position:absolute;
+top:100%;
+right:0;
+z-index:100;
+background:#fff;
+border:1px solid #999;
+border-radius:3px;
+box-shadow:0 2px 8px rgba(0,0,0,0.15);
+padding:6px 8px;
+column-count:2;
+column-gap:8px;
+}
+.edit-form .type-menu-dropdown.open {
+display:block;
+}
+.edit-form .type-menu-item {
+display:block;
+padding:3px 8px;
+cursor:pointer;
+font-weight:normal;
+white-space:nowrap;
+break-inside:avoid;
+}
+.edit-form .type-menu-item:hover {
+background:#e8f0e8;
+}
+.edit-form .type-menu-item input {
+margin-right:6px;
+}
+.edit-form .section-header {
+font-weight:bold;
+font-size:110%;
+margin-top:16px;
+margin-bottom:8px;
+border-bottom:1px solid #ccc;
+padding-bottom:4px;
+}
+.edit-form .url-row {
+margin-bottom:4px;
+}
+.edit-form .url-row input {
+width:55%;
+min-width:250px;
+}
+.edit-form .url-test-btn {
+background:#3a6a3a;
+color:white;
+border:1px solid #1a3a1a;
+border-radius:3px;
+padding:2px 8px;
+cursor:pointer;
+margin-left:4px;
+font-size:90%;
+}
+.edit-form .url-test-btn:hover {
+background:#4a7a4a;
+}
+.edit-form .url-test-btn:disabled {
+background:#999;
+cursor:default;
+}
+.edit-form .url-remove-btn {
+background:#cc3333;
+color:white;
+border:1px solid #993333;
+border-radius:3px;
+padding:2px 8px;
+cursor:pointer;
+margin-left:4px;
+font-size:90%;
+}
+.edit-form .url-remove-btn:hover {
+background:#dd4444;
+}
+.edit-form .add-btn {
+background:#3a6a3a;
+color:white;
+border:1px solid #1a3a1a;
+border-radius:3px;
+padding:3px 10px;
+cursor:pointer;
+font-size:90%;
+margin-top:4px;
+}
+.edit-form .add-btn:hover {
+background:#4a7a4a;
+}
+.edit-form .notes-layout {
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+}
+.edit-form .notes-editor-pane {
+flex:1;
+min-width:300px;
+}
+.edit-form .notes-editor-pane textarea {
+font-family:monospace;
+font-size:95%;
+}
+.edit-form .notes-preview-pane {
+flex:1;
+min-width:300px;
+}
+.edit-form .notes-preview-pane img {
+max-width:100%;
+}
+.edit-form .chord-layout {
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+}
+.edit-form .chord-editor-pane {
+flex:1;
+min-width:300px;
+}
+.edit-form .chord-preview-pane {
+flex:1;
+min-width:300px;
+text-align:right;
+}
+.edit-form .chord-preview-pane table.chords-preview {
+border:0px;
+border-left:2px solid #000;
+border-right:2px solid #000;
+border-collapse:collapse;
+margin-left:auto;
+table-layout:fixed;
+font-size:min(3vw, 26px);
+}
+.edit-form .chord-preview-pane table.chords-preview td {
+padding-right:1.0em;
+line-height:120%;
+}
+.edit-form .chord-preview-pane table.chords-preview td.last-chord {
+padding-right:0.5em;
+}
+.edit-form .chord-preview-pane table.chords-preview td.last {
+text-align:right;
+padding-right:3px;
+width:1.2em;
+}
+.edit-form .chord-preview-pane table.chords-preview td.first {
+padding-left:3px;
+padding-right:0.5em;
+width:1.2em;
+}
+.edit-form .chord-preview-pane tr.even {
+background:#e8f0e8;
+}
+.edit-form .chord-preview-pane .chord-note {
+font-style:italic;
+text-align:left;
+margin:4px 0;
+font-size:min(3vw, 26px);
+}
+.edit-form .chord-structure-controls {
+margin:8px 0;
+}
+.edit-form .chord-structure-controls button {
+margin-right:8px;
+}
+.edit-form .part-wrapper {
+margin-bottom:4px;
+}
+.edit-form .part-header {
+font-weight:bold;
+padding:4px 0;
+margin-top:8px;
+background:#e8f0e8;
+padding-left:6px;
+width:50%;
+}
+.edit-form .part-remove-btn {
+background:#cc3333;
+color:white;
+border:1px solid #993333;
+border-radius:3px;
+font-size:80%;
+padding:1px 5px;
+cursor:pointer;
+font-weight:bold;
+}
+.edit-form .part-remove-btn:hover {
+background:#aa1111;
+}
+.edit-form table.edit-chords {
+border-collapse:collapse;
+margin:4px 0 2px 0;
+}
+.edit-form table.edit-chords td {
+padding:2px 4px;
+}
+.edit-form table.edit-chords input[type="text"] {
+width:70px;
+font-size:100%;
+padding:2px 4px;
+}
+.edit-form .row-ctl-btn {
+font-size:80%;
+padding:1px 5px;
+margin:0 1px;
+border:1px solid #999;
+border-radius:3px;
+cursor:pointer;
+background:#f0f0f0;
+font-weight:bold;
+}
+.edit-form .add-measure-btn {
+color:#3a6a3a;
+border-color:#3a6a3a;
+}
+.edit-form .remove-measure-btn {
+color:#cc3333;
+border-color:#993333;
+}
+.edit-form .remove-row-btn {
+color:white;
+background:#cc3333;
+border-color:#993333;
+margin-left:4px;
+}
+.edit-form .inline-fields {
+display:inline-block;
+margin-right:20px;
+}
+.edit-form .inline-fields label {
+width:auto;
+margin-right:6px;
+}
+@media (max-width: 489px) {
+.edit-form label {
+width:80px;
+font-size:95%;
+}
+.edit-form .wide-input,
+.edit-form textarea.description-field,
+.edit-form .url-row input {
+width:90%;
+min-width:0;
+}
+.edit-form table.edit-chords input[type="text"] {
+width:50px;
+}
+}
+@media (max-width: 700px) {
+.edit-form .chord-preview-pane {
+text-align:left;
+}
+.edit-form .chord-preview-pane table.chords-preview {
+margin-left:0;
+}
+.edit-form .chord-preview-pane .chord-note {
+text-align:left;
+}
 }
 
 """
@@ -3459,8 +4772,8 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, editor=False):
   else:
     refs = ''
     
-  if editor and obj.chords:
-    edit_link = CDiv('<a href="/tune/%s/edit" class="green-button">Edit Chords</a>' % name, style='clear:right; float:right; margin-top:4px')
+  if editor:
+    edit_link = CDiv('<a href="/tune/%s/edit" class="green-button">Edit Tune</a>' % name, style='clear:right; float:right; margin-top:4px')
   else:
     edit_link = ''
 
