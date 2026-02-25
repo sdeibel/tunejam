@@ -1947,33 +1947,47 @@ function validateForm() {
     return false;
   }
 
+  // Validate tune types have compatible time signatures
+  var checks = document.querySelectorAll('#type-menu-dropdown input[type="checkbox"]:checked');
+  if (checks.length > 1) {
+    var meters = {};
+    for (var i = 0; i < checks.length; i++) {
+      var ttype = checks[i].name.replace('klass_', '');
+      var m = tuneDefaults[ttype] ? tuneDefaults[ttype].meter : '4/4';
+      // Group compatible meters: 4/4 and 2/4 and C are compatible
+      if (m === '2/4' || m === 'C') m = '4/4';
+      meters[m] = 1;
+    }
+    if (Object.keys(meters).length > 1) {
+      alert('The selected tune types have different time signatures and cannot be combined.');
+      return false;
+    }
+  }
+
+  // Validate URL format
+  var urlInputs = document.querySelectorAll('input[name^="url_"]');
+  for (var i = 0; i < urlInputs.length; i++) {
+    var url = urlInputs[i].value.trim();
+    if (!url) continue;
+    if (!/^https?:\\/\\/.+\\..+/.test(url)) {
+      urlInputs[i].style.backgroundColor = '#ffcccc';
+      urlInputs[i].focus();
+      alert('Invalid URL format: ' + url + '\\nURLs should start with http:// or https://');
+      return false;
+    }
+    urlInputs[i].style.backgroundColor = '';
+  }
+
   // Validate chord cells
   var chordInputs = document.querySelectorAll('#chord-parts-container input[type="text"]');
   for (var i = 0; i < chordInputs.length; i++) {
     var val = chordInputs[i].value;
     if (!val) continue;
-    for (var j = 0; j < val.length; j++) {
-      var c = val[j];
-      var prev = j > 0 ? val[j-1] : '';
-      var next = j + 1 < val.length ? val[j+1] : '';
-      var N = 'ABCDEFGH';
-      if (N.indexOf(c) >= 0) continue;
-      if (c == '/' || c == '(' || c == ')') continue;
-      if ((c == 'b' || c == '#' || c == '+') && N.indexOf(prev) >= 0) continue;
-      if (c == 'm' && (N.indexOf(prev) >= 0 || prev == 'b' || prev == '#' || prev == 'i')) continue;
-      if ((c == '7' || c == '6') && (N.indexOf(prev) >= 0 || prev == 'b' || prev == '#' || prev == 'm')) continue;
-      if (c == '9' && (N.indexOf(prev) >= 0 || prev == 'b' || prev == '#' || prev == 'm' || prev == 'p')) continue;
-      if (c == '-' && (N.indexOf(prev) >= 0 || prev == 'b' || prev == '#' || prev == 'm' || prev == '7' || prev == '6')) continue;
-      if ('0123456789'.indexOf(c) >= 0 && (next == '/' || prev == '/')) continue;
-      if ((c == '1' || c == '2' || c == '3') && next == ':') continue;
-      if (c == ':' && (prev == '1' || prev == '2' || prev == '3')) continue;
-      if (c == 'i' && N.indexOf(prev) >= 0) continue;
-      if (c == 's' && (N.indexOf(prev) >= 0 || prev == 'b' || prev == '#')) continue;
-      if (c == 'u' && prev == 's') continue;
-      if (c == 'p' && prev == 'u') continue;
+    var err = validateChordCell(val);
+    if (err) {
       chordInputs[i].style.backgroundColor = '#ffcccc';
       chordInputs[i].focus();
-      alert('Invalid chord: ' + val + '\\nCharacter \\'' + c + '\\' at position ' + (j+1) + ' is not allowed here.');
+      alert(err);
       return false;
     }
     chordInputs[i].style.backgroundColor = '';
@@ -1981,6 +1995,69 @@ function validateForm() {
 
   formChanged = false;
   return true;
+}
+
+function validateChordCell(val) {
+  // Validate a single chord cell value against the notation spec
+  // Valid patterns:
+  //   Note: A-H (H = German Bb)
+  //   Accidental after note: b (flat), # (sharp)
+  //   Quality: m (minor), + (augmented), Dim (diminished), sup (suspended)
+  //   Extension: 7, 6, 9 (after note/accidental/quality)
+  //   Sustain: - (hold chord)
+  //   Multiple chords per cell: just concatenated e.g. AmG
+  //   Alt endings: 1: 2: 3: at start
+  //   Alternatives: / ( ) for optional/alternative chords
+  //   Time sig changes: digits/digits e.g. 7/8
+  var j = 0;
+  var len = val.length;
+  // Allow alternate ending prefix like "1:" "2:" "3:"
+  if (j < len && '123'.indexOf(val[j]) >= 0 && j + 1 < len && val[j+1] === ':') {
+    j += 2;
+  }
+  while (j < len) {
+    var c = val[j];
+    // Parentheses and slash for alternatives
+    if (c === '(' || c === ')' || c === '/') { j++; continue; }
+    // Sustain dash
+    if (c === '-') { j++; continue; }
+    // Time signature like 7/8 or 9/8
+    if ('0123456789'.indexOf(c) >= 0) {
+      var k = j;
+      while (k < len && '0123456789'.indexOf(val[k]) >= 0) k++;
+      if (k < len && val[k] === '/') {
+        k++;
+        while (k < len && '0123456789'.indexOf(val[k]) >= 0) k++;
+        j = k;
+        continue;
+      }
+      // Bare number not part of time sig or extension - invalid
+      return 'Invalid chord: ' + val + '\\nUnexpected character \\'' + c + '\\' at position ' + (j+1) + '.';
+    }
+    // Note letter A-H
+    if ('ABCDEFGH'.indexOf(c) >= 0) {
+      j++;
+      // Optional accidental: b or #
+      if (j < len && (val[j] === 'b' || val[j] === '#')) j++;
+      // Optional quality: Dim, sup, m, +
+      // Check dim/Dim first (D is also a valid note, so CDim must not parse D as a new note)
+      if (j + 2 < len && (val.substring(j, j+3) === 'Dim' || val.substring(j, j+3) === 'dim')) { j += 3; }
+      else if (j + 2 < len && (val.substring(j, j+3) === 'sup' || val.substring(j, j+3) === 'Sus' || val.substring(j, j+3) === 'sus')) {
+        j += 3;
+        // sup is usually followed by a number like sup9
+        if (j < len && '0123456789'.indexOf(val[j]) >= 0) j++;
+        continue;
+      }
+      else if (j < len && val[j] === 'm') { j++; }
+      else if (j < len && val[j] === '+') { j++; }
+      // Optional extension: 7, 6, 9
+      if (j < len && ('769'.indexOf(val[j]) >= 0)) j++;
+      continue;
+    }
+    // Anything else is invalid
+    return 'Invalid chord: ' + val + '\\nUnexpected character \\'' + c + '\\' at position ' + (j+1) + '.';
+  }
+  return null;
 }
 </script>
 """ % (defaults_js, url_count, len(chord_parts))
@@ -2382,8 +2459,8 @@ def _chord_notation_guide():
     CParagraph([
       "Add", CText("7", bold=1), ", ", CText("6", bold=1), ", or ",
       CText("9", bold=1), " extend chords. ",
-      "", CText("Dim", bold=1), "=diminished, ", CText("sup", bold=1), "=suspended "
-      "like: ", CText("A7  Em6  Bbm7  C#Dim  Csup9", italic=1),
+      "", CText("dim", bold=1), "=diminished, ", CText("sup", bold=1), "=suspended "
+      "like: ", CText("A7  Em6  Bbm7  C#dim  Csup9", italic=1),
     ]),
     CParagraph([
       "Use ", CText("-", bold=1), " to explicitely sustain chords. "

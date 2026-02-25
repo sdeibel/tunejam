@@ -361,6 +361,8 @@ class CTune:
     
     def GetKeyString(self):
         keys = self.key
+        if not keys:
+            return ''
         keys = keys.split('/')
         key_str = []
         for key in keys:
