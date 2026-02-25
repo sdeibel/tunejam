@@ -3982,6 +3982,56 @@ function setupStaffClick() {
     setTimeout(highlightSelected, 20);
     showPropertyPanel(barPartIdx, modelIdx);
   });
+  // Beam group selection — double-click a note to select all notes in its
+  // beam group (the notes connected by the same horizontal beam bar).
+  preview.addEventListener('dblclick', function(e) {
+    if (veMode !== 'visual') return;
+    if (currentTool) return;  // Only in selection mode
+    // Find which part and note the double-click landed on
+    var staff = getStaffAtPoint(e.clientX, e.clientY);
+    if (!staff) return;
+    var pr = null;
+    for (var pi = 0; pi < partRenderings.length; pi++) {
+      if (partRenderings[pi].partIdx === staff.partIdx) { pr = partRenderings[pi]; break; }
+    }
+    if (!pr || !pr.beamGroups || pr.beamGroups.length === 0) return;
+    // Find which note was clicked by X position
+    var positions = pr.elementPositions || [];
+    var part = notationModel.parts[pr.partIdx];
+    if (!part || positions.length === 0) return;
+    var svg = pr.renderTarget ? pr.renderTarget.querySelector('svg') : null;
+    if (!svg) return;
+    var clickSvgX = clientToSvgCoords(svg, e.clientX, e.clientY).x;
+    // Find the closest element position to the click
+    var closestSelIdx = -1;
+    var closestDist = Infinity;
+    for (var i = 0; i < positions.length; i++) {
+      var dist = Math.abs(positions[i].centerX - clickSvgX);
+      if (dist < closestDist) { closestDist = dist; closestSelIdx = i; }
+    }
+    if (closestSelIdx < 0 || closestDist > 30) return;
+    var clickedModelIdx = selectableIdxToModelIdx(part, closestSelIdx);
+    // Find which beam group contains this element
+    for (var bi = 0; bi < pr.beamGroups.length; bi++) {
+      var bg = pr.beamGroups[bi];
+      for (var ni = 0; ni < bg.elemIndices.length; ni++) {
+        if (bg.elemIndices[ni] === clickedModelIdx) {
+          // Found it — select all notes in this beam group
+          selectedElements = [];
+          for (var j = 0; j < bg.elemIndices.length; j++) {
+            selectedElements.push({partIdx: pr.partIdx, elemIdx: bg.elemIndices[j]});
+          }
+          highlightSelected();
+          setTimeout(highlightSelected, 20);
+          if (selectedElements.length > 0) {
+            showPropertyPanel(selectedElements[0].partIdx, selectedElements[0].elemIdx);
+          }
+          e.preventDefault();
+          return;
+        }
+      }
+    }
+  });
   // Deselect when clicking empty area (not on a note/rest/bar)
   preview.addEventListener('click', function(e) {
     if (veMode !== 'visual') return;
