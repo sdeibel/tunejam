@@ -4539,7 +4539,7 @@ def _build_notes_section(obj, tune, meter_options, unit_options):
       '<svg viewBox="0 0 24 16" width="20" height="14"><path d="M2,4 Q12,16 22,4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>'
       '</button>',
       '<button type="button" class="ve-tool-btn" data-tool="grace" title="Grace note (acciaccatura)">'
-      '<svg viewBox="0 0 20 28" width="16" height="22"><ellipse cx="7" cy="21" rx="4.5" ry="3" fill="currentColor" transform="rotate(-15,7,21)"/><line x1="11" y1="20" x2="11" y2="5" stroke="currentColor" stroke-width="2"/><path d="M11,5 Q14,8 16,12" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="2" y1="27" x2="16" y2="7" stroke="currentColor" stroke-width="2"/></svg>'
+      '<svg viewBox="0 0 20 28" width="16" height="22"><ellipse cx="8" cy="16" rx="3.5" ry="2.5" fill="currentColor" transform="rotate(-15,8,16)"/><line x1="11" y1="15" x2="11" y2="3" stroke="currentColor" stroke-width="1.5"/><path d="M11,3 Q13.5,5.5 15,9" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>'
       '</button>',
     ], hclass='ve-tool-group'),
   ], hclass='ve-toolbar', id='ve-toolbar')

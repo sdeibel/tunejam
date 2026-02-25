@@ -1,29 +1,33 @@
 ** Fix note generation on production site
 * Website Phase Three
-  ** Coding
-    ** More editing functionality for tunes (title, author, origin, key, 
-       description, reference urls, ABC for notes) and also create/delete tunes.
-       When create should add to git.  When delete should remove file but not
-       remove from git.  Nothing should commit; human reviews it later.
-    ** Deleting events, changing order of sets in events
-    ** Generate playable midi with music21.  For example:
-        import os
-        from music21 import converter
-        score = converter.parse('/Users/sdeibel/abc/src/tunes/mountain_ash.abc')
-        fn = score.write('midi')
-        os.system('open {}'.format(fn))    
-        (or feed midi into a js midi player or let browser open it)
-    ** Are PDF chords working for odd tunes like Arran Boat, Bear Dance I, and
-       Snowy Path?
-    ** Option to include meta data in sets, events, and books
-    ** Authoring of tunes on the dev page  
-    ** Embedded audio player on same page -- use http://jplayer.org/latest/demo-05/
-       Or use Web Audio API in html5:  https://codepen.io/SitePoint/pen/JRaLVR
-       https://www.html5rocks.com/en/tutorials/webaudio/intro/
-    ** Ability to convert abc to midi wih https://ifdo.ca/~seymour/runabc/top.html
-       (download link is hard to see; buried as "The latest version is abcMIDI-2020.02.12.zip")
-       and play it with https://github.com/mudcube/MIDI.js/ or similar
+  ** Coding Tasks Near Term
+    ** Auto-add new regular measure bar once full
+    ** Click on nothing and drag to select all in dragged out rectangle (w/ dotted frame
+       shown during the drag) -- probably need tool palette item for selection mode:
+       toggle off any other tool when click on that and toggle it on if click on and
+       de-activate other current tool
+    ** Click on the note connector bar to select all the connected notes at once  
+    ** A way to break note bar (enters space in the ABC side)
+    ** A way to change length of existing note by clicking on it + doing something (what?)
+    ** When go to ABC Text mode and back and up with lots of blank space below editor before chords
+    ** Undo in the note editor?
+    
+    ** Clean up code (split up tunejam.py into logical sub-systems?)
+    ** Check over for other browsers and iOS/Android
+    ** Three user permissions levels:  Regular (create events, add/delete/edit sets,
+       delete their event, create tune and then later edit the ones they own), Editor 
+       (that plus edit any tune and delete tunes not in use in an event), Admin (that plus 
+       can delete or edit any event, set, or tune, and run cache and book rebuilds)
+    ** Ability to drag set order in events, rename events, duplicate events, and delete events
+    ** Let event owner specify whether public or just visible to them (admin sees all), 
+       allow adding other emails that can edit/etc the event, allow sharing a hash url
+       for hidden events that allows people to see them in any case (e.g. for use at
+       the actual session - hash should be as short as possible without being guessable)
+    ** Event sorting by title, date created, and modification date
+    ** Option to include meta data in saved sets, events, and books
     ** Easier selection by typed fragments to quickly make sets (do OR on each word)
+    ** Ability to press record button to listen to a tune being played and analyze
+       with AI to prefill the New Tune form
   ** Content
     ** Complete the partial listings and add missing recordings and sheet music
     ** Entirely missing tunes
@@ -33,28 +37,15 @@
         ** Mr Ernest Hillier aka Two Goats Jig
         ** Isolation Jig - need notes and full written form
       ** January waltz (can't find this anywhere)
-      ** Others? - All the recent ones (need to see Bliss's notebook)
 * Website Phase Four+
-  * Improve ability to create live-updating event page
-    * Per-event passwords to prevent edit/deletion by others + on set creation
-      require entering the set password + some sort of captcha -- if not pw entered,
-      generate one
-    * A way to rename or duplicate the event
-    * A way to sort sets in the event
-    - A way to name sets
-    - A way to indicate a missing song (not in database)
   * Clean up
     * Remove old saved sets impl
     * Remove old unused doc generation code
-    * Book impls could share more code
     * error() shouldn't exit but instead show meaningful error to user
+    * Port to Python 3 and updated packages
   * Allow setting event expiration date (default to 1 month)
   * A way to select tunes by length in measures
-  * In books:  Optional matrix for know/at-speed/can-start/harmonies check rectangle
-  * A way to play the chords at a set tempo and/or metronome?
-  * A way to play set recordings in order one after the other and/or w/ repeat?
-  * A way to play recordings slowed down (record speed in DB so can show
-    approx beats/minute)
+  * Per-user annotations for things like how well they know (at-speed, can start, harmonies)
   * Statistics-guided set creation
     * Also remember times played for each tune
     * Randomly select tunes based on time played -- mix well-known and less known
@@ -62,4 +53,3 @@
     * Load set as provisional and only mark as played if save to event
        (but still mark the individual tunes as played)
     * Avoid generating sets identical to existing (ignoring order of tunes)
-  * Find notebooks/bindings/printing options for flip books
