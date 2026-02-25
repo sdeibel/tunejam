@@ -8,7 +8,7 @@ K:G
 L:1/8
 M:6/8
 --
-B2D- DGA | Bdc BAG |
+B2(DD)GA | Bdc BAG |
 e3 ecd | egf edB |
 --
 |: G | G  | C   | D   |

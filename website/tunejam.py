@@ -2129,6 +2129,7 @@ var staffGeometry = [];   // array of {y0..y4, spacing, halfSpacing, topY, botto
 var elementPositions = []; // array of {x, partIdx, elemIdx, charStart, charEnd}
 var selectedElements = []; // array of {partIdx, elemIdx}
 var isDragging = false;
+var lastPointerShift = false;  // Track shift key from pointer events
 var dragGhost = null;
 var insertionMarker = null;
 var lastTuneObj = null;
@@ -2223,6 +2224,29 @@ function parseAbcLine(line) {
       i = innerElems.newIdx;
       for (var si = 0; si < innerElems.elems.length; si++) {
         elements.push(innerElems.elems[si]);
+      }
+      continue;
+    }
+    // Grace notes {notes}
+    if (c === '{') {
+      i++; // skip {
+      // Check for acciaccatura marker /
+      var acciaccatura = false;
+      if (i < len && line[i] === '/') { acciaccatura = true; i++; }
+      var graceNotes = [];
+      while (i < len && line[i] !== '}') {
+        if (isNoteStart(line, i)) {
+          var gn = parseNote(line, i);
+          i = gn.newIdx;
+          gn.elem.grace = true;
+          graceNotes.push(gn.elem);
+        } else {
+          i++; // skip unrecognized inside grace
+        }
+      }
+      if (i < len && line[i] === '}') i++; // skip }
+      for (var gi = 0; gi < graceNotes.length; gi++) {
+        elements.push(graceNotes[gi]);
       }
       continue;
     }
@@ -2383,6 +2407,8 @@ function modelToAbc(model) {
       var el = part.elements[e];
       if (el.type === 'note') {
         if (el.slurStart && !inSlur) { line += '('; inSlur = true; }
+        // Grace note wrapper
+        if (el.grace) line += '{';
         // Accidental
         if (el.accidental) line += el.accidental;
         // Pitch letter with octave
@@ -2395,8 +2421,9 @@ function modelToAbc(model) {
         } else {
           line += el.pitch.toUpperCase();
         }
-        // Duration
-        if (el.duration) line += el.duration;
+        // Duration (skip for grace notes)
+        if (el.duration && !el.grace) line += el.duration;
+        if (el.grace) line += '}';
         // Tie
         if (el.tied) line += '-';
         if (el.slurEnd && inSlur) { line += ')'; inSlur = false; }
@@ -2658,6 +2685,56 @@ function buildElementPositionMap(tuneObj, svgEl) {
   return positions;
 }
 
+// Build a map from model element index to SVG element arrays for highlighting.
+// Uses char offset matching between model elements and abcjs selectables.
+function buildElemSvgMap(tuneObj, partIdx) {
+  var map = {};
+  if (!tuneObj || !tuneObj[0]) return map;
+  if (partIdx >= notationModel.parts.length) return map;
+  var part = notationModel.parts[partIdx];
+
+  // Compute the header length for this part's ABC
+  var key = document.getElementById('field-key').value || 'C';
+  var meterSel = document.getElementById('field-meter');
+  var meter = meterSel ? meterSel.value : '4/4';
+  var unitField = document.querySelector('input[name="unit"]');
+  var unit = unitField ? unitField.value : '1/8';
+  var headerLen = ('X:1\\nK:' + key + '\\nL:' + unit + '\\nM:' + meter + '\\n').length;
+
+  // Pre-compute char start positions for each model element
+  var elemCharStarts = [];
+  var pos = 0;
+  for (var e = 0; e < part.elements.length; e++) {
+    elemCharStarts.push(headerLen + pos);
+    pos += elementAbcLength(part.elements[e]);
+  }
+
+  try {
+    var selectables = tuneObj[0].getSelectableArray();
+    if (!selectables) return map;
+    for (var j = 0; j < selectables.length; j++) {
+      var sa = selectables[j];
+      if (!sa || !sa.absEl || !sa.absEl.elemset) continue;
+      // startChar lives on absEl.abcelem in abcjs 6.x
+      var sc = (sa.absEl.abcelem && sa.absEl.abcelem.startChar !== undefined) ? sa.absEl.abcelem.startChar : undefined;
+      if (sc === undefined) continue;
+      // Find which model element this selectable belongs to
+      for (var e = 0; e < elemCharStarts.length; e++) {
+        var eStart = elemCharStarts[e];
+        var eLen = elementAbcLength(part.elements[e]);
+        if (sc >= eStart && sc < eStart + eLen) {
+          if (!map[e]) map[e] = [];
+          for (var k = 0; k < sa.absEl.elemset.length; k++) {
+            map[e].push(sa.absEl.elemset[k]);
+          }
+          break;
+        }
+      }
+    }
+  } catch(ex) {}
+  return map;
+}
+
 // --- Y to Pitch Conversion ---
 // Treble clef staff lines bottom-to-top: E4, G4, B4, D5, F5
 // Staff positions: E4=0, F4=1, G4=2, A4=3, B4=4, C5=5, D5=6, E5=7, F5=8
@@ -2847,13 +2924,13 @@ function veDoRenderAbc() {
       responsive: "resize",
       staffwidth: 500,
       add_classes: true,
+      selectionColor: "#000000",
       clickListener: (function(partIdx) {
         return function(abcElem, tuneNumber, classes, analysis, drag, mouseEvent) {
           veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEvent, partIdx);
         };
       })(p),
-      dragging: true,
-      dragColor: '#cc6600'
+      dragging: false
     };
 
     var tuneObj = ABCJS.renderAbc('ve-part-render-' + p, abc, renderOpts);
@@ -2864,6 +2941,7 @@ function veDoRenderAbc() {
       tuneObj: tuneObj,
       geo: null,
       elementPositions: [],
+      elemSvgMap: {},  // model elemIdx -> array of SVG elements
       partIdx: p
     });
   }
@@ -2878,6 +2956,8 @@ function veDoRenderAbc() {
       pr.geo = staffGeometry.length > 0 ? staffGeometry[0] : null;
       var partSvg = pr.renderTarget.querySelector('svg');
       pr.elementPositions = buildElementPositionMap(pr.tuneObj, partSvg);
+      // Build model-index to SVG-elements map using char offsets
+      pr.elemSvgMap = buildElemSvgMap(pr.tuneObj, pr.partIdx);
     }
     updatePartHeaders();
     highlightSelected();
@@ -2888,95 +2968,44 @@ function veDoRenderAbc() {
 // partIdx is passed via closure from per-part render options
 function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEvent, partIdx) {
   if (veMode !== 'visual') return;
+  if (isDragging) return;  // Suppress during palette drag
   if (partIdx === undefined) partIdx = 0;
 
-  // Handle drag pitch changes (abcjs built-in dragging)
-  if (drag && drag.step !== 0 && selectedElements.length > 0) {
-    var sel = selectedElements[0];
-    if (sel.partIdx < notationModel.parts.length && sel.elemIdx < notationModel.parts[sel.partIdx].elements.length) {
-      var elem = notationModel.parts[sel.partIdx].elements[sel.elemIdx];
-      if (elem.type === 'note') {
-        pushUndo();
-        var pos = pitchToStaffPosition(elem.pitch, elem.octave);
-        pos += drag.step;
-        var newPitch = staffPositionToPitch(pos);
-        elem.pitch = newPitch.pitch;
-        elem.octave = newPitch.octave;
-        syncModelToTextarea();
-        return;
-      }
-    }
-  }
-
-  // Handle accidental tool click on existing note
-  if (currentTool === 'sharp' || currentTool === 'flat' || currentTool === 'natural') {
+  // Selection mode: click on a note to select it, shift-click to multi-select
+  // Works when no note/rest/bar tool is active
+  if (!currentTool || currentTool === 'slur' || currentTool === 'grace' ||
+      currentTool === 'sharp' || currentTool === 'flat' || currentTool === 'natural') {
     var mapped = mapAbcElemToModel(abcElem, partIdx);
     if (mapped && mapped.partIdx >= 0) {
-      var tgtElem = notationModel.parts[mapped.partIdx].elements[mapped.elemIdx];
-      if (tgtElem.type === 'note') {
-        pushUndo();
-        var acc = currentTool === 'sharp' ? '^' : currentTool === 'flat' ? '_' : '=';
-        tgtElem.accidental = (tgtElem.accidental === acc) ? null : acc;
-        syncModelToTextarea();
-        return;
-      }
-    }
-  }
-
-  // Handle tie tool
-  if (currentTool === 'tie') {
-    if (selectedElements.length >= 1) {
-      var sel0 = selectedElements[0];
-      var elem0 = notationModel.parts[sel0.partIdx].elements[sel0.elemIdx];
-      if (elem0.type === 'note') {
-        pushUndo();
-        elem0.tied = !elem0.tied;
-        syncModelToTextarea();
-        return;
-      }
-    }
-  }
-
-  // Handle slur tool
-  if (currentTool === 'slur') {
-    if (selectedElements.length >= 2) {
-      pushUndo();
-      var first = selectedElements[0];
-      var last = selectedElements[selectedElements.length - 1];
-      var fe = notationModel.parts[first.partIdx].elements[first.elemIdx];
-      var le = notationModel.parts[last.partIdx].elements[last.elemIdx];
-      if (fe.type === 'note') fe.slurStart = !fe.slurStart;
-      if (le.type === 'note') le.slurEnd = !le.slurEnd;
-      syncModelToTextarea();
-      return;
-    }
-  }
-
-  // Selection mode (no tool or accidental/tie/slur tool)
-  if (!currentTool || currentTool === 'tie' || currentTool === 'slur' ||
-      currentTool === 'sharp' || currentTool === 'flat' || currentTool === 'natural' ||
-      currentTool === 'delete') {
-    var mapped = mapAbcElemToModel(abcElem, partIdx);
-    if (mapped && mapped.partIdx >= 0) {
-      if (mouseEvent && mouseEvent.shiftKey) {
-        // Add to selection
-        selectedElements.push({partIdx: mapped.partIdx, elemIdx: mapped.elemIdx});
+      // Use lastPointerShift (from our pointerdown handler) for reliable shift detection
+      var isShift = lastPointerShift || (mouseEvent && mouseEvent.shiftKey);
+      if (isShift && selectedElements.length > 0) {
+        // Range select: select all elements between the first selected and the clicked one
+        var anchor = selectedElements[0];
+        if (anchor.partIdx === mapped.partIdx) {
+          var lo = Math.min(anchor.elemIdx, mapped.elemIdx);
+          var hi = Math.max(anchor.elemIdx, mapped.elemIdx);
+          selectedElements = [];
+          for (var ri = lo; ri <= hi; ri++) {
+            selectedElements.push({partIdx: mapped.partIdx, elemIdx: ri});
+          }
+        } else {
+          // Different parts: just add to selection
+          selectedElements.push({partIdx: mapped.partIdx, elemIdx: mapped.elemIdx});
+        }
       } else {
         selectedElements = [{partIdx: mapped.partIdx, elemIdx: mapped.elemIdx}];
       }
       highlightSelected();
+      // Re-apply after a short delay in case abcjs modifies elements post-callback
+      setTimeout(highlightSelected, 20);
       showPropertyPanel(mapped.partIdx, mapped.elemIdx);
-
-      // Delete tool
-      if (currentTool === 'delete' && selectedElements.length > 0) {
-        veDeleteSelected();
-      }
       return;
     }
   }
 
-  // Deselect if clicking empty area
-  if (!currentTool || currentTool === 'delete') {
+  // Deselect if clicking empty area with no placement tool active
+  if (!currentTool) {
     selectedElements = [];
     highlightSelected();
     hidePropertyPanel();
@@ -3015,6 +3044,7 @@ function modelToAbcPart(part) {
     var el = part.elements[e];
     if (el.type === 'note') {
       if (el.slurStart && !inSlur) { line += '('; inSlur = true; }
+      if (el.grace) line += '{';
       if (el.accidental) line += el.accidental;
       if (el.octave >= 1) {
         line += el.pitch.toLowerCase();
@@ -3025,7 +3055,8 @@ function modelToAbcPart(part) {
       } else {
         line += el.pitch.toUpperCase();
       }
-      if (el.duration) line += el.duration;
+      if (el.duration && !el.grace) line += el.duration;
+      if (el.grace) line += '}';
       if (el.tied) line += '-';
       if (el.slurEnd && inSlur) { line += ')'; inSlur = false; }
     } else if (el.type === 'rest') {
@@ -3057,6 +3088,7 @@ function elementAbcLength(el) {
   if (el.type === 'note') {
     var len = 0;
     if (el.slurStart) len += 1;
+    if (el.grace) len += 1; // {
     if (el.accidental) len += el.accidental.length;
     len += 1; // pitch letter
     if (el.octave >= 1) {
@@ -3064,7 +3096,8 @@ function elementAbcLength(el) {
     } else if (el.octave <= -1) {
       len += Math.abs(el.octave); // commas
     }
-    if (el.duration) len += el.duration.length;
+    if (el.duration && !el.grace) len += el.duration.length;
+    if (el.grace) len += 1; // }
     if (el.tied) len += 1;
     if (el.slurEnd) len += 1;
     return len;
@@ -3073,11 +3106,66 @@ function elementAbcLength(el) {
 }
 
 // --- Selection Highlighting ---
+// Apply red highlight to an SVG element and all its children
+function veApplyHighlight(el) {
+  el.setAttribute('data-ve-hl', '1');
+  var isTie = el.getAttribute && ((el.getAttribute('class') || '').indexOf('abcjs-tie') >= 0 ||
+              (el.getAttribute('class') || '').indexOf('abcjs-slur') >= 0);
+  if (isTie) {
+    el.style.setProperty('fill', 'none', 'important');
+    el.style.setProperty('stroke', '#cc3333', 'important');
+  } else {
+    el.style.setProperty('fill', '#cc3333', 'important');
+    el.style.setProperty('stroke', '#cc3333', 'important');
+    el.style.setProperty('stroke-width', '1.5', 'important');
+  }
+  var children = el.children || el.childNodes;
+  if (children) {
+    for (var c = 0; c < children.length; c++) {
+      if (children[c].nodeType === 1) veApplyHighlight(children[c]);
+    }
+  }
+}
+// Remove highlight from an SVG element and all its children
+function veRemoveHighlight(el) {
+  el.removeAttribute('data-ve-hl');
+  el.style.removeProperty('fill');
+  el.style.removeProperty('stroke');
+  el.style.removeProperty('stroke-width');
+  el.classList.remove('ve-note-highlight');
+  var children = el.children || el.childNodes;
+  if (children) {
+    for (var c = 0; c < children.length; c++) {
+      if (children[c].nodeType === 1) veRemoveHighlight(children[c]);
+    }
+  }
+}
+
 function highlightSelected() {
-  // Remove old highlights from all part SVGs
-  var old = document.querySelectorAll('.ve-note-highlight');
-  for (var i = 0; i < old.length; i++) old[i].classList.remove('ve-note-highlight');
-  // Stub: selection highlighting via abcjs classes is not yet implemented
+  // Remove old highlights
+  var old = document.querySelectorAll('[data-ve-hl]');
+  for (var i = 0; i < old.length; i++) {
+    var el = old[i];
+    el.removeAttribute('data-ve-hl');
+    el.style.removeProperty('fill');
+    el.style.removeProperty('stroke');
+    el.style.removeProperty('stroke-width');
+    el.classList.remove('ve-note-highlight');
+  }
+
+  // Use the pre-built elemSvgMap for fast, reliable highlighting
+  for (var s = 0; s < selectedElements.length; s++) {
+    var sel = selectedElements[s];
+    if (sel.partIdx >= partRenderings.length) continue;
+    var pr = partRenderings[sel.partIdx];
+    if (!pr || !pr.elemSvgMap) continue;
+    var svgElems = pr.elemSvgMap[sel.elemIdx];
+    if (svgElems) {
+      for (var k = 0; k < svgElems.length; k++) {
+        veApplyHighlight(svgElems[k]);
+      }
+    }
+  }
 }
 
 // --- Property Panel ---
@@ -3120,6 +3208,11 @@ function showPropertyPanel(partIdx, elemIdx) {
     var tieActive = el.tied ? ' ve-prop-active' : '';
     html += '<button type="button" class="ve-prop-btn' + tieActive + '" onclick="vePropToggleTie(' +
             partIdx + ',' + elemIdx + ')">Tie</button>';
+    html += '</div>';
+    html += '<div class="ve-prop-row"><span class="ve-prop-label">Grace:</span>';
+    var graceActive = el.grace ? ' ve-prop-active' : '';
+    html += '<button type="button" class="ve-prop-btn' + graceActive + '" onclick="vePropToggleGrace(' +
+            partIdx + ',' + elemIdx + ')">Grace</button>';
     html += '</div>';
   } else if (el.type === 'rest') {
     html += '<div class="ve-prop-row"><span class="ve-prop-label">Rest</span></div>';
@@ -3193,6 +3286,14 @@ function vePropToggleTie(partIdx, elemIdx) {
   pushUndo();
   var el = notationModel.parts[partIdx].elements[elemIdx];
   el.tied = !el.tied;
+  syncModelToTextarea();
+  showPropertyPanel(partIdx, elemIdx);
+}
+
+function vePropToggleGrace(partIdx, elemIdx) {
+  pushUndo();
+  var el = notationModel.parts[partIdx].elements[elemIdx];
+  el.grace = !el.grace;
   syncModelToTextarea();
   showPropertyPanel(partIdx, elemIdx);
 }
@@ -3303,40 +3404,54 @@ function setupToolbar() {
         var tool = btn.getAttribute('data-tool');
         if (!tool) return;
 
-        // Special tools (tie, slur, delete, accidentals) act on selection — just toggle
-        if (tool === 'tie' || tool === 'slur' || tool === 'delete' ||
-            tool === 'sharp' || tool === 'flat' || tool === 'natural') {
-          if (currentTool === tool) {
-            clearToolSelection();
-          } else {
-            clearToolSelection();
-            currentTool = tool;
-            btn.classList.add('ve-tool-active');
-          }
-
-          // Immediate action for delete
-          if (tool === 'delete' && selectedElements.length > 0) {
-            veDeleteSelected();
-          }
-          // Immediate action for tie
-          if (tool === 'tie' && selectedElements.length > 0) {
-            var sel0 = selectedElements[0];
-            var elem0 = notationModel.parts[sel0.partIdx].elements[sel0.elemIdx];
-            if (elem0.type === 'note') {
-              pushUndo();
-              elem0.tied = !elem0.tied;
-              syncModelToTextarea();
-            }
-          }
-          // Immediate action for slur
+        // Special tools act on selection immediately
+        if (tool === 'slur' || tool === 'sharp' || tool === 'flat' || tool === 'natural' || tool === 'grace') {
+          // Immediate action for slur on selected range (toggle)
           if (tool === 'slur' && selectedElements.length >= 2) {
             pushUndo();
-            var first = selectedElements[0];
-            var last = selectedElements[selectedElements.length - 1];
+            var sortedSel = selectedElements.slice().sort(function(a, b) { return a.elemIdx - b.elemIdx; });
+            var first = sortedSel[0];
+            var last = sortedSel[sortedSel.length - 1];
             var fe = notationModel.parts[first.partIdx].elements[first.elemIdx];
             var le = notationModel.parts[last.partIdx].elements[last.elemIdx];
-            if (fe.type === 'note') fe.slurStart = !fe.slurStart;
-            if (le.type === 'note') le.slurEnd = !le.slurEnd;
+            // Toggle: if slur already exists on this range, remove it
+            var hasSlur = (fe.type === 'note' && fe.slurStart && le.type === 'note' && le.slurEnd);
+            // Clear all slur flags on selected notes
+            for (var si = 0; si < sortedSel.length; si++) {
+              var se = sortedSel[si];
+              var el = notationModel.parts[se.partIdx].elements[se.elemIdx];
+              if (el.type === 'note') { el.slurStart = false; el.slurEnd = false; }
+            }
+            // If slur wasn't present, add it
+            if (!hasSlur) {
+              if (fe.type === 'note') fe.slurStart = true;
+              if (le.type === 'note') le.slurEnd = true;
+            }
+            syncModelToTextarea();
+          }
+          // Immediate action for accidentals on selected notes
+          if ((tool === 'sharp' || tool === 'flat' || tool === 'natural') && selectedElements.length > 0) {
+            var acc = tool === 'sharp' ? '^' : tool === 'flat' ? '_' : '=';
+            pushUndo();
+            for (var si = 0; si < selectedElements.length; si++) {
+              var sel = selectedElements[si];
+              var elem = notationModel.parts[sel.partIdx].elements[sel.elemIdx];
+              if (elem.type === 'note') {
+                elem.accidental = (elem.accidental === acc) ? null : acc;
+              }
+            }
+            syncModelToTextarea();
+          }
+          // Immediate action for grace note toggle on selected notes
+          if (tool === 'grace' && selectedElements.length > 0) {
+            pushUndo();
+            for (var si = 0; si < selectedElements.length; si++) {
+              var sel = selectedElements[si];
+              var elem = notationModel.parts[sel.partIdx].elements[sel.elemIdx];
+              if (elem.type === 'note') {
+                elem.grace = !elem.grace;
+              }
+            }
             syncModelToTextarea();
           }
           e.preventDefault();
@@ -3363,13 +3478,8 @@ function setupToolbar() {
 // --- Palette Drag ---
 function startPaletteDrag(e, btn, tool) {
   isDragging = true;
-  // Create ghost
-  dragGhost = document.createElement('div');
-  dragGhost.className = 've-drag-ghost';
-  dragGhost.innerHTML = btn.innerHTML || tool;
-  dragGhost.style.left = e.clientX + 'px';
-  dragGhost.style.top = e.clientY + 'px';
-  document.body.appendChild(dragGhost);
+  var startX = e.clientX, startY = e.clientY;
+  var dragStarted = false;  // True once pointer moves enough to be a real drag
 
   var pitchLabel = document.getElementById('ve-pitch-label');
 
@@ -3377,17 +3487,26 @@ function startPaletteDrag(e, btn, tool) {
 
   function onMove(ev) {
     if (!isDragging) return;
+    // Require minimum 5px movement before starting visual drag
+    if (!dragStarted) {
+      var dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if (dx * dx + dy * dy < 25) return;
+      dragStarted = true;
+      // Create ghost on first real movement
+      dragGhost = document.createElement('div');
+      dragGhost.className = 've-drag-ghost';
+      dragGhost.innerHTML = btn.innerHTML || tool;
+      document.body.appendChild(dragGhost);
+    }
     dragGhost.style.left = (ev.clientX + 10) + 'px';
     dragGhost.style.top = (ev.clientY - 15) + 'px';
 
     // Check if over staff
     var overStaff = getStaffAtPoint(ev.clientX, ev.clientY);
     if (overStaff) {
-      // Snap Y to nearest staff position
-      var snappedPos = yToStaffPosition(overStaff.localY, overStaff.geo);
-      var snappedY = overStaff.geo.y0 + (8 - snappedPos) * overStaff.geo.halfSpacing;
       // Show pitch label
       if (tool !== 'bar' && tool !== 'bar-open' && tool !== 'bar-close' && tool !== 'rest') {
+        var snappedPos = yToStaffPosition(overStaff.localY, overStaff.geo);
         var pp = staffPositionToPitch(snappedPos);
         if (pitchLabel) {
           pitchLabel.textContent = pitchToDisplayName(pp.pitch, pp.octave);
@@ -3409,16 +3528,20 @@ function startPaletteDrag(e, btn, tool) {
     btn.removeEventListener('pointerup', onUp);
     btn.removeEventListener('pointercancel', onUp);
     try { btn.releasePointerCapture(ev.pointerId); } catch(ex) {}
-    isDragging = false;
     if (dragGhost) { document.body.removeChild(dragGhost); dragGhost = null; }
     if (pitchLabel) pitchLabel.style.display = 'none';
     removeInsertionMarker();
 
-    // Check if dropped on staff
-    var overStaff = getStaffAtPoint(ev.clientX, ev.clientY);
-    if (overStaff) {
-      placeElementOnStaff(tool, overStaff, ev.clientX);
+    // Only place element if drag actually started (moved enough)
+    if (dragStarted) {
+      var overStaff = getStaffAtPoint(ev.clientX, ev.clientY);
+      if (overStaff) {
+        placeElementOnStaff(tool, overStaff, ev.clientX);
+      }
     }
+    // Keep isDragging true briefly to suppress abcjs clickListener
+    // and setupStaffClick handler from also firing
+    setTimeout(function() { isDragging = false; }, 100);
   }
 
   btn.addEventListener('pointermove', onMove);
@@ -3432,9 +3555,14 @@ function setupStaffClick() {
   // dynamically created per-part SVGs
   var preview = document.getElementById('abcjs-preview');
   if (!preview) return;
+  // Track shift state on pointerdown for reliable shift-click detection
+  preview.addEventListener('pointerdown', function(e) {
+    lastPointerShift = e.shiftKey;
+  });
   preview.addEventListener('pointerup', function(e) {
     if (veMode !== 'visual') return;
     if (isDragging) return;
+    lastPointerShift = e.shiftKey;
     if (!currentTool) return;
     if (['whole','half','quarter','eighth','sixteenth','rest','bar','bar-open','bar-close'].indexOf(currentTool) < 0) return;
 
@@ -4011,16 +4139,12 @@ def _build_notes_section(obj, tune, meter_options):
     ], hclass='ve-tool-group'),
     # Tie / Slur
     CDiv([
-      '<button type="button" class="ve-tool-btn" data-tool="tie" title="Tie selected notes">'
+      '<button type="button" class="ve-tool-btn" data-tool="slur" title="Slur: phrasing arc across selected notes">'
       '<svg viewBox="0 0 24 16" width="20" height="14"><path d="M2,4 Q12,16 22,4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>'
       '</button>',
-      '<button type="button" class="ve-tool-btn" data-tool="slur" title="Slur selected notes">'
-      '<svg viewBox="0 0 24 16" width="20" height="14"><path d="M2,4 Q12,14 22,4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/></svg>'
+      '<button type="button" class="ve-tool-btn" data-tool="grace" title="Grace note: toggle selected note as grace note (ornament)">'
+      '<svg viewBox="0 0 16 24" width="12" height="18"><ellipse cx="6" cy="17" rx="4" ry="3" fill="currentColor" transform="rotate(-15,6,17)"/><line x1="10" y1="16" x2="10" y2="4" stroke="currentColor" stroke-width="1"/><line x1="2" y1="20" x2="12" y2="8" stroke="currentColor" stroke-width="1"/></svg>'
       '</button>',
-    ], hclass='ve-tool-group'),
-    # Delete
-    CDiv([
-      '<button type="button" class="ve-tool-btn ve-tool-del" data-tool="delete" title="Delete selected">Del</button>',
     ], hclass='ve-tool-group'),
   ], hclass='ve-toolbar', id='ve-toolbar')
 
@@ -5695,13 +5819,19 @@ pointer-events:none;
 .ve-selected .abcjs-note,
 .ve-selected .abcjs-rest,
 .ve-selected .abcjs-bar {
-fill:#cc6600 !important;
-stroke:#cc6600 !important;
+fill:#cc3333 !important;
+stroke:#cc3333 !important;
 }
-.abcjs-note.ve-note-highlight,
-.abcjs-rest.ve-note-highlight {
-fill:#cc6600 !important;
-stroke:#cc6600 !important;
+.ve-note-highlight,
+.ve-note-highlight * {
+fill:#cc3333 !important;
+stroke:#cc3333 !important;
+stroke-width:1.5 !important;
+}
+.ve-note-highlight path[class*="abcjs-tie"],
+.ve-note-highlight path[class*="abcjs-slur"] {
+fill:none !important;
+stroke:#cc3333 !important;
 }
 
 /* Visual Editor - Property Panel */
