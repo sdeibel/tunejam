@@ -537,6 +537,8 @@ M:%(meter)s
     def MakeNotesPNGFile(self, density=600):
 
         eps_file = self.MakeNotesEPSFile()
+        if eps_file is None:
+            return None
         png_file, up_to_date = self._GetCacheFile('notes.png')
         if up_to_date:
             return png_file
@@ -544,11 +546,15 @@ M:%(meter)s
         cmd = 'gs -dBATCH -dNOPAUSE -q -sDEVICE=pngmono -r%i -dEPSCrop -sOutputFile=%s %s' % (density, png_file, eps_file)
         os.system(cmd)
 
+        if not os.path.exists(png_file):
+            return None
         return png_file
 
     def MakeSheetMusicPNGFile(self, density=600):
 
         eps_file = self.MakeSheetMusicEPSFile()
+        if eps_file is None:
+            return None
         png_file, up_to_date = self._GetCacheFile('sheet.png')
         if up_to_date:
             return png_file
@@ -556,6 +562,8 @@ M:%(meter)s
         cmd = 'gs -dBATCH -dNOPAUSE -q -sDEVICE=pngmono -r%i -dEPSCrop -sOutputFile=%s %s' % (density, png_file, eps_file)
         os.system(cmd)
 
+        if not os.path.exists(png_file):
+            return None
         return png_file
 
     def MakeSheetMusicPDFFile(self):

@@ -25,7 +25,7 @@ else:
 import utils
 
 from datetime import timedelta
-from flask import Flask, Response, request, send_file, make_response, redirect, session, jsonify
+from flask import Flask, Response, request, send_file, make_response, redirect, session, jsonify, abort
 app = Flask(__name__)
 app.secret_key = 'TunejamIsAtHubbardHallEachTuesday'
 app.config['SESSION_TYPE'] = 'filesystem'
@@ -1928,7 +1928,7 @@ function updateChordPreview() {
 var abcDebounce;
 function renderAbcPreview() {
   clearTimeout(abcDebounce);
-  abcDebounce = setTimeout(doRenderAbc, 300);
+  abcDebounce = setTimeout(function() { doRenderAbc(); }, 300);
 }
 function doRenderAbc() {
   var textarea = document.getElementById('raw-notes-textarea');
@@ -2613,30 +2613,49 @@ function extractStaffGeometry(svgContainer) {
   }
 }
 
-// --- Element Position Mapping ---
-function buildElementPositionMap(tuneObj) {
-  elementPositions = [];
-  if (!tuneObj || !tuneObj[0]) return;
+// --- Per-Part Rendering Data ---
+// Each entry: { container, svg, tuneObj, geo, elementPositions, partIdx }
+var partRenderings = [];
+
+function buildElementPositionMap(tuneObj, svgEl) {
+  var positions = [];
+  if (!tuneObj || !tuneObj[0]) return positions;
   try {
     var selectables = tuneObj[0].getSelectableArray();
-    if (!selectables) return;
+    if (!selectables) return positions;
     for (var i = 0; i < selectables.length; i++) {
       var sel = selectables[i];
       if (!sel || sel.absEl === undefined) continue;
       var absEl = sel.absEl;
       if (!absEl) continue;
-      elementPositions.push({
-        x: absEl.x || 0,
-        w: absEl.w || 10,
-        centerX: (absEl.x || 0) + (absEl.w || 10) / 2,
-        staffIdx: absEl.staff || 0,
+      // Use the rendered SVG element's bounding box for positions in viewBox
+      // coords, which matches what clientToSvgCoords returns for clicks.
+      // absEl.x is in abcjs's internal layout coords which may differ.
+      var x = absEl.x || 0;
+      var w = absEl.w || 10;
+      if (svgEl && absEl.elemset && absEl.elemset.length > 0) {
+        try {
+          var svgElem = absEl.elemset[0];
+          var bbox = svgElem.getBBox();
+          // Convert bbox position to viewBox coords (same space as click coords)
+          var rootPt = localToSvgRoot(svgEl, svgElem, bbox.x, bbox.y);
+          var rootPt2 = localToSvgRoot(svgEl, svgElem, bbox.x + bbox.width, bbox.y);
+          // bbox-based position used
+          x = rootPt.x;
+          w = rootPt2.x - rootPt.x;
+          if (w < 1) w = 10;
+        } catch(ex) {}
+      }
+      positions.push({
+        x: x,
+        w: w,
+        centerX: x + w / 2,
         charStart: sel.startChar || 0,
         charEnd: sel.endChar || 0
       });
     }
-  } catch(e) {
-    // getSelectableArray may not be available in all abcjs versions
-  }
+  } catch(e) {}
+  return positions;
 }
 
 // --- Y to Pitch Conversion ---
@@ -2691,19 +2710,29 @@ function pitchToDisplayName(pitch, octave) {
 
 // --- X to Insertion Index ---
 function xToInsertionIndex(dropX, partIdx) {
-  // Find insertion point in the element positions for this staff system
-  var partElems = [];
-  for (var i = 0; i < elementPositions.length; i++) {
-    if (elementPositions[i].staffIdx === partIdx) {
-      partElems.push(elementPositions[i]);
-    }
+  // Use per-part element positions (from abcjs selectables, which
+  // exclude bar lines) to find where to insert by X coordinate,
+  // then convert that selectable index to a model element index
+  // (which includes bar lines).
+  var positions = (partIdx < partRenderings.length) ? partRenderings[partIdx].elementPositions : [];
+  if (positions.length === 0) return 0;
+  var sorted = positions.slice().sort(function(a, b) { return a.centerX - b.centerX; });
+  // Find position among selectables
+  var posIdx = sorted.length;
+  for (var i = 0; i < sorted.length; i++) {
+    if (dropX < sorted[i].centerX) { posIdx = i; break; }
   }
-  if (partElems.length === 0) return 0;
-  partElems.sort(function(a, b) { return a.centerX - b.centerX; });
-  for (var i = 0; i < partElems.length; i++) {
-    if (dropX < partElems[i].centerX) return i;
+  // Convert selectable index to model index, skipping bar elements
+  // (bars are in the model but not in abcjs selectables)
+  var part = notationModel.parts[partIdx];
+  if (!part) return posIdx;
+  var selectableCount = 0;
+  for (var j = 0; j < part.elements.length; j++) {
+    if (part.elements[j].type === 'bar') continue;
+    if (selectableCount === posIdx) return j;
+    selectableCount++;
   }
-  return partElems.length;
+  return part.elements.length;
 }
 
 // --- Duration Mapping ---
@@ -2753,9 +2782,8 @@ function veDoRenderAbc() {
   var raw = textarea.value.trim();
   if (!raw) {
     previewEl.innerHTML = '<div style="color:#666; font-style:italic; padding:20px">Enter ABC notation or use the visual editor above</div>';
-    staffGeometry = [];
-    elementPositions = [];
-    removePartHeaders();
+    partRenderings = [];
+    updatePartHeaders();
     return;
   }
 
@@ -2765,48 +2793,102 @@ function veDoRenderAbc() {
   var unitField = document.querySelector('input[name="unit"]');
   var unit = unitField ? unitField.value : '1/8';
 
-  var lines = raw.split('\\n');
-  var abc = 'X:1\\nK:' + key + '\\nL:' + unit + '\\nM:' + meter + '\\n';
-  for (var i = 0; i < lines.length; i++) {
-    var line = lines[i];
-    if (line.length > 1 && line[1] === ':') {
-      abc += line + '\\n';
-    } else {
-      abc += 'M:' + meter + '\\n' + line + '\\n';
+  if (veMode !== 'visual') {
+    // ABC text mode: render all parts into one SVG as before
+    var lines = raw.split('\\n');
+    var abc = 'X:1\\nK:' + key + '\\nL:' + unit + '\\nM:' + meter + '\\n';
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (line.length > 1 && line[1] === ':') {
+        abc += line + '\\n';
+      } else {
+        abc += 'M:' + meter + '\\n' + line + '\\n';
+      }
     }
+    ABCJS.renderAbc("abcjs-preview", abc, {
+      responsive: "resize", staffwidth: 500, add_classes: true
+    });
+    partRenderings = [];
+    updatePartHeaders();
+    return;
   }
 
-  var renderOpts = {
-    responsive: "resize",
-    staffwidth: 500,
-    add_classes: true
-  };
+  // Visual mode: render each part into its own container
+  var partLabels = 'ABCDEFGHIJ';
+  previewEl.innerHTML = '';
+  partRenderings = [];
 
-  // In visual mode, enable click listener and dragging
-  if (veMode === 'visual') {
-    renderOpts.clickListener = veClickListener;
-    renderOpts.dragging = true;
-    renderOpts.dragColor = '#cc6600';
+  for (var p = 0; p < notationModel.parts.length; p++) {
+    var part = notationModel.parts[p];
+    var label = part.label || (p < partLabels.length ? partLabels[p] : '' + p);
+
+    // Create part container with label
+    var partContainer = document.createElement('div');
+    partContainer.className = 've-part-container';
+    partContainer.setAttribute('data-part-idx', '' + p);
+
+    var partLabel = document.createElement('div');
+    partLabel.className = 've-part-label';
+    partLabel.textContent = 'Part ' + label;
+    partContainer.appendChild(partLabel);
+
+    var renderTarget = document.createElement('div');
+    renderTarget.className = 've-part-render';
+    renderTarget.id = 've-part-render-' + p;
+    partContainer.appendChild(renderTarget);
+
+    previewEl.appendChild(partContainer);
+
+    // Build ABC for this single part
+    var partAbc = modelToAbcPart(part);
+    var abc = 'X:1\\nK:' + key + '\\nL:' + unit + '\\nM:' + meter + '\\n' + partAbc + '\\n';
+
+    var renderOpts = {
+      responsive: "resize",
+      staffwidth: 500,
+      add_classes: true,
+      clickListener: (function(partIdx) {
+        return function(abcElem, tuneNumber, classes, analysis, drag, mouseEvent) {
+          veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEvent, partIdx);
+        };
+      })(p),
+      dragging: true,
+      dragColor: '#cc6600'
+    };
+
+    var tuneObj = ABCJS.renderAbc('ve-part-render-' + p, abc, renderOpts);
+
+    partRenderings.push({
+      container: partContainer,
+      renderTarget: renderTarget,
+      tuneObj: tuneObj,
+      geo: null,
+      elementPositions: [],
+      partIdx: p
+    });
   }
 
-  lastTuneObj = ABCJS.renderAbc("abcjs-preview", abc, renderOpts);
-
-  // Post-render: extract geometry
+  // Post-render: extract geometry for each part
   setTimeout(function() {
-    extractStaffGeometry(previewEl);
-    buildElementPositionMap(lastTuneObj);
-    if (veMode === 'visual') {
-      updatePartHeaders();
-      highlightSelected();
-    } else {
-      removePartHeaders();
+    for (var i = 0; i < partRenderings.length; i++) {
+      var pr = partRenderings[i];
+      // Extract single staff geometry for this part
+      staffGeometry = [];
+      extractStaffGeometry(pr.renderTarget);
+      pr.geo = staffGeometry.length > 0 ? staffGeometry[0] : null;
+      var partSvg = pr.renderTarget.querySelector('svg');
+      pr.elementPositions = buildElementPositionMap(pr.tuneObj, partSvg);
     }
+    updatePartHeaders();
+    highlightSelected();
   }, 50);
 }
 
 // --- Click Listener (abcjs callback) ---
-function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEvent) {
+// partIdx is passed via closure from per-part render options
+function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEvent, partIdx) {
   if (veMode !== 'visual') return;
+  if (partIdx === undefined) partIdx = 0;
 
   // Handle drag pitch changes (abcjs built-in dragging)
   if (drag && drag.step !== 0 && selectedElements.length > 0) {
@@ -2828,7 +2910,7 @@ function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEven
 
   // Handle accidental tool click on existing note
   if (currentTool === 'sharp' || currentTool === 'flat' || currentTool === 'natural') {
-    var mapped = mapAbcElemToModel(abcElem);
+    var mapped = mapAbcElemToModel(abcElem, partIdx);
     if (mapped && mapped.partIdx >= 0) {
       var tgtElem = notationModel.parts[mapped.partIdx].elements[mapped.elemIdx];
       if (tgtElem.type === 'note') {
@@ -2874,7 +2956,7 @@ function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEven
   if (!currentTool || currentTool === 'tie' || currentTool === 'slur' ||
       currentTool === 'sharp' || currentTool === 'flat' || currentTool === 'natural' ||
       currentTool === 'delete') {
-    var mapped = mapAbcElemToModel(abcElem);
+    var mapped = mapAbcElemToModel(abcElem, partIdx);
     if (mapped && mapped.partIdx >= 0) {
       if (mouseEvent && mouseEvent.shiftKey) {
         // Add to selection
@@ -2902,58 +2984,27 @@ function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEven
 }
 
 // --- Map abcjs element to model ---
-function mapAbcElemToModel(abcElem) {
+function mapAbcElemToModel(abcElem, partIdx) {
   if (!abcElem || abcElem.startChar === undefined) return null;
-  // Reconstruct the full ABC string to find which part/element the char offset maps to
-  var textarea = document.getElementById('raw-notes-textarea');
-  if (!textarea) return null;
-  var fullAbc = textarea.value;
+  if (partIdx === undefined) partIdx = 0;
+  if (partIdx >= notationModel.parts.length) return null;
+
   var charOffset = abcElem.startChar;
 
-  // The rendered ABC has headers prepended. We need to figure out the offset
-  // into the raw text. Build the same header string to compute header length.
+  // Per-part ABC has header: 'X:1\\nK:key\\nL:unit\\nM:meter\\n' then the notes
   var key = document.getElementById('field-key').value || 'C';
   var meterSel = document.getElementById('field-meter');
   var meter = meterSel ? meterSel.value : '4/4';
   var unitField = document.querySelector('input[name="unit"]');
   var unit = unitField ? unitField.value : '1/8';
-
-  var lines = fullAbc.split('\\n');
   var headerLen = ('X:1\\nK:' + key + '\\nL:' + unit + '\\nM:' + meter + '\\n').length;
 
-  // Calculate offset into raw lines
-  var runningOffset = headerLen;
-  for (var li = 0; li < lines.length; li++) {
-    var line = lines[li];
-    var linePrefix = '';
-    if (line.length > 1 && line[1] === ':') {
-      linePrefix = line + '\\n';
-    } else {
-      linePrefix = 'M:' + meter + '\\n' + line + '\\n';
-    }
-    var lineStart = runningOffset;
-    var lineEnd = runningOffset + linePrefix.length;
-    if (charOffset >= lineStart && charOffset < lineEnd) {
-      // This click is in this line (which maps to part li)
-      var partIdx = li;
-      // Rough mapping: count through model elements to find the one at this char offset
-      if (partIdx < notationModel.parts.length) {
-        var inLineOffset = charOffset - lineStart;
-        // The line has 'M:meter\\n' prefix followed by the actual note content
-        var meterPrefixLen = ('M:' + meter + '\\n').length;
-        if (!(line.length > 1 && line[1] === ':')) {
-          inLineOffset -= meterPrefixLen;
-        }
-        if (inLineOffset < 0) inLineOffset = 0;
-        // Walk through the ABC text of this part to find which element
-        var partAbc = modelToAbcPart(notationModel.parts[partIdx]);
-        var elemIdx = charOffsetToElemIdx(partAbc, inLineOffset, notationModel.parts[partIdx].elements);
-        return { partIdx: partIdx, elemIdx: elemIdx };
-      }
-    }
-    runningOffset = lineEnd;
-  }
-  return null;
+  var inPartOffset = charOffset - headerLen;
+  if (inPartOffset < 0) inPartOffset = 0;
+
+  var partAbc = modelToAbcPart(notationModel.parts[partIdx]);
+  var elemIdx = charOffsetToElemIdx(partAbc, inPartOffset, notationModel.parts[partIdx].elements);
+  return { partIdx: partIdx, elemIdx: elemIdx };
 }
 
 function modelToAbcPart(part) {
@@ -3023,19 +3074,10 @@ function elementAbcLength(el) {
 
 // --- Selection Highlighting ---
 function highlightSelected() {
-  // Remove old highlights
+  // Remove old highlights from all part SVGs
   var old = document.querySelectorAll('.ve-note-highlight');
   for (var i = 0; i < old.length; i++) old[i].classList.remove('ve-note-highlight');
-
-  if (selectedElements.length === 0) return;
-
-  var svg = document.querySelector('#abcjs-preview svg');
-  if (!svg) return;
-
-  // Use abcjs note-level classes to highlight
-  // abcjs adds classes like abcjs-n0, abcjs-n1 etc for note indices
-  // Better approach: use the selectable array
-  // For now, we'll use the start/end char approach
+  // Stub: selection highlighting via abcjs classes is not yet implemented
 }
 
 // --- Property Panel ---
@@ -3182,45 +3224,40 @@ function veDeleteSelected() {
   syncModelToTextarea();
 }
 
-// --- Part Headers ---
+// --- Parts Bar ---
+// Rendered as a normal-flow HTML bar above the preview, avoiding all
+// CSS/SVG overlay positioning issues.
 function updatePartHeaders() {
   removePartHeaders();
-  var container = document.getElementById('ve-preview-container');
-  if (!container || staffGeometry.length === 0) return;
-  var svgEl = document.querySelector('#abcjs-preview svg');
-  if (!svgEl) return;
-  var svgRect = svgEl.getBoundingClientRect();
-  var containerRect = container.getBoundingClientRect();
+  var bar = document.getElementById('ve-parts-bar');
+  if (!bar) return;
+  if (veMode !== 'visual') { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML = '';
   var partLabels = 'ABCDEFGHIJ';
 
-  // Use getScreenCTM to convert SVG root coords to screen coords
-  var screenCTM = svgEl.getScreenCTM();
-
-  for (var s = 0; s < staffGeometry.length && s < notationModel.parts.length; s++) {
-    var geo = staffGeometry[s];
-    var div = document.createElement('div');
-    div.className = 've-part-header';
+  for (var s = 0; s < notationModel.parts.length; s++) {
     var label = notationModel.parts[s].label || (s < partLabels.length ? partLabels[s] : '' + s);
-    // Convert SVG-root Y coordinate to screen Y, then to container-relative offset
-    var pt = svgEl.createSVGPoint();
-    pt.x = 0;
-    pt.y = geo.y0;
-    var screenPt = pt.matrixTransform(screenCTM);
-    var topOffset = (screenPt.y - containerRect.top) - 18;
-    div.style.top = topOffset + 'px';
-    div.innerHTML = 'Part ' + label +
-      ' <button type="button" onclick="addNotePart(' + s + ')" title="Add part before">+Before</button>' +
-      ' <button type="button" onclick="addNotePart(' + (s+1) + ')" title="Add part after">+After</button>' +
-      ' <button type="button" class="ve-part-remove" onclick="removeNotePart(' + s + ')" title="Remove part">X</button>';
-    container.appendChild(div);
+    var partDiv = document.createElement('span');
+    partDiv.className = 've-parts-bar-item';
+    partDiv.innerHTML = '<strong>Part ' + label + '</strong>';
+    if (notationModel.parts.length > 1) {
+      partDiv.innerHTML += ' <button type="button" class="ve-part-remove" onclick="removeNotePart(' + s + ')" title="Remove part ' + label + '">&times;</button>';
+    }
+    bar.appendChild(partDiv);
   }
+  // Add Part button
+  var addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 've-parts-bar-add';
+  addBtn.textContent = '+ Add Part';
+  addBtn.onclick = function() { addNotePart(notationModel.parts.length); };
+  bar.appendChild(addBtn);
 }
 
 function removePartHeaders() {
-  var headers = document.querySelectorAll('.ve-part-header');
-  for (var i = 0; i < headers.length; i++) {
-    headers[i].parentNode.removeChild(headers[i]);
-  }
+  var bar = document.getElementById('ve-parts-bar');
+  if (bar) { bar.innerHTML = ''; bar.style.display = 'none'; }
 }
 
 function addNotePart(beforeIndex) {
@@ -3391,13 +3428,14 @@ function startPaletteDrag(e, btn, tool) {
 
 // --- Staff Click-to-Place ---
 function setupStaffClick() {
+  // Use event delegation on the preview container so it works with
+  // dynamically created per-part SVGs
   var preview = document.getElementById('abcjs-preview');
   if (!preview) return;
   preview.addEventListener('pointerup', function(e) {
     if (veMode !== 'visual') return;
     if (isDragging) return;
     if (!currentTool) return;
-    // Only handle note/rest/bar tools for click-to-place
     if (['whole','half','quarter','eighth','sixteenth','rest','bar','bar-open','bar-close'].indexOf(currentTool) < 0) return;
 
     var overStaff = getStaffAtPoint(e.clientX, e.clientY);
@@ -3409,19 +3447,13 @@ function setupStaffClick() {
 
 // --- Place Element on Staff ---
 function placeElementOnStaff(tool, overStaff, clientX) {
-  var partIdx = overStaff.systemIdx;
-  // Ensure part exists
-  while (notationModel.parts.length <= partIdx) {
-    var partLabels = 'ABCDEFGHIJ';
-    var label = notationModel.parts.length < partLabels.length ? partLabels[notationModel.parts.length] : '' + notationModel.parts.length;
-    notationModel.parts.push({ label: label, elements: [] });
-  }
+  var partIdx = overStaff.partIdx;
+  if (partIdx >= notationModel.parts.length) return;
   var part = notationModel.parts[partIdx];
 
-  // Use SVG-root X coordinate from getStaffAtPoint, or convert now
   var localX = overStaff.localX;
   if (localX === undefined) {
-    var svg = document.querySelector('#abcjs-preview svg');
+    var svg = overStaff.svg || document.querySelector('#abcjs-preview svg');
     if (svg) {
       var svgPt = clientToSvgCoords(svg, clientX, 0);
       localX = svgPt.x;
@@ -3468,57 +3500,35 @@ function placeElementOnStaff(tool, overStaff, clientX) {
 }
 
 // --- Get Staff at Point ---
+// Searches all per-part SVGs to find which part the point is in
 function getStaffAtPoint(clientX, clientY) {
-  var svg = document.querySelector('#abcjs-preview svg');
-  if (!svg) return null;
-  var svgRect = svg.getBoundingClientRect();
-  if (clientX < svgRect.left || clientX > svgRect.right ||
-      clientY < svgRect.top || clientY > svgRect.bottom) return null;
+  for (var i = 0; i < partRenderings.length; i++) {
+    var pr = partRenderings[i];
+    if (!pr.geo) continue;
+    var svg = pr.renderTarget.querySelector('svg');
+    if (!svg) continue;
+    var svgRect = svg.getBoundingClientRect();
+    if (clientX < svgRect.left || clientX > svgRect.right ||
+        clientY < svgRect.top || clientY > svgRect.bottom) continue;
 
-  // Convert client/screen coordinates to SVG root coordinates
-  var svgPt = clientToSvgCoords(svg, clientX, clientY);
-  var localX = svgPt.x;
-  var localY = svgPt.y;
-
-  // Find closest staff system
-  var bestIdx = -1;
-  var bestDist = Infinity;
-  for (var i = 0; i < staffGeometry.length; i++) {
-    var geo = staffGeometry[i];
-    var centerY = (geo.y0 + geo.y4) / 2;
-    var dist = Math.abs(localY - centerY);
-    // Allow some range above/below
-    if (localY >= geo.topY && localY <= geo.bottomY && dist < bestDist) {
-      bestDist = dist;
-      bestIdx = i;
-    }
+    var svgPt = clientToSvgCoords(svg, clientX, clientY);
+    return {
+      partIdx: pr.partIdx,
+      geo: pr.geo,
+      svg: svg,
+      localX: svgPt.x,
+      localY: svgPt.y,
+      clientX: clientX,
+      clientY: clientY
+    };
   }
-  if (bestIdx < 0) {
-    // Try wider tolerance
-    for (var i = 0; i < staffGeometry.length; i++) {
-      var geo = staffGeometry[i];
-      var dist = Math.abs(localY - (geo.y0 + geo.y4) / 2);
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestIdx = i;
-      }
-    }
-  }
-  if (bestIdx < 0) return null;
-  return {
-    systemIdx: bestIdx,
-    geo: staffGeometry[bestIdx],
-    localX: localX,
-    localY: localY,
-    clientX: clientX,
-    clientY: clientY
-  };
+  return null;
 }
 
 // --- Insertion Marker ---
 function showInsertionMarker(overStaff, clientX) {
   removeInsertionMarker();
-  var svg = document.querySelector('#abcjs-preview svg');
+  var svg = overStaff.svg || document.querySelector('#abcjs-preview svg');
   if (!svg) return;
   var svgPt = clientToSvgCoords(svg, clientX, 0);
   var localX = svgPt.x;
@@ -4035,8 +4045,7 @@ def _build_notes_section(obj, tune, meter_options):
   # Preview pane with overlay container for staff interaction
   preview_pane = CDiv([
     CDiv('', id='abcjs-preview', hclass='ve-staff-area'),
-  ], hclass='notes-preview-pane ve-preview-container', id='ve-preview-container',
-     style='position:relative')
+  ], hclass='notes-preview-pane ve-preview-container', id='ve-preview-container')
 
   # Property panel (hidden, shown when a note is selected)
   property_panel = CDiv([
@@ -4046,10 +4055,14 @@ def _build_notes_section(obj, tune, meter_options):
   # Pitch label (follows ghost during drag)
   pitch_label = CDiv('', id='ve-pitch-label', hclass='ve-pitch-label', style='display:none')
 
+  # Parts management bar (normal document flow, above preview)
+  parts_bar = CDiv('', id='ve-parts-bar', hclass='ve-parts-bar', style='display:none')
+
   return [
     mode_toggle,
     toolbar,
     meter_unit_row,
+    parts_bar,
     CDiv([
       textarea_pane,
       preview_pane,
@@ -4315,12 +4328,16 @@ def check_url():
 def png(tune):
   tune = utils.CTune(tune)
   png_file = tune.MakeNotesPNGFile(density=600)
+  if png_file is None or not os.path.exists(png_file):
+    abort(404)
   return send_file(png_file, mimetype='image/png')
 
 @app.route('/sheet/<tune>')
 def sheet(tune):
   tune = utils.CTune(tune)
   png_file = tune.MakeSheetMusicPNGFile(density=600)
+  if png_file is None or not os.path.exists(png_file):
+    abort(404)
   return send_file(png_file, mimetype='image/png')
 
 @app.route('/sheet/view/<tunes>')
@@ -5610,15 +5627,34 @@ font-weight:bold;
 }
 
 /* Visual Editor - Preview Container & Staff */
-.edit-form .ve-preview-container {
-position:relative;
-min-height:120px;
-}
 .edit-form .ve-staff-area {
 cursor:crosshair;
 }
+.ve-part-container {
+margin-bottom:4px;
+}
+.ve-part-label {
+font-size:12px;
+font-weight:bold;
+color:#3a6a3a;
+padding:2px 6px;
+background:#f0f4f0;
+border:1px solid #ddd;
+border-bottom:none;
+border-radius:3px 3px 0 0;
+display:inline-block;
+}
+.ve-part-render {
+border:1px solid #ddd;
+border-radius:0 3px 3px 3px;
+}
+.ve-part-render svg {
+max-width:100%;
+display:block;
+}
 .edit-form .ve-staff-area svg {
 max-width:100%;
+display:block;
 }
 
 /* Visual Editor - Ghost element during drag */
@@ -5714,36 +5750,53 @@ color:white;
 border-color:#1a3a1a;
 }
 
-/* Visual Editor - Part Headers */
-.ve-part-header {
-position:absolute;
-left:0;
-background:rgba(232,240,232,0.9);
-border:1px solid #ccc;
-border-radius:3px;
-padding:1px 6px;
-font-size:12px;
-font-weight:bold;
+/* Visual Editor - Parts Bar */
+.ve-parts-bar {
 display:flex;
 align-items:center;
-gap:4px;
-z-index:50;
+gap:8px;
+padding:4px 8px;
+background:#f0f4f0;
+border:1px solid #ccc;
+border-radius:3px;
+margin-bottom:4px;
+flex-wrap:wrap;
 }
-.ve-part-header button {
-font-size:10px;
-padding:0 4px;
+.ve-parts-bar-item {
+display:inline-flex;
+align-items:center;
+gap:3px;
+padding:2px 8px;
+background:white;
 border:1px solid #bbb;
-border-radius:2px;
-background:#f0f0f0;
+border-radius:3px;
+font-size:13px;
+}
+.ve-parts-bar-item .ve-part-remove {
+font-size:14px;
+font-weight:bold;
+padding:0 3px;
+border:none;
+background:none;
+color:#993333;
 cursor:pointer;
+line-height:1;
 }
-.ve-part-header button:hover {
-background:#ddd;
+.ve-parts-bar-item .ve-part-remove:hover {
+color:#cc0000;
 }
-.ve-part-header .ve-part-remove {
-background:#cc3333;
-color:white;
-border-color:#993333;
+.ve-parts-bar-add {
+font-size:12px;
+padding:2px 8px;
+border:1px solid #3a6a3a;
+border-radius:3px;
+background:#e8f0e8;
+color:#3a6a3a;
+cursor:pointer;
+font-weight:bold;
+}
+.ve-parts-bar-add:hover {
+background:#d0e0d0;
 }
 
 @media (max-width: 489px) {
