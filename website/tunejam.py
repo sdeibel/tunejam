@@ -2687,10 +2687,11 @@ function buildElementPositionMap(tuneObj, svgEl) {
 
 // Build a map from model element index to SVG element arrays for highlighting.
 // Uses char offset matching between model elements and abcjs selectables.
+// Also builds beam groups: arrays of {elemIndices, svgElems} for beam highlighting.
 function buildElemSvgMap(tuneObj, partIdx) {
-  var map = {};
-  if (!tuneObj || !tuneObj[0]) return map;
-  if (partIdx >= notationModel.parts.length) return map;
+  var result = {map: {}, beams: []};
+  if (!tuneObj || !tuneObj[0]) return result;
+  if (partIdx >= notationModel.parts.length) return result;
   var part = notationModel.parts[partIdx];
 
   // Compute the header length for this part's ABC
@@ -2709,9 +2710,12 @@ function buildElemSvgMap(tuneObj, partIdx) {
     pos += elementAbcLength(part.elements[e]);
   }
 
+  var map = result.map;
+  var beamRefs = [];  // [{ref, elemIndices}] - track unique beam objects
+
   try {
     var selectables = tuneObj[0].getSelectableArray();
-    if (!selectables) return map;
+    if (!selectables) return result;
     for (var j = 0; j < selectables.length; j++) {
       var sa = selectables[j];
       if (!sa || !sa.absEl || !sa.absEl.elemset) continue;
@@ -2719,6 +2723,7 @@ function buildElemSvgMap(tuneObj, partIdx) {
       var sc = (sa.absEl.abcelem && sa.absEl.abcelem.startChar !== undefined) ? sa.absEl.abcelem.startChar : undefined;
       if (sc === undefined) continue;
       // Find which model element this selectable belongs to
+      var matchedIdx = -1;
       for (var e = 0; e < elemCharStarts.length; e++) {
         var eStart = elemCharStarts[e];
         var eLen = elementAbcLength(part.elements[e]);
@@ -2727,12 +2732,41 @@ function buildElemSvgMap(tuneObj, partIdx) {
           for (var k = 0; k < sa.absEl.elemset.length; k++) {
             map[e].push(sa.absEl.elemset[k]);
           }
+          matchedIdx = e;
           break;
         }
       }
+      // Track beam groups
+      if (matchedIdx >= 0 && sa.absEl.beam) {
+        var beamRef = sa.absEl.beam;
+        var found = false;
+        for (var bi = 0; bi < beamRefs.length; bi++) {
+          if (beamRefs[bi].ref === beamRef) {
+            beamRefs[bi].elemIndices.push(matchedIdx);
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          beamRefs.push({ref: beamRef, elemIndices: [matchedIdx]});
+        }
+      }
+    }
+    // Extract beam X ranges for matching to SVG beam paths
+    for (var bi = 0; bi < beamRefs.length; bi++) {
+      var br = beamRefs[bi];
+      // Get X range from beam geometry (beam.beams[] has startX/endX)
+      var bdata = br.ref.beams;
+      if (bdata && bdata.length > 0) {
+        result.beams.push({
+          elemIndices: br.elemIndices,
+          startX: bdata[0].startX,
+          endX: bdata[0].endX
+        });
+      }
     }
   } catch(ex) {}
-  return map;
+  return result;
 }
 
 // --- Y to Pitch Conversion ---
@@ -2941,7 +2975,8 @@ function veDoRenderAbc() {
       tuneObj: tuneObj,
       geo: null,
       elementPositions: [],
-      elemSvgMap: {},  // model elemIdx -> array of SVG elements
+      elemSvgMap: {},   // model elemIdx -> array of SVG elements
+      beamGroups: [],   // [{elemIndices: [...], svgElems: [...]}]
       partIdx: p
     });
   }
@@ -2956,8 +2991,10 @@ function veDoRenderAbc() {
       pr.geo = staffGeometry.length > 0 ? staffGeometry[0] : null;
       var partSvg = pr.renderTarget.querySelector('svg');
       pr.elementPositions = buildElementPositionMap(pr.tuneObj, partSvg);
-      // Build model-index to SVG-elements map using char offsets
-      pr.elemSvgMap = buildElemSvgMap(pr.tuneObj, pr.partIdx);
+      // Build model-index to SVG-elements map and beam groups
+      var svgMapResult = buildElemSvgMap(pr.tuneObj, pr.partIdx);
+      pr.elemSvgMap = svgMapResult.map;
+      pr.beamGroups = svgMapResult.beams;
     }
     updatePartHeaders();
     highlightSelected();
@@ -3107,22 +3144,23 @@ function elementAbcLength(el) {
 
 // --- Selection Highlighting ---
 // Apply red highlight to an SVG element and all its children
-function veApplyHighlight(el) {
+// If colorOnly is true, change color but not stroke-width (for beams/ties)
+function veApplyHighlight(el, colorOnly) {
   el.setAttribute('data-ve-hl', '1');
-  var isTie = el.getAttribute && ((el.getAttribute('class') || '').indexOf('abcjs-tie') >= 0 ||
-              (el.getAttribute('class') || '').indexOf('abcjs-slur') >= 0);
-  if (isTie) {
+  var cls = (el.getAttribute && el.getAttribute('class')) || '';
+  var isTieOrSlur = cls.indexOf('abcjs-tie') >= 0 || cls.indexOf('abcjs-slur') >= 0;
+  if (isTieOrSlur) {
     el.style.setProperty('fill', 'none', 'important');
     el.style.setProperty('stroke', '#cc3333', 'important');
   } else {
     el.style.setProperty('fill', '#cc3333', 'important');
     el.style.setProperty('stroke', '#cc3333', 'important');
-    el.style.setProperty('stroke-width', '1.5', 'important');
+    if (!colorOnly) el.style.setProperty('stroke-width', '1.5', 'important');
   }
   var children = el.children || el.childNodes;
   if (children) {
     for (var c = 0; c < children.length; c++) {
-      if (children[c].nodeType === 1) veApplyHighlight(children[c]);
+      if (children[c].nodeType === 1) veApplyHighlight(children[c], colorOnly);
     }
   }
 }
@@ -3153,7 +3191,14 @@ function highlightSelected() {
     el.classList.remove('ve-note-highlight');
   }
 
-  // Use the pre-built elemSvgMap for fast, reliable highlighting
+  // Build a set of selected {partIdx, elemIdx} for fast lookup
+  var selSet = {};
+  for (var s = 0; s < selectedElements.length; s++) {
+    var sel = selectedElements[s];
+    selSet[sel.partIdx + ',' + sel.elemIdx] = true;
+  }
+
+  // Highlight selected notes
   for (var s = 0; s < selectedElements.length; s++) {
     var sel = selectedElements[s];
     if (sel.partIdx >= partRenderings.length) continue;
@@ -3164,6 +3209,47 @@ function highlightSelected() {
       for (var k = 0; k < svgElems.length; k++) {
         veApplyHighlight(svgElems[k]);
       }
+    }
+  }
+
+  // Highlight beams where ALL connected notes are selected (color only, no width change)
+  for (var p = 0; p < partRenderings.length; p++) {
+    var pr = partRenderings[p];
+    if (!pr || !pr.beamGroups || pr.beamGroups.length === 0) continue;
+    // Collect X ranges of beams whose notes are all selected
+    var beamXRanges = [];
+    for (var bi = 0; bi < pr.beamGroups.length; bi++) {
+      var bg = pr.beamGroups[bi];
+      var allSelected = true;
+      for (var ni = 0; ni < bg.elemIndices.length; ni++) {
+        if (!selSet[p + ',' + bg.elemIndices[ni]]) {
+          allSelected = false;
+          break;
+        }
+      }
+      if (allSelected && bg.startX !== undefined) {
+        beamXRanges.push({startX: bg.startX, endX: bg.endX});
+      }
+    }
+    if (beamXRanges.length === 0) continue;
+    // Find SVG beam paths and match by X range
+    var svg = pr.renderTarget.querySelector('svg');
+    if (!svg) continue;
+    var beamPaths = svg.querySelectorAll('.abcjs-beam-elem');
+    for (var bp = 0; bp < beamPaths.length; bp++) {
+      try {
+        var bbox = beamPaths[bp].getBBox();
+        var bx1 = bbox.x;
+        var bx2 = bbox.x + bbox.width;
+        for (var ri = 0; ri < beamXRanges.length; ri++) {
+          var r = beamXRanges[ri];
+          // Match if beam path overlaps the beam group's X range
+          if (bx1 >= r.startX - 5 && bx2 <= r.endX + 5) {
+            veApplyHighlight(beamPaths[bp], true);
+            break;
+          }
+        }
+      } catch(ex) {}
     }
   }
 }
