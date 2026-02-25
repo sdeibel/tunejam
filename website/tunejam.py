@@ -1500,7 +1500,7 @@ function updateMeterUnit() {
   if (bestType && tuneDefaults[bestType]) {
     var meterSel = document.getElementById('field-meter');
     if (meterSel) meterSel.value = tuneDefaults[bestType].meter;
-    var unitField = document.querySelector('input[name="unit"]');
+    var unitField = document.querySelector('select[name="unit"]');
     if (unitField) unitField.value = tuneDefaults[bestType].unit;
   }
   renderAbcPreview();
@@ -1945,7 +1945,7 @@ function doRenderAbc() {
   var key = document.getElementById('field-key').value || 'C';
   var meterSel = document.getElementById('field-meter');
   var meter = meterSel ? meterSel.value : '4/4';
-  var unitField = document.querySelector('input[name="unit"]');
+  var unitField = document.querySelector('select[name="unit"]');
   var unit = unitField ? unitField.value : '1/8';
 
   // Build ABC string with headers, replicating __NotesWithMeterOnEachLine()
@@ -1989,7 +1989,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   var meterSel = document.getElementById('field-meter');
   if (meterSel) meterSel.addEventListener('change', renderAbcPreview);
-  var unitField = document.querySelector('input[name="unit"]');
+  var unitField = document.querySelector('select[name="unit"]');
   if (unitField) unitField.addEventListener('input', renderAbcPreview);
 });
 
@@ -2663,10 +2663,11 @@ function buildElementPositionMap(tuneObj, svgEl) {
       if (svgEl && absEl.elemset && absEl.elemset.length > 0) {
         try {
           var svgElem = absEl.elemset[0];
-          var bbox = svgElem.getBBox();
-          // Convert bbox position to viewBox coords (same space as click coords)
-          var rootPt = localToSvgRoot(svgEl, svgElem, bbox.x, bbox.y);
-          var rootPt2 = localToSvgRoot(svgEl, svgElem, bbox.x + bbox.width, bbox.y);
+          // Use getBoundingClientRect -> clientToSvgCoords so element positions
+          // use the exact same transform path as click coordinates
+          var rect = svgElem.getBoundingClientRect();
+          var rootPt = clientToSvgCoords(svgEl, rect.left, rect.top);
+          var rootPt2 = clientToSvgCoords(svgEl, rect.right, rect.top);
           // bbox-based position used
           x = rootPt.x;
           w = rootPt2.x - rootPt.x;
@@ -2698,7 +2699,7 @@ function buildElemSvgMap(tuneObj, partIdx) {
   var key = document.getElementById('field-key').value || 'C';
   var meterSel = document.getElementById('field-meter');
   var meter = meterSel ? meterSel.value : '4/4';
-  var unitField = document.querySelector('input[name="unit"]');
+  var unitField = document.querySelector('select[name="unit"]');
   var unit = unitField ? unitField.value : '1/8';
   var headerLen = ('X:1\\nK:' + key + '\\nL:' + unit + '\\nM:' + meter + '\\n').length;
 
@@ -2766,6 +2767,31 @@ function buildElemSvgMap(tuneObj, partIdx) {
       }
     }
   } catch(ex) {}
+
+  // Map bar line SVG elements to model bar elements by position order.
+  // abcjs doesn't include bars in getSelectableArray(), so we scan the SVG directly.
+  try {
+    var renderTarget = document.getElementById('ve-part-render-' + partIdx);
+    if (renderTarget) {
+      var svg = renderTarget.querySelector('svg');
+      if (svg) {
+        var barSvgEls = svg.querySelectorAll('.abcjs-bar');
+        // Collect model indices of bar elements
+        var barModelIndices = [];
+        for (var bi = 0; bi < part.elements.length; bi++) {
+          if (part.elements[bi].type === 'bar') barModelIndices.push(bi);
+        }
+        // Match nth SVG bar to nth model bar
+        var limit = Math.min(barSvgEls.length, barModelIndices.length);
+        for (var bi = 0; bi < limit; bi++) {
+          var midx = barModelIndices[bi];
+          if (!map[midx]) map[midx] = [];
+          map[midx].push(barSvgEls[bi]);
+        }
+      }
+    }
+  } catch(ex) {}
+
   return result;
 }
 
@@ -2849,7 +2875,7 @@ function xToInsertionIndex(dropX, partIdx) {
 // --- Duration Mapping ---
 function toolToDuration(toolName) {
   // Map tool name to ABC duration suffix based on L: unit note
-  var unitField = document.querySelector('input[name="unit"]');
+  var unitField = document.querySelector('select[name="unit"]');
   var unit = unitField ? unitField.value.trim() : '1/8';
   // Parse unit as fraction
   var unitNum = 1, unitDen = 8;
@@ -2901,7 +2927,7 @@ function veDoRenderAbc() {
   var key = document.getElementById('field-key').value || 'C';
   var meterSel = document.getElementById('field-meter');
   var meter = meterSel ? meterSel.value : '4/4';
-  var unitField = document.querySelector('input[name="unit"]');
+  var unitField = document.querySelector('select[name="unit"]');
   var unit = unitField ? unitField.value : '1/8';
 
   if (veMode !== 'visual') {
@@ -2940,7 +2966,23 @@ function veDoRenderAbc() {
 
     var partLabel = document.createElement('div');
     partLabel.className = 've-part-label';
+    partLabel.setAttribute('data-part-idx', '' + p);
     partLabel.textContent = 'Part ' + label;
+    if (notationModel.parts.length > 1) {
+      var removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 've-part-label-remove';
+      removeBtn.innerHTML = '&times;';
+      removeBtn.title = 'Remove part ' + label;
+      removeBtn.setAttribute('data-part-idx', '' + p);
+      removeBtn.addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        var idx = parseInt(this.getAttribute('data-part-idx'));
+        removeNotePart(idx);
+      });
+      partLabel.appendChild(removeBtn);
+    }
+    setupPartLabelDrag(partLabel, p);
     partContainer.appendChild(partLabel);
 
     var renderTarget = document.createElement('div');
@@ -2981,6 +3023,16 @@ function veDoRenderAbc() {
     });
   }
 
+  // "+ Add Part" button below last part
+  var addPartBtn = document.createElement('button');
+  addPartBtn.type = 'button';
+  addPartBtn.className = 've-add-part-btn';
+  addPartBtn.textContent = '+ Add Part';
+  addPartBtn.addEventListener('click', function() {
+    addNotePart(notationModel.parts.length);
+  });
+  previewEl.appendChild(addPartBtn);
+
   // Post-render: extract geometry for each part
   setTimeout(function() {
     for (var i = 0; i < partRenderings.length; i++) {
@@ -2995,6 +3047,8 @@ function veDoRenderAbc() {
       var svgMapResult = buildElemSvgMap(pr.tuneObj, pr.partIdx);
       pr.elemSvgMap = svgMapResult.map;
       pr.beamGroups = svgMapResult.beams;
+      // Add wider hit areas to thin bar lines for easier clicking
+      if (partSvg) addBarHitAreas(partSvg);
     }
     updatePartHeaders();
     highlightSelected();
@@ -3007,6 +3061,41 @@ function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEven
   if (veMode !== 'visual') return;
   if (isDragging) return;  // Suppress during palette drag
   if (partIdx === undefined) partIdx = 0;
+
+  // Check if click was actually on a bar line — handle before abcjs note selection
+  if (mouseEvent) {
+    var barEl = findBarAncestor(mouseEvent.target);
+    if (barEl) {
+      if (!currentTool || currentTool === 'slur' || currentTool === 'grace' ||
+          currentTool === 'sharp' || currentTool === 'flat' || currentTool === 'natural') {
+        var barPartIdx = findPartForSvgElement(barEl);
+        if (barPartIdx < 0) barPartIdx = partIdx;
+        var modelIdx = findBarModelIndex(barPartIdx, barEl);
+        if (modelIdx >= 0) {
+          var isShift = lastPointerShift || mouseEvent.shiftKey;
+          if (isShift && selectedElements.length > 0) {
+            var anchor = selectedElements[0];
+            if (anchor.partIdx === barPartIdx) {
+              var lo = Math.min(anchor.elemIdx, modelIdx);
+              var hi = Math.max(anchor.elemIdx, modelIdx);
+              selectedElements = [];
+              for (var ri = lo; ri <= hi; ri++) {
+                selectedElements.push({partIdx: barPartIdx, elemIdx: ri});
+              }
+            } else {
+              selectedElements.push({partIdx: barPartIdx, elemIdx: modelIdx});
+            }
+          } else {
+            selectedElements = [{partIdx: barPartIdx, elemIdx: modelIdx}];
+          }
+          highlightSelected();
+          setTimeout(highlightSelected, 20);
+          showPropertyPanel(barPartIdx, modelIdx);
+          return;
+        }
+      }
+    }
+  }
 
   // Selection mode: click on a note to select it, shift-click to multi-select
   // Works when no note/rest/bar tool is active
@@ -3061,7 +3150,7 @@ function mapAbcElemToModel(abcElem, partIdx) {
   var key = document.getElementById('field-key').value || 'C';
   var meterSel = document.getElementById('field-meter');
   var meter = meterSel ? meterSel.value : '4/4';
-  var unitField = document.querySelector('input[name="unit"]');
+  var unitField = document.querySelector('select[name="unit"]');
   var unit = unitField ? unitField.value : '1/8';
   var headerLen = ('X:1\\nK:' + key + '\\nL:' + unit + '\\nM:' + meter + '\\n').length;
 
@@ -3146,8 +3235,10 @@ function elementAbcLength(el) {
 // Apply red highlight to an SVG element and all its children
 // If colorOnly is true, change color but not stroke-width (for beams/ties)
 function veApplyHighlight(el, colorOnly) {
-  el.setAttribute('data-ve-hl', '1');
   var cls = (el.getAttribute && el.getAttribute('class')) || '';
+  // Skip hit-area rects — they must stay invisible
+  if (cls.indexOf('ve-bar-hitarea') >= 0) return;
+  el.setAttribute('data-ve-hl', '1');
   var isTieOrSlur = cls.indexOf('abcjs-tie') >= 0 || cls.indexOf('abcjs-slur') >= 0;
   if (isTieOrSlur) {
     el.style.setProperty('fill', 'none', 'important');
@@ -3412,45 +3503,19 @@ function veDeleteSelected() {
 }
 
 // --- Parts Bar ---
-// Rendered as a normal-flow HTML bar above the preview, avoiding all
-// CSS/SVG overlay positioning issues.
+// Part controls are now inline on each part label (× button) and below parts (+ Add Part).
 function updatePartHeaders() {
-  removePartHeaders();
-  var bar = document.getElementById('ve-parts-bar');
-  if (!bar) return;
-  if (veMode !== 'visual') { bar.style.display = 'none'; return; }
-  bar.style.display = 'flex';
-  bar.innerHTML = '';
-  var partLabels = 'ABCDEFGHIJ';
-
-  for (var s = 0; s < notationModel.parts.length; s++) {
-    var label = notationModel.parts[s].label || (s < partLabels.length ? partLabels[s] : '' + s);
-    var partDiv = document.createElement('span');
-    partDiv.className = 've-parts-bar-item';
-    partDiv.innerHTML = '<strong>Part ' + label + '</strong>';
-    if (notationModel.parts.length > 1) {
-      partDiv.innerHTML += ' <button type="button" class="ve-part-remove" onclick="removeNotePart(' + s + ')" title="Remove part ' + label + '">&times;</button>';
-    }
-    bar.appendChild(partDiv);
-  }
-  // Add Part button
-  var addBtn = document.createElement('button');
-  addBtn.type = 'button';
-  addBtn.className = 've-parts-bar-add';
-  addBtn.textContent = '+ Add Part';
-  addBtn.onclick = function() { addNotePart(notationModel.parts.length); };
-  bar.appendChild(addBtn);
+  // No-op: inline part controls are rendered in veDoRenderAbc()
 }
 
 function removePartHeaders() {
-  var bar = document.getElementById('ve-parts-bar');
-  if (bar) { bar.innerHTML = ''; bar.style.display = 'none'; }
+  // No-op: inline part controls are rendered in veDoRenderAbc()
 }
 
 function addNotePart(beforeIndex) {
   pushUndo();
   var partLabels = 'ABCDEFGHIJ';
-  var newPart = { label: '', elements: [] };
+  var newPart = { label: '', elements: [{type: 'bar', subtype: '|'}] };
   if (beforeIndex >= notationModel.parts.length) {
     notationModel.parts.push(newPart);
   } else {
@@ -3479,6 +3544,137 @@ function removeNotePart(index) {
   selectedElements = [];
   hidePropertyPanel();
   syncModelToTextarea();
+}
+
+// --- Part Drag Reorder ---
+var partDragState = {dragging: false, fromIdx: -1, startY: 0, dropIndicator: null};
+
+function reorderPart(fromIdx, toIdx) {
+  if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0) return;
+  if (fromIdx >= notationModel.parts.length) return;
+  pushUndo();
+  var part = notationModel.parts.splice(fromIdx, 1)[0];
+  notationModel.parts.splice(toIdx, 0, part);
+  // Re-label all parts
+  var partLabels = 'ABCDEFGHIJ';
+  for (var i = 0; i < notationModel.parts.length; i++) {
+    notationModel.parts[i].label = i < partLabels.length ? partLabels[i] : '' + i;
+  }
+  selectedElements = [];
+  hidePropertyPanel();
+  syncModelToTextarea();
+}
+
+function getPartContainerMidpoints() {
+  // Get vertical midpoints of each part container for drop targeting
+  var midpoints = [];
+  for (var i = 0; i < partRenderings.length; i++) {
+    var rect = partRenderings[i].container.getBoundingClientRect();
+    midpoints.push({idx: i, top: rect.top, bottom: rect.bottom, mid: (rect.top + rect.bottom) / 2});
+  }
+  return midpoints;
+}
+
+function getPartDropIndex(clientY) {
+  var mids = getPartContainerMidpoints();
+  if (mids.length === 0) return 0;
+  // Before first part
+  if (clientY < mids[0].mid) return 0;
+  // After last part
+  if (clientY >= mids[mids.length - 1].mid) return mids.length - 1;
+  // Between parts
+  for (var i = 0; i < mids.length; i++) {
+    if (clientY < mids[i].mid) return i;
+  }
+  return mids.length - 1;
+}
+
+function showPartDropIndicator(clientY) {
+  removePartDropIndicator();
+  var dropIdx = getPartDropIndex(clientY);
+  var indicator = document.createElement('div');
+  indicator.className = 've-part-drop-indicator';
+  var previewEl = document.getElementById('abcjs-preview');
+  if (!previewEl) return;
+  // Insert before the target container
+  if (dropIdx < partRenderings.length) {
+    previewEl.insertBefore(indicator, partRenderings[dropIdx].container);
+  } else {
+    // After last container, before the add button
+    var addBtn = previewEl.querySelector('.ve-add-part-btn');
+    if (addBtn) {
+      previewEl.insertBefore(indicator, addBtn);
+    } else {
+      previewEl.appendChild(indicator);
+    }
+  }
+  partDragState.dropIndicator = indicator;
+}
+
+function removePartDropIndicator() {
+  if (partDragState.dropIndicator && partDragState.dropIndicator.parentNode) {
+    partDragState.dropIndicator.parentNode.removeChild(partDragState.dropIndicator);
+  }
+  partDragState.dropIndicator = null;
+}
+
+function setupPartLabelDrag(partLabel, partIdx) {
+  if (notationModel.parts.length <= 1) return;
+
+  partLabel.addEventListener('pointerdown', function(e) {
+    // Skip if clicking × button
+    if (e.target.classList.contains('ve-part-label-remove')) return;
+    if (notationModel.parts.length <= 1) return;
+    partDragState.dragging = false;
+    partDragState.fromIdx = partIdx;
+    partDragState.startY = e.clientY;
+    partLabel.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  partLabel.addEventListener('pointermove', function(e) {
+    if (partDragState.fromIdx < 0) return;
+    var dy = Math.abs(e.clientY - partDragState.startY);
+    if (!partDragState.dragging && dy > 5) {
+      partDragState.dragging = true;
+      // Dim source part
+      if (partDragState.fromIdx < partRenderings.length) {
+        partRenderings[partDragState.fromIdx].container.style.opacity = '0.5';
+      }
+    }
+    if (partDragState.dragging) {
+      showPartDropIndicator(e.clientY);
+    }
+  });
+
+  partLabel.addEventListener('pointerup', function(e) {
+    if (partDragState.dragging) {
+      var toIdx = getPartDropIndex(e.clientY);
+      // Adjust: if dropping after the source, account for removal
+      if (toIdx > partDragState.fromIdx) {
+        // toIdx stays as-is since splice-then-insert handles it
+      }
+      removePartDropIndicator();
+      // Restore opacity
+      if (partDragState.fromIdx < partRenderings.length) {
+        partRenderings[partDragState.fromIdx].container.style.opacity = '';
+      }
+      if (toIdx !== partDragState.fromIdx) {
+        reorderPart(partDragState.fromIdx, toIdx);
+      }
+    }
+    partDragState.dragging = false;
+    partDragState.fromIdx = -1;
+  });
+
+  partLabel.addEventListener('pointercancel', function(e) {
+    removePartDropIndicator();
+    if (partDragState.fromIdx >= 0 && partDragState.fromIdx < partRenderings.length) {
+      partRenderings[partDragState.fromIdx].container.style.opacity = '';
+    }
+    partDragState.dragging = false;
+    partDragState.fromIdx = -1;
+  });
 }
 
 // --- Toolbar Tool Selection ---
@@ -3591,7 +3787,7 @@ function startPaletteDrag(e, btn, tool) {
     var overStaff = getStaffAtPoint(ev.clientX, ev.clientY);
     if (overStaff) {
       // Show pitch label
-      if (tool !== 'bar' && tool !== 'bar-open' && tool !== 'bar-close' && tool !== 'rest') {
+      if (tool !== 'bar' && tool !== 'bar-open' && tool !== 'bar-close' && !tool.match(/^rest-/)) {
         var snappedPos = yToStaffPosition(overStaff.localY, overStaff.geo);
         var pp = staffPositionToPitch(snappedPos);
         if (pitchLabel) {
@@ -3635,6 +3831,72 @@ function startPaletteDrag(e, btn, tool) {
   btn.addEventListener('pointercancel', onUp);
 }
 
+// --- Bar Line Selection Helpers ---
+function findBarAncestor(el) {
+  // Walk up from click target to find an .abcjs-bar SVG group
+  while (el && el !== document) {
+    if (el.classList && el.classList.contains('abcjs-bar')) return el;
+    el = el.parentNode;
+  }
+  return null;
+}
+
+function addBarHitAreas(svg) {
+  // Add invisible wider hit-area rects to thin bar lines so they're easier to click
+  var bars = svg.querySelectorAll('.abcjs-bar');
+  for (var i = 0; i < bars.length; i++) {
+    var bar = bars[i];
+    // Skip if we already added a hit area
+    if (bar.querySelector('.ve-bar-hitarea')) continue;
+    try {
+      var bbox = bar.getBBox();
+      var hitRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      hitRect.setAttribute('class', 've-bar-hitarea');
+      hitRect.setAttribute('x', bbox.x + bbox.width / 2 - 6);
+      hitRect.setAttribute('y', bbox.y);
+      hitRect.setAttribute('width', 12);
+      hitRect.setAttribute('height', bbox.height);
+      hitRect.setAttribute('fill', 'transparent');
+      hitRect.setAttribute('pointer-events', 'all');
+      bar.insertBefore(hitRect, bar.firstChild);
+    } catch(ex) {}
+  }
+}
+
+function findPartForSvgElement(svgEl) {
+  // Find which part rendering contains this SVG element
+  for (var i = 0; i < partRenderings.length; i++) {
+    var svg = partRenderings[i].renderTarget.querySelector('svg');
+    if (svg && svg.contains(svgEl)) return i;
+  }
+  return -1;
+}
+
+function findBarModelIndex(partIdx, barSvgEl) {
+  // Find all .abcjs-bar elements in this part's SVG, determine which
+  // position the clicked bar is at, then map to the nth bar in the model
+  if (partIdx >= partRenderings.length) return -1;
+  var pr = partRenderings[partIdx];
+  var svg = pr.renderTarget.querySelector('svg');
+  if (!svg) return -1;
+  var allBars = svg.querySelectorAll('.abcjs-bar');
+  var svgBarIdx = -1;
+  for (var i = 0; i < allBars.length; i++) {
+    if (allBars[i] === barSvgEl) { svgBarIdx = i; break; }
+  }
+  if (svgBarIdx < 0) return -1;
+  // Map to nth bar in model
+  var part = notationModel.parts[partIdx];
+  var barCount = 0;
+  for (var i = 0; i < part.elements.length; i++) {
+    if (part.elements[i].type === 'bar') {
+      if (barCount === svgBarIdx) return i;
+      barCount++;
+    }
+  }
+  return -1;
+}
+
 // --- Staff Click-to-Place ---
 function setupStaffClick() {
   // Use event delegation on the preview container so it works with
@@ -3645,12 +3907,46 @@ function setupStaffClick() {
   preview.addEventListener('pointerdown', function(e) {
     lastPointerShift = e.shiftKey;
   });
+  // Bar selection via hit areas — handles clicks on ve-bar-hitarea rects
+  // and any .abcjs-bar descendants that abcjs doesn't route through its callback
+  preview.addEventListener('click', function(e) {
+    if (veMode !== 'visual') return;
+    if (isDragging) return;
+    // Only handle selection mode (no placement tool active)
+    if (currentTool && ['whole','half','quarter','eighth','sixteenth','rest-whole','rest-half','rest-quarter','rest-eighth','rest-sixteenth','bar','bar-open','bar-close'].indexOf(currentTool) >= 0) return;
+    var barEl = findBarAncestor(e.target);
+    if (!barEl) return;
+    var barPartIdx = findPartForSvgElement(barEl);
+    if (barPartIdx < 0) return;
+    var modelIdx = findBarModelIndex(barPartIdx, barEl);
+    if (modelIdx < 0) return;
+    var isShift = e.shiftKey;
+    if (isShift && selectedElements.length > 0) {
+      var anchor = selectedElements[0];
+      if (anchor.partIdx === barPartIdx) {
+        var lo = Math.min(anchor.elemIdx, modelIdx);
+        var hi = Math.max(anchor.elemIdx, modelIdx);
+        selectedElements = [];
+        for (var ri = lo; ri <= hi; ri++) {
+          selectedElements.push({partIdx: barPartIdx, elemIdx: ri});
+        }
+      } else {
+        selectedElements.push({partIdx: barPartIdx, elemIdx: modelIdx});
+      }
+    } else {
+      selectedElements = [{partIdx: barPartIdx, elemIdx: modelIdx}];
+    }
+    highlightSelected();
+    setTimeout(highlightSelected, 20);
+    showPropertyPanel(barPartIdx, modelIdx);
+  });
   preview.addEventListener('pointerup', function(e) {
     if (veMode !== 'visual') return;
     if (isDragging) return;
     lastPointerShift = e.shiftKey;
+
     if (!currentTool) return;
-    if (['whole','half','quarter','eighth','sixteenth','rest','bar','bar-open','bar-close'].indexOf(currentTool) < 0) return;
+    if (['whole','half','quarter','eighth','sixteenth','rest-whole','rest-half','rest-quarter','rest-eighth','rest-sixteenth','bar','bar-open','bar-close'].indexOf(currentTool) < 0) return;
 
     var overStaff = getStaffAtPoint(e.clientX, e.clientY);
     if (overStaff) {
@@ -3680,8 +3976,9 @@ function placeElementOnStaff(tool, overStaff, clientX) {
   pushUndo();
 
   var elem = null;
-  if (tool === 'rest') {
-    elem = { type: 'rest', duration: toolToDuration('quarter') };
+  var restMatch = tool.match(/^rest-(whole|half|quarter|eighth|sixteenth)$/);
+  if (restMatch) {
+    elem = { type: 'rest', duration: toolToDuration(restMatch[1]) };
   } else if (tool === 'bar') {
     elem = { type: 'bar', subtype: '|' };
   } else if (tool === 'bar-open') {
@@ -3945,6 +4242,7 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
 
   # Build form fields
   meter_options = [('C', 'C'), ('5/8', '5/8'), ('6/8', '6/8'), ('7/8', '7/8'), ('9/8', '9/8'), ('2/4', '2/4'), ('3/4', '3/4'), ('4/4', '4/4')]
+  unit_options = [('1/16', '1/16'), ('1/8', '1/8'), ('1/4', '1/4'), ('1/2', '1/2')]
 
   form_body = [
     editor_js,
@@ -4007,7 +4305,7 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
 
     # Notes (ABC)
     CDiv('Melody Reminder (ABC Format):', hclass='section-header'),
-    CDiv(_build_notes_section(obj, tune, meter_options), hclass='notes-section', id='notes-section'),
+    CDiv(_build_notes_section(obj, tune, meter_options, unit_options), hclass='notes-section', id='notes-section'),
 
     # Chords
     CDiv('Chords:', hclass='section-header'),
@@ -4162,7 +4460,7 @@ def _build_url_fields(url_list):
     ], hclass='url-row'))
   return rows
 
-def _build_notes_section(obj, tune, meter_options):
+def _build_notes_section(obj, tune, meter_options, unit_options):
   """Build the notes (ABC) editing section with visual editor and ABC text mode."""
   raw = obj.raw_notes.rstrip('\n') if obj.raw_notes else ''
 
@@ -4199,10 +4497,22 @@ def _build_notes_section(obj, tune, meter_options):
       '<svg viewBox="0 0 22 32" width="18" height="26"><ellipse cx="7" cy="24" rx="5.5" ry="3.5" fill="currentColor" transform="rotate(-15,7,24)"/><line x1="12" y1="23" x2="12" y2="4" stroke="currentColor" stroke-width="1.5"/><path d="M12,4 Q16,8 18,14" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12,9 Q16,13 18,19" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>'
       '</button>',
     ], hclass='ve-tool-group'),
-    # Rest
+    # Rests (one per duration)
     CDiv([
-      '<button type="button" class="ve-tool-btn" data-tool="rest" title="Rest">'
-      '<svg viewBox="0 0 20 24" width="16" height="20"><text x="10" y="18" text-anchor="middle" font-size="20" fill="currentColor">&#x1D13D;</text></svg>'
+      '<button type="button" class="ve-tool-btn" data-tool="rest-whole" title="Whole rest">'
+      '<svg viewBox="0 0 20 24" width="16" height="20"><line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1"/><rect x="5" y="10" width="10" height="4" fill="currentColor"/></svg>'
+      '</button>',
+      '<button type="button" class="ve-tool-btn" data-tool="rest-half" title="Half rest">'
+      '<svg viewBox="0 0 20 24" width="16" height="20"><line x1="2" y1="14" x2="18" y2="14" stroke="currentColor" stroke-width="1"/><rect x="5" y="10" width="10" height="4" fill="currentColor"/></svg>'
+      '</button>',
+      '<button type="button" class="ve-tool-btn" data-tool="rest-quarter" title="Quarter rest">'
+      '<svg viewBox="0 0 20 24" width="16" height="20"><path d="M10,3 L7,8 L12,12 L8,17 Q6,20 9,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+      '</button>',
+      '<button type="button" class="ve-tool-btn" data-tool="rest-eighth" title="Eighth rest">'
+      '<svg viewBox="0 0 20 24" width="16" height="20"><circle cx="11" cy="7" r="2.5" fill="currentColor"/><path d="M11,9 Q8,14 8,20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+      '</button>',
+      '<button type="button" class="ve-tool-btn" data-tool="rest-sixteenth" title="Sixteenth rest">'
+      '<svg viewBox="0 0 20 24" width="16" height="20"><circle cx="11" cy="5" r="2.5" fill="currentColor"/><circle cx="11" cy="11" r="2.5" fill="currentColor"/><path d="M11,13 Q8,17 8,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
       '</button>',
     ], hclass='ve-tool-group'),
     # Bar lines
@@ -4228,8 +4538,8 @@ def _build_notes_section(obj, tune, meter_options):
       '<button type="button" class="ve-tool-btn" data-tool="slur" title="Slur: phrasing arc across selected notes">'
       '<svg viewBox="0 0 24 16" width="20" height="14"><path d="M2,4 Q12,16 22,4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>'
       '</button>',
-      '<button type="button" class="ve-tool-btn" data-tool="grace" title="Grace note: toggle selected note as grace note (ornament)">'
-      '<svg viewBox="0 0 16 24" width="12" height="18"><ellipse cx="6" cy="17" rx="4" ry="3" fill="currentColor" transform="rotate(-15,6,17)"/><line x1="10" y1="16" x2="10" y2="4" stroke="currentColor" stroke-width="1"/><line x1="2" y1="20" x2="12" y2="8" stroke="currentColor" stroke-width="1"/></svg>'
+      '<button type="button" class="ve-tool-btn" data-tool="grace" title="Grace note (acciaccatura)">'
+      '<svg viewBox="0 0 20 28" width="16" height="22"><ellipse cx="7" cy="21" rx="4.5" ry="3" fill="currentColor" transform="rotate(-15,7,21)"/><line x1="11" y1="20" x2="11" y2="5" stroke="currentColor" stroke-width="2"/><path d="M11,5 Q14,8 16,12" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="2" y1="27" x2="16" y2="7" stroke="currentColor" stroke-width="2"/></svg>'
       '</button>',
     ], hclass='ve-tool-group'),
   ], hclass='ve-toolbar', id='ve-toolbar')
@@ -4242,7 +4552,7 @@ def _build_notes_section(obj, tune, meter_options):
     ], hclass='inline-fields'),
     CSpan([
       CText('Unit:', bold=1, hclass='edit-label'),
-      CInput(type='text', name='unit', value=obj.unit or '', hclass='medium-input'),
+      CSelect(unit_options, current=obj.unit or '1/8', name='unit', id='field-unit'),
     ], hclass='inline-fields'),
   ], hclass='field-row', style='margin-bottom:8px')
 
@@ -4265,14 +4575,10 @@ def _build_notes_section(obj, tune, meter_options):
   # Pitch label (follows ghost during drag)
   pitch_label = CDiv('', id='ve-pitch-label', hclass='ve-pitch-label', style='display:none')
 
-  # Parts management bar (normal document flow, above preview)
-  parts_bar = CDiv('', id='ve-parts-bar', hclass='ve-parts-bar', style='display:none')
-
   return [
     mode_toggle,
-    toolbar,
     meter_unit_row,
-    parts_bar,
+    toolbar,
     CDiv([
       textarea_pane,
       preview_pane,
@@ -5852,7 +6158,41 @@ background:#f0f4f0;
 border:1px solid #ddd;
 border-bottom:none;
 border-radius:3px 3px 0 0;
+display:inline-flex;
+align-items:center;
+gap:4px;
+cursor:grab;
+user-select:none;
+-webkit-user-select:none;
+touch-action:none;
+}
+.ve-part-label-remove {
+font-size:14px;
+font-weight:bold;
+padding:0 3px;
+border:none;
+background:none;
+color:#993333;
+cursor:pointer;
+line-height:1;
+}
+.ve-part-label-remove:hover {
+color:#cc0000;
+}
+.ve-add-part-btn {
+font-size:12px;
+padding:3px 10px;
+border:1px solid #3a6a3a;
+border-radius:3px;
+background:#e8f0e8;
+color:#3a6a3a;
+cursor:pointer;
+font-weight:bold;
+margin-top:4px;
 display:inline-block;
+}
+.ve-add-part-btn:hover {
+background:#d0e0d0;
 }
 .ve-part-render {
 border:1px solid #ddd;
@@ -5907,6 +6247,11 @@ pointer-events:none;
 .ve-selected .abcjs-bar {
 fill:#cc3333 !important;
 stroke:#cc3333 !important;
+}
+.ve-bar-hitarea {
+pointer-events:all;
+fill:transparent !important;
+stroke:none !important;
 }
 .ve-note-highlight,
 .ve-note-highlight * {
@@ -5966,53 +6311,12 @@ color:white;
 border-color:#1a3a1a;
 }
 
-/* Visual Editor - Parts Bar */
-.ve-parts-bar {
-display:flex;
-align-items:center;
-gap:8px;
-padding:4px 8px;
-background:#f0f4f0;
-border:1px solid #ccc;
-border-radius:3px;
-margin-bottom:4px;
-flex-wrap:wrap;
-}
-.ve-parts-bar-item {
-display:inline-flex;
-align-items:center;
-gap:3px;
-padding:2px 8px;
-background:white;
-border:1px solid #bbb;
-border-radius:3px;
-font-size:13px;
-}
-.ve-parts-bar-item .ve-part-remove {
-font-size:14px;
-font-weight:bold;
-padding:0 3px;
-border:none;
-background:none;
-color:#993333;
-cursor:pointer;
-line-height:1;
-}
-.ve-parts-bar-item .ve-part-remove:hover {
-color:#cc0000;
-}
-.ve-parts-bar-add {
-font-size:12px;
-padding:2px 8px;
-border:1px solid #3a6a3a;
-border-radius:3px;
-background:#e8f0e8;
-color:#3a6a3a;
-cursor:pointer;
-font-weight:bold;
-}
-.ve-parts-bar-add:hover {
-background:#d0e0d0;
+/* Visual Editor - Part Drop Indicator (for drag reorder) */
+.ve-part-drop-indicator {
+height:3px;
+background:#3a6a3a;
+border-radius:2px;
+margin:2px 0;
 }
 
 @media (max-width: 489px) {
