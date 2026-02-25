@@ -1503,6 +1503,7 @@ function updateMeterUnit() {
     var unitField = document.querySelector('input[name="unit"]');
     if (unitField) unitField.value = tuneDefaults[bestType].unit;
   }
+  renderAbcPreview();
 }
 // Close the type menu when clicking outside
 document.addEventListener('click', function(e) {
@@ -1576,6 +1577,7 @@ function updateKeyValue() {
   document.getElementById('field-key').value = parts.join('/');
   document.getElementById('key-display-label').textContent = displayParts.join(' / ');
   formChanged = true;
+  renderAbcPreview();
 }
 
 function addKeyPart() {
@@ -1922,6 +1924,48 @@ function updateChordPreview() {
   preview.innerHTML = html;
 }
 
+// Live ABC preview via abcjs
+var abcDebounce;
+function renderAbcPreview() {
+  clearTimeout(abcDebounce);
+  abcDebounce = setTimeout(doRenderAbc, 300);
+}
+function doRenderAbc() {
+  var textarea = document.getElementById('raw-notes-textarea');
+  var preview = document.getElementById('abcjs-preview');
+  if (!textarea || !preview || typeof ABCJS === 'undefined') return;
+
+  var raw = textarea.value.trim();
+  if (!raw) {
+    preview.innerHTML = '<div style="color:#666; font-style:italic; padding:20px">Enter ABC notation to see preview</div>';
+    return;
+  }
+
+  // Read current key, meter, unit from form fields
+  var key = document.getElementById('field-key').value || 'C';
+  var meterSel = document.getElementById('field-meter');
+  var meter = meterSel ? meterSel.value : '4/4';
+  var unitField = document.querySelector('input[name="unit"]');
+  var unit = unitField ? unitField.value : '1/8';
+
+  // Build ABC string with headers, replicating __NotesWithMeterOnEachLine()
+  var lines = raw.split('\\n');
+  var abc = 'X:1\\nK:' + key + '\\nL:' + unit + '\\nM:' + meter + '\\n';
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    if (line.length > 1 && line[1] === ':') {
+      abc += line + '\\n';
+    } else {
+      abc += 'M:' + meter + '\\n' + line + '\\n';
+    }
+  }
+
+  ABCJS.renderAbc("abcjs-preview", abc, {
+    responsive: "resize",
+    staffwidth: 500
+  });
+}
+
 // Hook up live preview updates
 document.addEventListener('DOMContentLoaded', function() {
   // Update on any input in chord area
@@ -1936,6 +1980,17 @@ document.addEventListener('DOMContentLoaded', function() {
   if (footerField) footerField.addEventListener('input', updateChordPreview);
   // Initial render
   updateChordPreview();
+
+  // Live ABC preview
+  var notesTA = document.getElementById('raw-notes-textarea');
+  if (notesTA) {
+    notesTA.addEventListener('input', renderAbcPreview);
+    renderAbcPreview();
+  }
+  var meterSel = document.getElementById('field-meter');
+  if (meterSel) meterSel.addEventListener('change', renderAbcPreview);
+  var unitField = document.querySelector('input[name="unit"]');
+  if (unitField) unitField.addEventListener('input', renderAbcPreview);
 });
 
 // Form validation
@@ -2388,16 +2443,10 @@ def _build_notes_section(obj, tune, meter_options):
     ], hclass='field-row', style='margin-bottom:8px'),
     CTextArea(raw, name='raw_notes', id='raw-notes-textarea', rows=8, cols=40,
               hclass='notes-textarea', style='font-family:monospace; width:100%'),
-    CDiv("(Preview will update after save)", style='font-style:italic; color:#666; margin-top:4px'),
   ], hclass='notes-editor-pane')
 
-  # Right pane: rendered notes image
-  if obj.notes:
-    preview_content = '<img src="/png/%s" style="max-width:100%%" id="notes-image"/>' % tune
-  else:
-    preview_content = CDiv(CText("Notes not yet available", italic=1), id='notes-image',
-                           style='color:#666')
-  preview_pane = CDiv(preview_content, hclass='notes-preview-pane')
+  # Right pane: live ABC preview via abcjs
+  preview_pane = CDiv('', id='abcjs-preview', hclass='notes-preview-pane')
 
   return [CDiv([editor_pane, preview_pane], hclass='notes-layout')]
 
@@ -3738,12 +3787,6 @@ font-size:95%;
 .edit-form .notes-preview-pane {
 flex:1;
 min-width:300px;
-display:flex;
-align-items:center;
-justify-content:center;
-}
-.edit-form .notes-preview-pane img {
-max-width:100%;
 }
 .edit-form .chord-layout {
 display:flex;
@@ -4657,6 +4700,7 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
     '<link rel="stylesheet" type="text/css" href="/css/print" media="print" />',
     '<script src="/js/player.js"></script>',
     '<script src="/js/login.js"></script>',
+    '<script src="https://cdn.jsdelivr.net/npm/abcjs@6.6.2/dist/abcjs-basic-min.js"></script>',
   ]
   if refresh is not None:
     head.append(CMeta(str(refresh), http_equiv="refresh"))
