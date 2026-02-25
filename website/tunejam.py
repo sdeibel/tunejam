@@ -2629,34 +2629,28 @@ def _ReconstructChords(form):
 
 @app.route('/check-url')
 def check_url():
-  """Check if a URL is accessible. Returns JSON with ok/error."""
-  import urllib2
+  """Check if a URL is accessible. Uses curl to avoid Python 2.7 SSL issues."""
   import json as json_module
+  import subprocess
   url = request.args.get('url', '')
   if not url:
     return json_module.dumps({'ok': False, 'error': 'No URL provided'}), 400, {'Content-Type': 'application/json'}
   try:
-    req = urllib2.Request(url)
-    req.add_header('User-Agent', 'Mozilla/5.0 (compatible; TuneJam link checker)')
-    req.get_method = lambda: 'HEAD'
-    try:
-      resp = urllib2.urlopen(req, timeout=10)
-    except urllib2.HTTPError as e:
-      if e.code == 405:
-        # HEAD not allowed, try GET
-        req = urllib2.Request(url)
-        req.add_header('User-Agent', 'Mozilla/5.0 (compatible; TuneJam link checker)')
-        resp = urllib2.urlopen(req, timeout=10)
-      else:
-        raise
-    code = resp.getcode()
-    if code and code >= 400:
+    result = subprocess.Popen(
+      ['curl', '-sS', '-o', '/dev/null', '-w', '%{http_code}', '-L',
+       '--http1.1', '--max-time', '10',
+       '-A', 'Mozilla/5.0 (compatible; TuneJam link checker)',
+       url],
+      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = result.communicate()
+    code_str = stdout.strip()
+    if result.returncode != 0:
+      error = stderr.strip() if stderr.strip() else 'Connection failed'
+      return json_module.dumps({'ok': False, 'error': error}), 200, {'Content-Type': 'application/json'}
+    code = int(code_str) if code_str.isdigit() else 0
+    if code >= 400:
       return json_module.dumps({'ok': False, 'error': 'HTTP %d' % code}), 200, {'Content-Type': 'application/json'}
     return json_module.dumps({'ok': True}), 200, {'Content-Type': 'application/json'}
-  except urllib2.HTTPError as e:
-    return json_module.dumps({'ok': False, 'error': 'HTTP %d' % e.code}), 200, {'Content-Type': 'application/json'}
-  except urllib2.URLError as e:
-    return json_module.dumps({'ok': False, 'error': str(e.reason)}), 200, {'Content-Type': 'application/json'}
   except Exception as e:
     return json_module.dumps({'ok': False, 'error': str(e)}), 200, {'Content-Type': 'application/json'}
 
