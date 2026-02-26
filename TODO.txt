@@ -1,7 +1,6 @@
 ** Fix note generation on production site
 * Website Phase Three
   ** Coding Tasks Near Term
-    ** Ability to drag set order in events, rename events, duplicate events, and delete events
     ** Let event owner specify whether public or just visible to them (admin sees all), 
        allow adding other emails that can edit/etc the event, allow sharing a hash url
        for hidden events that allows people to see them in any case (e.g. for use at

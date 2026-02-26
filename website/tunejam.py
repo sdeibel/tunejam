@@ -3,6 +3,7 @@
 import sys, os
 import time
 import struct
+import json
 from html import *
 import tempfile
 import datetime
@@ -6993,6 +6994,30 @@ font-style:italic;
 color:#666;
 font-size:90%;
 }
+#event-title {
+border-bottom:1px dashed #999;
+outline:none;
+min-width:100px;
+}
+#event-title:focus {
+border-bottom:2px solid #336;
+background-color:#ffffee;
+}
+#event-sets .event-set-row {
+padding:2px 0;
+}
+#event-sets .drag-handle {
+cursor:grab;
+font-size:1.2em;
+margin-right:4px;
+color:#666;
+}
+#event-sets .drag-handle:active {
+cursor:grabbing;
+}
+#event-sets .ui-sortable-helper {
+background-color:#ffffdd;
+}
 
 /* Tune editor styles */
 .edit-form label {
@@ -7840,7 +7865,7 @@ def events(delete=None, undelete=None):
         expires = time.strftime('%x %X', time.localtime(event.GetExpiration()))
         parts.extend([
           CSpan(event.title+' - Expires '+expires+' - '),
-          CText("Undelete", href='/event/undelete/%s' % event.name),
+          CText("Undelete", href='/events/undelete/%s' % event.name),
           CBreak(),
         ])
   else:
@@ -7946,7 +7971,16 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
     title = "Deleted"
     
   parts = []
-  parts.append(CH("Event: %s" % event.title, 1))
+  if editor:
+    parts.append('<h1>Event: <span id="event-title" contenteditable="true">%s</span>'
+                 ' <button id="dup-btn" style="font-size:0.5em;vertical-align:middle;cursor:pointer"'
+                 '>Duplicate</button></h1>' % event.title)
+  elif IsLoggedIn():
+    parts.append('<h1>Event: %s'
+                 ' <button id="dup-btn" style="font-size:0.5em;vertical-align:middle;cursor:pointer"'
+                 '>Duplicate</button></h1>' % event.title)
+  else:
+    parts.append(CH("Event: %s" % event.title, 1))
   parts.append(CParagraph(""))
   
   if not event.title:
@@ -7956,9 +7990,9 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
       CText('Return to event list', href='/events'),
     ])
     return PageWrapper(parts, 'event', show_eye_candy=False)
-    
-  parts.extend(EventReloader(sid))
-  
+
+  parts.extend(EventReloader(sid, editor=editor))
+
   if not event.current_set:
     c = 'None'
   else:
@@ -8021,10 +8055,16 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
     else:
       parts.append(CParagraph("View a particular set with melody reminders, chords, or both:"))
 
+    parts.append('<div id="event-sets">')
     for s in event.sets:
       titles = get_set_title(s)
-      
+
       url = '/sets/%s' % s
+      parts.append('<div class="event-set-row" data-set="%s">' % s)
+
+      if editor:
+        parts.append('<span class="drag-handle">&#x2630;</span>')
+
       if s == event.current_set:
         parts.append(CImage(src='/image/check-mark.png', style="height:1.0em"))
       elif editor:
@@ -8032,20 +8072,20 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
                             style="height:1.0em"))
       else:
         parts.append(CImage(src='/image/red-square.png', style="height:1.0em"))
-        
+
       parts.extend([
-        CNBSP(2), 
-        CText("Notes", href=url+'&pagetype=notes&event=%s' % sid), 
-        CNBSP(), 
-        CText("Chords", href=url+'&pagetype=chords&event=%s' % sid), 
-        CNBSP(), 
+        CNBSP(2),
+        CText("Notes", href=url+'&pagetype=notes&event=%s' % sid),
+        CNBSP(),
+        CText("Chords", href=url+'&pagetype=chords&event=%s' % sid),
+        CNBSP(),
         CText("Both", href=url+'&event=%s' % sid),
-        CNBSP(), 
+        CNBSP(),
         CText("Print", href=url+'&event=%s&print=1' % sid),
-        CNBSP(2), 
-        CSpan(titles), 
+        CNBSP(2),
+        CSpan(titles),
       ])
-      
+
       if event.stats[s]:
         ptime = sorted(event.stats[s])[-1]
         ltime = time.localtime(ptime)
@@ -8057,39 +8097,40 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
           lplayed = time.strftime('%b %d', ltime)
         parts.extend([
           CText(' - '),
-          CText('Played %ix last on %s' % (len(event.stats[s]), lplayed)), 
+          CText('Played %ix last on %s' % (len(event.stats[s]), lplayed)),
         ])
-      
+
       if editor:
         parts.extend([
           CText(' - '),
           CText("Edit", href='/sets/sid/%s/edit/%s' % (sid, s)),
-          CText(' - '), 
+          CText(' - '),
           CText("Delete", href='/event/%s/delete/%s' % (sid, s)),
         ])
-      
-      parts.append(CBreak())
+
+      parts.append('</div>')
+    parts.append('</div>')
     
   if editor:
     parts.append(CBreak(2))
     parts.append(CForm([
-      CInput(type="SUBMIT", value="Add a Set"), 
+      CInput(type="SUBMIT", value="Add a Set"),
     ], action='/sets/sid/%s' % sid, method='GET', id="add-set-form"))
-  
+
   parts.extend([
-    CBreak(), 
+    CBreak(),
     CText('Print this event', href='/print/event/%s' % sid),
-    CText('(this may take a while)'), 
-    CBreak(), 
+    CText(' (this may take a while)'),
+    CBreak(),
     CText('Return to event list', href='/events'),
-    CBreak(), 
+    CBreak(),
   ])
   if editor:
     parts.extend([
       CBreak(),
-      CText('Delete this event', href='/events/delete/%s' % event.name),
+      '<a href="/events/delete/%s" class="red-button" onclick="return confirm(\'Are you sure you want to delete this event?\')">Delete Event</a>' % event.name,
     ])
-  else:
+  elif not IsLoggedIn():
     parts.append(CBreak())
     parts.append(LoginButton('/event/%s' % event.name))
 
@@ -8234,6 +8275,48 @@ def ajax_event_current(sid):
   s = utils.CEvent(sid)
   s.ReadEvent()
   return s.current_set + '&' + str(len(s.sets))
+
+@app.route('/event/<sid>/rename', methods=['POST'])
+def event_rename(sid):
+  event = utils.CEvent(sid)
+  event.ReadEvent()
+  if not CanEditEvent(event):
+    return redirect('/event/%s' % sid, code=303)
+  title = request.form.get('title', '').strip()
+  if title:
+    event.title = title
+    event.WriteEvent()
+  return redirect('/event/%s' % sid, code=303)
+
+@app.route('/event/<sid>/duplicate', methods=['POST'])
+def event_duplicate(sid):
+  if not IsLoggedIn():
+    return redirect('/event/%s' % sid, code=303)
+  event = utils.CEvent(sid)
+  event.ReadEvent()
+  title = request.form.get('title', '').strip()
+  if not title:
+    return redirect('/event/%s' % sid, code=303)
+  new_sid = utils.CreateEvent(title, owner=GetUserEmail())
+  new_event = utils.CEvent(new_sid)
+  new_event.ReadEvent()
+  new_event.sets = list(event.sets)
+  new_event.WriteEvent()
+  return redirect('/event/%s' % new_sid, code=303)
+
+@app.route('/ajax/event/<sid>/reorder', methods=['POST'])
+def ajax_event_reorder(sid):
+  event = utils.CEvent(sid)
+  event.ReadEvent()
+  if not CanEditEvent(event):
+    return json.dumps({'ok': False, 'error': 'permission denied'})
+  data = request.get_json(force=True)
+  new_order = data.get('sets', [])
+  if sorted(new_order) != sorted(event.sets):
+    return json.dumps({'ok': False, 'error': 'set mismatch'})
+  event.sets = new_order
+  event.WriteEvent()
+  return json.dumps({'ok': True})
 
 def ReadEmailConfig():
   """Read email config file, return dict of key=value pairs."""
@@ -8535,20 +8618,93 @@ def IsRateLimited(email):
     pass
   return user_count >= kMaxEmailsPerHour or global_count >= kMaxGlobalEmailsPerHour
 
-def EventReloader(sid):
+def EventReloader(sid, editor=False):
 
   e = utils.CEvent(sid)
   e.ReadEvent()
-  
+
   parts = []
-  
+
   parts.append("""
 <script src="/js/jquery-3.7.0.min.js"></script>
 <script src="/js/ui/jquery-ui.min.js"></script>
 """)
-  
+
+  extra_js = ''
+  ready_calls = ''
+
+  if editor:
+    extra_js += """
+function initSortable() {
+  $("#event-sets").sortable({
+    handle: ".drag-handle",
+    items: ".event-set-row",
+    axis: "y",
+    stop: function(event, ui) {
+      var sets = [];
+      $("#event-sets .event-set-row").each(function() {
+        sets.push($(this).data("set"));
+      });
+      $.ajax({
+        url: "/ajax/event/%s/reorder",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({sets: sets}),
+        success: function(resp) {
+          var data = typeof resp === "string" ? JSON.parse(resp) : resp;
+          if (!data.ok) {
+            location.reload();
+          }
+        },
+        error: function() {
+          location.reload();
+        }
+      });
+    }
+  });
+}
+""" % sid
+    ready_calls += '  initSortable();\n'
+
+    extra_js += """
+var originalTitle;
+function saveTitle() {
+  var newTitle = $("#event-title").text().trim();
+  if (!newTitle) {
+    $("#event-title").text(originalTitle);
+    return;
+  }
+  if (newTitle !== originalTitle) {
+    var form = $("<form>", {method: "POST", action: "/event/%s/rename"});
+    form.append($("<input>", {type: "hidden", name: "title", value: newTitle}));
+    $("body").append(form);
+    form.submit();
+  }
+}
+""" % sid
+    ready_calls += """  originalTitle = $("#event-title").text();
+  $("#event-title").on("keydown", function(e) {
+    if (e.which === 13) { e.preventDefault(); $(this).blur(); }
+    if (e.which === 27) { $(this).text(originalTitle); $(this).blur(); }
+  }).on("blur", function() { saveTitle(); });
+"""
+
+  extra_js += """
+function duplicateEvent() {
+  var title = prompt("Name for the duplicate event:", %s);
+  if (title) {
+    var form = $("<form>", {method: "POST", action: "/event/%s/duplicate"});
+    form.append($("<input>", {type: "hidden", name: "title", value: title}));
+    $("body").append(form);
+    form.submit();
+  }
+}
+""" % (json.dumps(e.title + ' copy'), sid)
+  ready_calls += '  $("#dup-btn").on("click", function() { duplicateEvent(); });\n'
+
   parts.extend([
     """<script>
+%s
 function CheckEvent() {
   $.ajax({
     url: "/ajax/event/%s/current",
@@ -8562,11 +8718,13 @@ function CheckEvent() {
 }
 $(document).ready(function() {
    setInterval(CheckEvent, 5000);
+%s
 });
-</script>""" % (sid, e.current_set + '&' + str(len(e.sets)))
-             
+</script>""" % (extra_js, sid, e.current_set + '&' + str(len(e.sets)),
+                ready_calls)
+
   ])
-  
+
   return parts
 
 def _jpeg_dimensions(path):
