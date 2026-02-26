@@ -1454,6 +1454,8 @@ def tune_new_create():
   obj.chords = _ReconstructChords(request.form)
 
   obj.WriteSpec()
+  utils.InvalidateTuneIndex()
+  gTuneCountCache.clear()
 
   return redirect('/tune/%s' % filename, code=303)
 
@@ -5883,6 +5885,8 @@ def tune_save(tune):
   # Write the full spec file and invalidate caches
   obj.WriteSpec()
   obj.InvalidateCaches()
+  utils.InvalidateTuneIndex()
+  gTuneCountCache.clear()
 
   return redirect('/tune/%s' % tune, code=303)
 
@@ -8873,9 +8877,10 @@ if __name__ == '__main__':
     app.debug = False
   else:
     app.debug = True
+  use_reloader = True
   if sys.platform == 'darwin':
-    host = '0.0.0.0'
+    host = '::'  # Dual-stack: accept both IPv4 and IPv6 (avoids Safari IPv6 timeout)
   else:
     host = 'music.cambridgeny.net'
-  app.run(host=host, port=60080, use_reloader=True, extra_files=list(watch_files))
+  app.run(host=host, port=60080, use_reloader=use_reloader, threaded=True, extra_files=list(watch_files))
 

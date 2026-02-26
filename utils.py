@@ -1866,14 +1866,23 @@ def PurgeDeletedEvents():
         if mod_time < time.time() - kEventExpiration:
             os.unlink(fn)
         
+_gTuneIndexCache = {}
+
+def InvalidateTuneIndex():
+    """Clear the cached tune index so the next call re-reads from disk."""
+    _gTuneIndexCache.clear()
+
 def GetTuneIndex(include_incomplete):
+
+    if include_incomplete in _gTuneIndexCache:
+        return _gTuneIndexCache[include_incomplete]
 
     incomplete_tunes = []
     tunes_by_class = collections.defaultdict(list)
     for fn in os.listdir(kDatabaseDir):
         if fn.startswith('.') or not fn.endswith('.spec'):
             continue
-        
+
         name = fn[:-len('.spec')]
         tune = CTune(name)
         tune.ReadDatabase()
@@ -1884,15 +1893,16 @@ def GetTuneIndex(include_incomplete):
             incomplete_tunes.append((title, name))
         else:
             for klass in tune.klass.split(','):
-                tunes_by_class[klass.lower()].append((title, name))                    
-                    
+                tunes_by_class[klass.lower()].append((title, name))
+
     for klass, tunes in tunes_by_class.items():
         tunes.sort()
-        
+
     if incomplete_tunes:
         incomplete_tunes.sort()
         tunes_by_class['incomplete'] = incomplete_tunes
-    
+
+    _gTuneIndexCache[include_incomplete] = tunes_by_class
     return tunes_by_class
 
 def ParseChords(chords):
