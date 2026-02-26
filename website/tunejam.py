@@ -1028,8 +1028,8 @@ function FilterTunes() {
 }
 function RandomThree() {
   var tunes = $("#alltunes").find("li");
-  visible = [];
-  for (i = 1; i < tunes.length; i++) {
+  var visible = [];
+  for (var i = 1; i < tunes.length; i++) {
     var item = tunes[i];
     var display = $(item).css("display");
     if (display != "none") {
@@ -1476,6 +1476,17 @@ def _build_editor_js(tune, chord_parts, url_count=1):
 
   return """
 <script>
+/* Element.closest polyfill for older browsers */
+if (!Element.prototype.closest) {
+  Element.prototype.closest = function(s) {
+    var el = this;
+    do {
+      if (el.matches ? el.matches(s) : el.msMatchesSelector(s)) return el;
+      el = el.parentElement || el.parentNode;
+    } while (el !== null && el.nodeType === 1);
+    return null;
+  };
+}
 var tuneDefaults = %s;
 var formChanged = false;
 
@@ -1875,7 +1886,7 @@ function addRowToPart(btn) {
   tbody.appendChild(tr);
   // Update rows_in_part hidden field
   var hf = document.querySelector('input[name="rows_in_part_' + pIdx + '"]');
-  if (hf) hf.value = parseInt(hf.value) + 1;
+  if (hf) hf.value = parseInt(hf.value, 10) + 1;
   formChanged = true;
   updateChordPreview();
 }
@@ -2386,7 +2397,7 @@ function parseDuration(line, i) {
       // Explicit: /N or //N etc. — multiple slashes with number
       // In standard ABC, /3 means divide by 3. Extra slashes before a number
       // are unusual but we handle them: each extra slash doubles the denominator
-      var denom = parseInt(denomStr);
+      var denom = parseInt(denomStr, 10);
       for (var s = 1; s < slashCount; s++) denom *= 2;
       dur += '/' + denom;
     } else {
@@ -2992,8 +3003,8 @@ function toolToDuration(toolName) {
   // Parse unit as fraction
   var unitNum = 1, unitDen = 8;
   var um = unit.match(/(\\d+)\\/(\\d+)/);
-  if (um) { unitNum = parseInt(um[1]); unitDen = parseInt(um[2]); }
-  else if (unit.match(/^\\d+$/)) { unitNum = parseInt(unit); unitDen = 1; }
+  if (um) { unitNum = parseInt(um[1], 10); unitDen = parseInt(um[2], 10); }
+  else if (unit.match(/^\\d+$/)) { unitNum = parseInt(unit, 10); unitDen = 1; }
   var unitVal = unitNum / unitDen;
 
   // Target durations in whole notes
@@ -3026,13 +3037,13 @@ function halfDuration(durStr) {
   // Parse duration string into numerator/denominator ratio relative to unit
   var num = 1, den = 1;
   var m = durStr.match(/^(\\d+)\\/(\\d+)$/);
-  if (m) { num = parseInt(m[1]); den = parseInt(m[2]); }
+  if (m) { num = parseInt(m[1], 10); den = parseInt(m[2], 10); }
   else {
     m = durStr.match(/^\\/(\\d+)$/);
-    if (m) { num = 1; den = parseInt(m[1]); }
+    if (m) { num = 1; den = parseInt(m[1], 10); }
     else {
       m = durStr.match(/^(\\d+)$/);
-      if (m) { num = parseInt(m[1]); den = 1; }
+      if (m) { num = parseInt(m[1], 10); den = 1; }
       // else: empty string means 1/1
     }
   }
@@ -3060,14 +3071,14 @@ function getMeasureCapacity() {
   if (meterStr === 'C') meterStr = '4/4';
   var mp = meterStr.split('/');
   if (mp.length !== 2) return null;
-  var meterNum = parseInt(mp[0]), meterDen = parseInt(mp[1]);
+  var meterNum = parseInt(mp[0], 10), meterDen = parseInt(mp[1], 10);
   if (!meterNum || !meterDen) return null;
 
   var unitField = document.querySelector('select[name="unit"]');
   var unitStr = unitField ? unitField.value : '1/8';
   var up = unitStr.split('/');
   if (up.length !== 2) return null;
-  var unitNum = parseInt(up[0]), unitDen = parseInt(up[1]);
+  var unitNum = parseInt(up[0], 10), unitDen = parseInt(up[1], 10);
   if (!unitNum || !unitDen) return null;
 
   return (meterNum * unitDen) / (meterDen * unitNum);
@@ -3079,13 +3090,13 @@ function durationToUnits(durStr) {
   if (durStr === undefined || durStr === null) durStr = '';
   var num = 1, den = 1;
   var m = durStr.match(/^(\\d+)\\/(\\d+)$/);
-  if (m) { num = parseInt(m[1]); den = parseInt(m[2]); }
+  if (m) { num = parseInt(m[1], 10); den = parseInt(m[2], 10); }
   else {
     m = durStr.match(/^\\/(\\d+)$/);
-    if (m) { num = 1; den = parseInt(m[1]); }
+    if (m) { num = 1; den = parseInt(m[1], 10); }
     else {
       m = durStr.match(/^(\\d+)$/);
-      if (m) { num = parseInt(m[1]); den = 1; }
+      if (m) { num = parseInt(m[1], 10); den = 1; }
     }
   }
   return num / den;
@@ -3236,7 +3247,7 @@ function veDoRenderAbc() {
       removeBtn.setAttribute('data-part-idx', '' + p);
       removeBtn.addEventListener('click', function(ev) {
         ev.stopPropagation();
-        var idx = parseInt(this.getAttribute('data-part-idx'));
+        var idx = parseInt(this.getAttribute('data-part-idx'), 10);
         removeNotePart(idx);
       });
       partLabel.appendChild(removeBtn);
@@ -3775,8 +3786,8 @@ function showPropertyPanel() {
   var indicator = document.getElementById('ve-prop-indicator');
   var container = document.getElementById('ve-preview-container');
   if (indicator && container) {
-    var indLeft = parseInt(indicator.style.left) || 0;
-    var indTop = parseInt(indicator.style.top) || 0;
+    var indLeft = parseInt(indicator.style.left, 10) || 0;
+    var indTop = parseInt(indicator.style.top, 10) || 0;
     panel.style.left = indLeft + 'px';
     panel.style.top = (indTop + indicator.offsetHeight + 4) + 'px';
     panel.style.right = 'auto';
@@ -6161,7 +6172,7 @@ def css(media):
 * {
 margin:0;
 padding:0;
-font-family: varela_round, "Trebuchet MS", Arial, Verdana, sans-serif;
+font-family: "Trebuchet MS", Arial, Verdana, sans-serif;
 line-height:140%;
 }
 body {
@@ -6258,6 +6269,7 @@ color:#004400;
 h1.tune-title {
 clear:both;
 position:relative;
+font-size:38px;
 font-size:min(3.5vw, 38px);
 color:#000000;
 padding-right:20%;
@@ -6265,6 +6277,7 @@ padding-right:20%;
 h1.long-tune-title {
 clear:both;
 position:relative;
+font-size:28px;
 font-size:min(2.6vw, 28px);
 color:#000000;
 padding-right:20%;
@@ -6272,31 +6285,40 @@ padding-right:20%;
 h1.extra-long-tune-title {
 clear:both;
 position:relative;
+font-size:27px;
 font-size:min(2.5vw, 27px);
 color:#000000;
 padding-right:20%;
 }
 span.tune-type {
+font-size:14px;
 font-size:max(70%, 14px);
 position:absolute;
+right:54px;
 right:calc(10px + clamp(18px, 3.1vw, 34px) + 10px);
 top:2px;
 }
 span.tune-type-two-icons {
+font-size:14px;
 font-size:max(70%, 14px);
 position:absolute;
+right:98px;
 right:calc(10px + 2 * (clamp(18px, 3.1vw, 34px) + 10px));
 top:2px;
 }
 span.tune-type-three-icons {
+font-size:14px;
 font-size:max(70%, 14px);
 position:absolute;
+right:142px;
 right:calc(10px + 3 * (clamp(18px, 3.1vw, 34px) + 10px));
 top:2px;
 }
 span.tune-type-four-icons {
+font-size:14px;
 font-size:max(70%, 14px);
 position:absolute;
+right:186px;
 right:calc(10px + 4 * (clamp(18px, 3.1vw, 34px) + 10px));
 top:2px;
 }
@@ -6371,28 +6393,39 @@ img.action-icon-1 {
 position:absolute;
 right:10px;
 top:5px;
+width:34px;
 width:clamp(18px, 3.1vw, 34px);
+height:34px;
 height:clamp(18px, 3.1vw, 34px);
 }
 img.action-icon-2 {
 position:absolute;
+right:54px;
 right:calc(10px + clamp(18px, 3.1vw, 34px) + 10px);
 top:5px;
+width:34px;
 width:clamp(18px, 3.1vw, 34px);
+height:34px;
 height:clamp(18px, 3.1vw, 34px);
 }
 img.action-icon-3 {
 position:absolute;
+right:98px;
 right:calc(10px + 2 * (clamp(18px, 3.1vw, 34px) + 10px));
 top:5px;
+width:34px;
 width:clamp(18px, 3.1vw, 34px);
+height:34px;
 height:clamp(18px, 3.1vw, 34px);
 }
 img.action-icon-4 {
 position:absolute;
+right:142px;
 right:calc(10px + 3 * (clamp(18px, 3.1vw, 34px) + 10px));
 top:5px;
+width:34px;
 width:clamp(18px, 3.1vw, 34px);
+height:34px;
 height:clamp(18px, 3.1vw, 34px);
 }
 img.notes {
@@ -6414,6 +6447,7 @@ table.chords {
 position:relative;
 top:0in;
 right:0in;
+font-size:26px;
 font-size:min(3vw, 26px);
 border:0px;  /* For Chrome and Safari */
 border-left:2px solid #000;
@@ -6449,6 +6483,7 @@ clear:both;
 float:left;
 width:95%;
 margin-top:2vw;
+font-size:54px;
 font-size:min(5.0vw, 54px);
 }
 div.chord-group-only table.chords-only {
@@ -6460,6 +6495,7 @@ table.chords-only {
 clear:both;
 left:0in;
 right:none;
+font-size:54px;
 font-size:min(5.0vw, 54px);
 width:95%;
 float:left;
@@ -6552,6 +6588,7 @@ display:block;
 }
 }
 .section-index img.eye-candy {
+width: 41% !important;
 width: min(41%, calc(100% - 510px)) !important;
 }
 .section-index h2 ~ a, .section-index h2 ~ span {
@@ -6775,6 +6812,12 @@ align-items:center;
 gap:10px;
 margin-bottom:8px;
 }
+.edit-form .title-row > * {
+margin-right:10px;
+}
+.edit-form .title-row > *:last-child {
+margin-right:0;
+}
 .edit-form .title-field {
 flex:1;
 min-width:0;
@@ -6973,6 +7016,9 @@ display:flex;
 gap:10px;
 flex-wrap:wrap;
 }
+.edit-form .notes-layout > * {
+margin-bottom:10px;
+}
 .edit-form .notes-editor-pane {
 flex:1;
 min-width:300px;
@@ -6991,6 +7037,9 @@ display:flex;
 gap:10px;
 flex-wrap:wrap;
 }
+.edit-form .chord-layout > * {
+margin-bottom:10px;
+}
 .edit-form .chord-editor-pane {
 flex:1;
 min-width:300px;
@@ -7007,6 +7056,7 @@ border-right:2px solid #000;
 border-collapse:collapse;
 margin-left:auto;
 table-layout:fixed;
+font-size:26px;
 font-size:min(3vw, 26px);
 }
 .edit-form .chord-preview-pane table.chords-preview td {
@@ -7033,6 +7083,7 @@ background:#e8f0e8;
 font-style:italic;
 text-align:left;
 margin:4px 0;
+font-size:26px;
 font-size:min(3vw, 26px);
 }
 .edit-form .chord-structure-controls {
@@ -7156,6 +7207,9 @@ gap:2px;
 align-items:center;
 padding-right:6px;
 border-right:1px solid #ddd;
+}
+.edit-form .ve-tool-group > * {
+margin:2px;
 }
 .edit-form .ve-tool-group:last-child {
 border-right:none;
@@ -7465,6 +7519,15 @@ margin-left:0;
 }
 .edit-form .chord-preview-pane .chord-note {
 text-align:left;
+}
+}
+@media (max-width: 595px) {
+a.green-button { display:none; }
+}
+@media (max-width: 1024px) {
+.edit-form .ve-tool-btn {
+min-width:40px;
+min-height:40px;
 }
 }
 
@@ -8605,7 +8668,7 @@ def ChordsToHTML(chords, tclass='chords'):
         return table
 
     if tclass == 'chords':
-        note_style = 'font-size:min(3vw, 26px); text-align:left; overflow-wrap:break-word'
+        note_style = 'font-size:26px; font-size:min(3vw, 26px); text-align:left; overflow-wrap:break-word'
         note_class = 'chord-note'
     else:
         note_style = 'text-align:left; overflow-wrap:break-word'
