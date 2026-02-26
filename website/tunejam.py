@@ -8007,60 +8007,58 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
   else:
     c = get_set_title(event.current_set)
 
-  parts.extend([
-    CText("Now Playing: ", bold=1), 
-    CSpan(c),
-    CBreak(), 
-    CText("Follow This Event:", bold=1),
-    CNBSP(),
-    CText("Notes", href='/watch/notes/%s' % sid), 
-    CNBSP(), 
-    CText("Chords", href='/watch/chords/%s' % sid), 
-    CNBSP(), 
-    CText("Both", href='/watch/%s' % sid),
-    CBreak(), 
-  ])
-  
   if event.on_air:
-    img = '/image/slider-on.png'
-    status = "On the Air: Recording active set statistics."
-    status_url = '/event/%s/status/off-air' % sid
-  else:
-    img = '/image/slider-off.png'
-    status = "Off The Air"
-    status_url = '/event/%s/status/on-air' % sid
+    parts.extend([
+      CText("Now Playing: ", bold=1),
+      CSpan(c),
+      CBreak(),
+      CText("Follow This Event:", bold=1),
+      CNBSP(),
+      CText("Notes", href='/watch/notes/%s' % sid),
+      CNBSP(),
+      CText("Chords", href='/watch/chords/%s' % sid),
+      CNBSP(),
+      CText("Both", href='/watch/%s' % sid),
+      CBreak(),
+    ])
 
   if editor:
-    status_img = CImage(src=img, href=status_url)
-  else:
-    status_img = CImage(src=img)
-    
-  parts.extend(
-    [
-      CBreak(),
-      CText("Status:", bold=1),
-      CNBSP(), 
-      status_img, 
-      CNBSP(),
-      CText(status)
-    ])
+    if event.on_air:
+      img = '/image/slider-on.png'
+      status = "On the Air: Recording active set statistics."
+      status_url = '/event/%s/status/off-air' % sid
+    else:
+      img = '/image/slider-off.png'
+      status = "Off The Air"
+      status_url = '/event/%s/status/on-air' % sid
+
+    status_img = CImage(src=img, href=status_url, style="vertical-align:text-bottom")
+
+    parts.extend(
+      [
+        CBreak(),
+        CText("Status:", bold=1),
+        CNBSP(),
+        status_img,
+        CNBSP(),
+        CText(status)
+      ])
   
   parts.append(CH("Available Sets:", 2))
   if not event.sets:
     parts.append(CText("No sets have been defined for this event", italic=1))
   else:
-    if editor:
+    if editor and event.on_air:
       parts.append(CParagraph("Click on a red dot to change the current set.  View a set with "
                               "melody reminders, chords, or both."))
-      if event.on_air:
-        parts.extend([
-          CText("Select Set:"),
-          CNBSP(),
-          CText("Random", href='/event/%s/select/random' % sid), 
-          CNBSP(),
-          CText("Least Recent", href='/event/%s/select/oldest' % sid),
-          CBreak(2), 
-        ])
+      parts.extend([
+        CText("Select Set:"),
+        CNBSP(),
+        CText("Random", href='/event/%s/select/random' % sid),
+        CNBSP(),
+        CText("Least Recent", href='/event/%s/select/oldest' % sid),
+        CBreak(2),
+      ])
     else:
       parts.append(CParagraph("View a particular set with melody reminders, chords, or both:"))
 
@@ -8076,12 +8074,12 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
       if editor:
         parts.append('<span class="drag-handle">&#x2630;</span>')
 
-      if s == event.current_set:
+      if event.on_air and s == event.current_set:
         parts.append(CImage(src='/image/check-mark.png', style="height:1.0em"))
-      elif editor:
+      elif event.on_air and editor:
         parts.append(CImage(src='/image/red-square.png', href="/event/%s/current/%s" % (sid, s),
                             style="height:1.0em;vertical-align:text-bottom"))
-      else:
+      elif event.on_air:
         parts.append(CImage(src='/image/red-square.png', style="height:1.0em;vertical-align:text-bottom"))
 
       parts.extend([
