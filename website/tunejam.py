@@ -1334,6 +1334,37 @@ padding-bottom:0.5em;
     
   return PageWrapper(parts, section, show_eye_candy=(section != 'event'))
 
+kHistoryWrapWidth = 85
+
+def _unwrap_history(text):
+  """Unwrap H: line breaks into a single paragraph for editing."""
+  if not text:
+    return text
+  return ' '.join(line.strip() for line in text.split('\n'))
+
+def _rewrap_history(text):
+  """Re-wrap history text to kHistoryWrapWidth for .spec file storage."""
+  if not text:
+    return text
+  import textwrap
+  return '\n'.join(textwrap.wrap(text, kHistoryWrapWidth))
+
+def _process_history(form, original_wrapped=None):
+  """Process history field from form submission.  If unchanged from
+  original, preserve original line wrapping.  Otherwise, re-wrap."""
+  new_text = form.get('history', '').strip() or None
+  if new_text is None:
+    return None
+  # Normalize submitted text (user edits unwrapped single-paragraph text)
+  new_unwrapped = ' '.join(new_text.split())
+  if original_wrapped:
+    orig_unwrapped = ' '.join(original_wrapped.split())
+    if new_unwrapped == orig_unwrapped:
+      # No content change — preserve original wrapping
+      return original_wrapped
+  # Content was edited (or new tune) — re-wrap
+  return _rewrap_history(new_unwrapped)
+
 @app.route('/tune/new')
 def tune_new():
   if not HasCapability(kCapEditTunes):
@@ -1392,7 +1423,7 @@ def tune_new_create():
   obj.origin = request.form.get('origin', '').strip() or None
   obj.structure = request.form.get('structure', '').strip() or None
   obj.ref = request.form.get('ref', '').strip() or None
-  obj.history = request.form.get('history', '').strip() or None
+  obj.history = _process_history(request.form)
 
   # Collect tune types from checkboxes
   types = []
@@ -5203,10 +5234,10 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
       CInput(type='text', name='origin', value=obj.origin or '', hclass='wide-input', placeholder='Enter origin here'),
     ], hclass='field-row'),
 
-    # History
+    # History — unwrap for editing; re-wrapped on save if changed
     CDiv('History:', hclass='section-header'),
     CDiv([
-      CTextArea(obj.history or '', name='history', rows=6, cols=80, hclass='description-field'),
+      CTextArea(_unwrap_history(obj.history or ''), name='history', rows=6, cols=80, hclass='description-field'),
     ], hclass='field-row'),
 
     # Notes (ref field — "Collected from Author", etc.)
@@ -5613,6 +5644,9 @@ def tune_save(tune):
   except SystemExit:
     return redirect('/tune/%s' % tune, code=303)
 
+  # Save original wrapped history before overwriting
+  original_history = obj.history
+
   # Update all fields from form
   obj.title = request.form.get('title', obj.title or '').strip()
   obj.key = request.form.get('key', obj.key or '').strip()
@@ -5622,7 +5656,7 @@ def tune_save(tune):
   obj.origin = request.form.get('origin', '').strip() or None
   obj.structure = request.form.get('structure', '').strip() or None
   obj.ref = request.form.get('ref', '').strip() or None
-  obj.history = request.form.get('history', '').strip() or None
+  obj.history = _process_history(request.form, original_history)
 
   # Collect tune types from checkboxes
   types = []
