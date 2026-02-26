@@ -7005,6 +7005,15 @@ background-color:#ffffee;
 }
 #event-sets .event-set-row {
 padding:2px 0;
+display:flex;
+align-items:baseline;
+}
+#event-sets .set-controls {
+white-space:nowrap;
+flex-shrink:0;
+}
+#event-sets .set-info {
+margin-left:1em;
 }
 #event-sets .drag-handle {
 cursor:grab;
@@ -8062,6 +8071,8 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
       url = '/sets/%s' % s
       parts.append('<div class="event-set-row" data-set="%s">' % s)
 
+      parts.append('<span class="set-controls">')
+
       if editor:
         parts.append('<span class="drag-handle">&#x2630;</span>')
 
@@ -8069,9 +8080,9 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
         parts.append(CImage(src='/image/check-mark.png', style="height:1.0em"))
       elif editor:
         parts.append(CImage(src='/image/red-square.png', href="/event/%s/current/%s" % (sid, s),
-                            style="height:1.0em"))
+                            style="height:1.0em;vertical-align:text-bottom"))
       else:
-        parts.append(CImage(src='/image/red-square.png', style="height:1.0em"))
+        parts.append(CImage(src='/image/red-square.png', style="height:1.0em;vertical-align:text-bottom"))
 
       parts.extend([
         CNBSP(2),
@@ -8082,7 +8093,8 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
         CText("Both", href=url+'&event=%s' % sid),
         CNBSP(),
         CText("Print", href=url+'&event=%s&print=1' % sid),
-        CNBSP(2),
+        '</span>',
+        '<span class="set-info">',
         CSpan(titles),
       ])
 
@@ -8107,6 +8119,8 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
           CText(' - '),
           CText("Delete", href='/event/%s/delete/%s' % (sid, s)),
         ])
+
+      parts.append('</span>')
 
       parts.append('</div>')
     parts.append('</div>')
