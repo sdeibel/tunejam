@@ -26,7 +26,7 @@ else:
 import utils
 
 from datetime import timedelta
-from flask import Flask, Response, request, send_file, make_response, redirect, session, jsonify, abort
+from flask import Flask, Response, request, send_file, make_response, redirect, session, jsonify, abort, g
 app = Flask(__name__)
 app.secret_key = 'TunejamIsAtHubbardHallEachTuesday'
 app.config['SESSION_TYPE'] = 'filesystem'
@@ -6264,7 +6264,7 @@ def doprint(format=None, bookname=None):
     import sessbook
     event = utils.CEvent(bookname)
     event.ReadEvent()
-    if event.private and not CanViewEvent(event) and not session.get('share_access_%s' % bookname):
+    if event.private and not CanViewEvent(event):
       parts.append(CParagraph('This event is private.'))
       return PageWrapper(parts, 'print')
     book = sessbook.CEventBook(event)
@@ -7918,13 +7918,8 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
   event.ReadEvent()
 
   # Access check for private events
-  if event.private and not CanViewEvent(event) and not session.get('share_access_%s' % sid):
-    parts = []
-    parts.append(CH("Private Event", 1))
-    parts.append(CParagraph("This event is private. You need a share link or to be added as a co-owner to view it."))
-    parts.append(CBreak())
-    parts.append(CText('Return to event list', href='/events'))
-    return PageWrapper(parts, 'event')
+  if event.private and not CanViewEvent(event) and not getattr(g, 'share_access', False):
+    return redirect('/events', code=303)
 
   editor = CanEditEvent(event)
 
@@ -8172,20 +8167,18 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
     parts.append(CBreak(2))
     if event.coowners:
       parts.append(CText("Co-owners: ", bold=1))
-      user_email = GetUserEmail()
-      is_owner = user_email and event.owner and user_email.lower() == event.owner.lower()
       for i, coowner in enumerate(event.coowners):
         if i > 0:
           parts.append(CText(', '))
         parts.append(CText(coowner))
-        can_remove = is_owner or (user_email and user_email.lower() == coowner.lower())
-        if can_remove:
-          parts.append(CForm([
-            CInput(type="HIDDEN", name="action", value="remove_coowner"),
-            CInput(type="HIDDEN", name="email", value=coowner),
-            CInput(type="SUBMIT", value="x",
-                   style="font-size:0.7em;padding:0 4px;cursor:pointer;margin-left:2px"),
-          ], action=settings_url, method='POST', style="display:inline"))
+        parts.append(
+          '<form method="POST" action="%s" style="display:inline">'
+          '<input type="hidden" name="action" value="remove_coowner">'
+          '<input type="hidden" name="email" value="%s">'
+          '<a href="#" onclick="this.parentNode.submit();return false" '
+          'style="color:red;text-decoration:none;font-weight:bold;margin-left:3px;'
+          'font-size:1.2em;position:relative;top:-0.05em">&times;</a>'
+          '</form>' % (settings_url, coowner))
       parts.append(CBreak())
     parts.append(CForm([
       CInput(type="HIDDEN", name="action", value="add_coowner"),
@@ -8227,8 +8220,8 @@ def event_share(share_id):
     parts.append(CBreak())
     parts.append(CText('Return to event list', href='/events'))
     return PageWrapper(parts, 'event')
-  session['share_access_%s' % evt.name] = True
-  return redirect('/event/%s' % evt.name, code=303)
+  g.share_access = True
+  return event(sid=evt.name)
 
 @app.route('/event/<sid>/settings', methods=['POST'])
 def event_settings(sid):
@@ -8274,12 +8267,8 @@ def watch(sid, type=None):
   event.ReadEvent()
 
   # Access check for private events
-  if event.private and not CanViewEvent(event) and not session.get('share_access_%s' % sid):
-    parts = []
-    parts.append(CH("Private Event", 1))
-    parts.append(CParagraph("This event is private."))
-    parts.append(CText('Return to event list', href='/events'))
-    return PageWrapper(parts, 'event')
+  if event.private and not CanViewEvent(event):
+    return redirect('/events', code=303)
 
   if event.title:
     title = event.title
@@ -8409,7 +8398,7 @@ def logout(target=''):
 def ajax_event_current(sid):
   s = utils.CEvent(sid)
   s.ReadEvent()
-  return s.current_set + '&' + str(len(s.sets))
+  return s.current_set + '&' + str(len(s.sets)) + '&' + str(s.on_air)
 
 @app.route('/event/<sid>/rename', methods=['POST'])
 def event_rename(sid):
@@ -8880,7 +8869,7 @@ $(document).ready(function() {
    setInterval(CheckEvent, 5000);
 %s
 });
-</script>""" % (extra_js, sid, e.current_set + '&' + str(len(e.sets)),
+</script>""" % (extra_js, sid, e.current_set + '&' + str(len(e.sets)) + '&' + str(e.on_air),
                 ready_calls)
 
   ])
