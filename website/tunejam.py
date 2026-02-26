@@ -3061,6 +3061,7 @@ function veDoRenderAbc() {
 
   var raw = textarea.value.trim();
   if (!raw && veMode !== 'visual') {
+    previewEl.removeAttribute('style');  // Clear responsive sizing from visual mode
     previewEl.innerHTML = '<div style="color:#666; font-style:italic; padding:20px">Enter ABC notation or use the visual editor above</div>';
     partRenderings = [];
     updatePartHeaders();
@@ -3081,6 +3082,7 @@ function veDoRenderAbc() {
 
   if (veMode !== 'visual') {
     // ABC text mode: render all parts into one SVG as before
+    previewEl.removeAttribute('style');  // Clear responsive sizing from visual mode
     var lines = raw.split('\\n');
     var abc = 'X:1\\nK:' + key + '\\nL:' + unit + '\\nM:' + meter + '\\n';
     for (var i = 0; i < lines.length; i++) {
@@ -3102,6 +3104,7 @@ function veDoRenderAbc() {
   // Visual mode: render each part into its own container
   var partLabels = 'ABCDEFGHIJ';
   previewEl.innerHTML = '';
+  previewEl.removeAttribute('style');  // Clear responsive sizing ABCJS may have set
   partRenderings = [];
 
   for (var p = 0; p < notationModel.parts.length; p++) {
