@@ -2755,26 +2755,37 @@ function buildElemSvgMap(tuneObj, partIdx) {
       var sc = (sa.absEl.abcelem && sa.absEl.abcelem.startChar !== undefined) ? sa.absEl.abcelem.startChar : undefined;
       if (sc === undefined) continue;
       // Find which model element this selectable belongs to
+      // Use core length (without spaceAfter) so trailing spaces don't cause
+      // the next element's startChar to match this element's range.
+      // If startChar lands on a trailing space, attribute to the next element.
       var matchedIdx = -1;
       for (var e = 0; e < elemCharStarts.length; e++) {
         var eStart = elemCharStarts[e];
-        var eLen = elementAbcLength(part.elements[e]);
-        if (sc >= eStart && sc < eStart + eLen) {
-          if (!map[e]) map[e] = [];
-          for (var k = 0; k < sa.absEl.elemset.length; k++) {
-            map[e].push(sa.absEl.elemset[k]);
-          }
-          // When abcjs folds a grace note with its following note into
-          // one selectable, also map the SVG elements to the next
-          // (main) note so highlighting works for both elements.
-          if (part.elements[e].grace && e + 1 < part.elements.length) {
-            if (!map[e + 1]) map[e + 1] = [];
-            for (var k = 0; k < sa.absEl.elemset.length; k++) {
-              map[e + 1].push(sa.absEl.elemset[k]);
-            }
-          }
+        var eCoreLen = elementAbcCoreLength(part.elements[e]);
+        if (sc >= eStart && sc < eStart + eCoreLen) {
           matchedIdx = e;
           break;
+        }
+        // Check if sc falls on trailing space — attribute to next element
+        if (part.elements[e].spaceAfter && sc >= eStart + eCoreLen && sc < eStart + elementAbcLength(part.elements[e])) {
+          matchedIdx = (e + 1 < elemCharStarts.length) ? e + 1 : e;
+          break;
+        }
+      }
+      if (matchedIdx >= 0) {
+        var me = matchedIdx;
+        if (!map[me]) map[me] = [];
+        for (var k = 0; k < sa.absEl.elemset.length; k++) {
+          map[me].push(sa.absEl.elemset[k]);
+        }
+        // When abcjs folds a grace note with its following note into
+        // one selectable, also map the SVG elements to the next
+        // (main) note so highlighting works for both elements.
+        if (part.elements[me].grace && me + 1 < part.elements.length) {
+          if (!map[me + 1]) map[me + 1] = [];
+          for (var k = 0; k < sa.absEl.elemset.length; k++) {
+            map[me + 1].push(sa.absEl.elemset[k]);
+          }
         }
       }
       // Track beam groups
@@ -3316,21 +3327,29 @@ function modelToAbcPart(part) {
 }
 
 function charOffsetToElemIdx(abcText, offset, elements) {
-  // Walk through the part's ABC text char by char, matching to element boundaries
+  // Walk through the part's ABC text char by char, matching to element boundaries.
+  // Use core length (without spaceAfter) for matching so trailing spaces don't
+  // cause the next element's startChar to fall inside this element's range.
+  // If offset lands on a trailing space, attribute it to the next element.
   var pos = 0;
   for (var e = 0; e < elements.length; e++) {
     var el = elements[e];
-    var elLen = elementAbcLength(el);
-    if (offset >= pos && offset < pos + elLen) return e;
-    pos += elLen;
+    var coreLen = elementAbcCoreLength(el);
+    var fullLen = elementAbcLength(el);
+    if (offset >= pos && offset < pos + coreLen) return e;
+    // Offset lands on trailing space — belongs to next element
+    if (el.spaceAfter && offset >= pos + coreLen && offset < pos + fullLen) {
+      return (e + 1 < elements.length) ? e + 1 : e;
+    }
+    pos += fullLen;
   }
   return Math.max(0, elements.length - 1);
 }
 
-function elementAbcLength(el) {
-  var extra = el.spaceAfter ? 1 : 0;
-  if (el.type === 'bar') return (el.subtype || '|').length + extra;
-  if (el.type === 'rest') return 1 + (el.duration || '').length + extra;
+function elementAbcCoreLength(el) {
+  // Length of the element's ABC text WITHOUT trailing space
+  if (el.type === 'bar') return (el.subtype || '|').length;
+  if (el.type === 'rest') return 1 + (el.duration || '').length;
   if (el.type === 'note') {
     var len = 0;
     if (el.slurStart) len += 1;
@@ -3346,9 +3365,13 @@ function elementAbcLength(el) {
     if (el.grace) len += 1; // }
     if (el.tied) len += 1;
     if (el.slurEnd) len += 1;
-    return len + extra;
+    return len;
   }
-  return 1 + extra;
+  return 1;
+}
+
+function elementAbcLength(el) {
+  return elementAbcCoreLength(el) + (el.spaceAfter ? 1 : 0);
 }
 
 // --- Selection Highlighting ---
