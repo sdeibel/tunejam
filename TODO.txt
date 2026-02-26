@@ -1,12 +1,6 @@
 ** Fix note generation on production site
 * Website Phase Three
   ** Coding Tasks Near Term
-    ** Check over for other browsers and iOS/Android
-    
-    ** Three user permissions levels:  Regular (create events, add/delete/edit sets,
-       delete their event, create tune and then later edit the ones they own), Editor 
-       (that plus edit any tune and delete tunes not in use in an event), Admin (that plus 
-       can delete or edit any event, set, or tune, and run cache and book rebuilds)
     ** Ability to drag set order in events, rename events, duplicate events, and delete events
     ** Let event owner specify whether public or just visible to them (admin sees all), 
        allow adding other emails that can edit/etc the event, allow sharing a hash url

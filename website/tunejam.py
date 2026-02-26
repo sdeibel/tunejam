@@ -55,14 +55,19 @@ kMaxEmailsPerHour = 3
 kMaxGlobalEmailsPerHour = 60
 
 # Capability constants
-kCapManageEvents = 'manage_events'
-kCapEditTunes = 'edit_tunes'
-kCapManageCache = 'manage_cache'
+kCapManageEvents = 'manage_events'       # Create events, manage own
+kCapEditTunes = 'edit_tunes'             # Create tunes, edit own
+kCapEditAnyTune = 'edit_any_tune'        # Edit/delete any tune
+kCapManageAnyEvent = 'manage_any_event'  # Edit/delete any event
+kCapDeleteInUse = 'delete_in_use'        # Force-delete in-use tunes
+kCapManageCache = 'manage_cache'         # Dev page cache mgmt
 
 # Permission levels
 kPermissions = {
-  'regular': {kCapManageEvents},
-  'admin': {kCapManageEvents, kCapEditTunes, kCapManageCache},
+  'regular': {kCapManageEvents, kCapEditTunes},
+  'editor':  {kCapManageEvents, kCapEditTunes, kCapEditAnyTune},
+  'admin':   {kCapManageEvents, kCapEditTunes, kCapEditAnyTune,
+              kCapManageAnyEvent, kCapDeleteInUse, kCapManageCache},
 }
 
 kMenu = [
@@ -679,6 +684,9 @@ def dev():
              CText(" -- Full book PDFs")]),
       CItem([CText("Clear All Caches", href='/dev/clear-cache/all'),
              CText(" -- All of the above")]),
+    ]))
+    parts.append(CBreak())
+    parts.append(CList([
       CItem([CText("Rebuild All Books", href='/dev/rebuild-books'),
              CText(" -- Regenerate all book PDFs (runs in background)")]),
     ]))
@@ -759,14 +767,15 @@ def rebuild_books():
 @app.route('/sets/sid/<sid>/edit/<spec>')
 def sets(spec=None, sid=None):
 
-  editor = HasCapability(kCapManageEvents)
-  
   error = None
   preload_tunes = []
 
   if sid is not None:
     s = utils.CEvent(sid)
     s.ReadEvent()
+    editor = CanEditEvent(s)
+  else:
+    editor = HasCapability(kCapManageEvents)
     
   if spec is not None:
     args = spec.split('&')
@@ -794,6 +803,7 @@ def sets(spec=None, sid=None):
         sid = arg[len('event='):].strip()
         s = utils.CEvent(sid)
         s.ReadEvent()
+        editor = CanEditEvent(s)
       elif arg:
         tunes.append(arg)
     
@@ -1453,6 +1463,7 @@ def tune_new_create():
   # Reconstruct chords from structured form
   obj.chords = _ReconstructChords(request.form)
 
+  obj.owner = GetUserEmail()
   obj.WriteSpec()
   utils.InvalidateTuneIndex()
   gTuneCountCache.clear()
@@ -1462,8 +1473,14 @@ def tune_new_create():
 @app.route('/tune/<tune>')
 def tune(tune):
   parts = []
-  editor = HasCapability(kCapEditTunes)
-  parts.extend(CreateTuneHTML(tune, metadata=True, editor=editor))
+  obj = utils.CTune(tune)
+  try:
+    obj.ReadDatabase()
+  except SystemExit:
+    pass
+  can_edit = CanEditTune(obj)
+  can_delete = CanDeleteTune(obj)[0]
+  parts.extend(CreateTuneHTML(tune, metadata=True, can_edit=can_edit, can_delete=can_delete))
   return PageWrapper(parts, 'index', show_eye_candy=False)
 
 def _build_editor_js(tune, chord_parts, url_count=1):
@@ -5288,14 +5305,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 @app.route('/tune/<tune>/edit')
 def tune_edit(tune):
-  if not HasCapability(kCapEditTunes):
-    return redirect('/authorize/tune/%s/edit' % tune, code=303)
-
   obj = utils.CTune(tune)
   try:
     obj.ReadDatabase()
   except SystemExit:
     pass
+  if not CanEditTune(obj):
+    return redirect('/authorize/tune/%s/edit' % tune, code=303)
 
   return _build_tune_form(obj, tune, 'Edit Tune', '/tune/%s/save' % tune, '/tune/%s' % tune)
 
@@ -5822,14 +5838,13 @@ def _chord_notation_guide():
 
 @app.route('/tune/<tune>/save', methods=['POST'])
 def tune_save(tune):
-  if not HasCapability(kCapEditTunes):
-    return redirect('/authorize/tune/%s/edit' % tune, code=303)
-
   obj = utils.CTune(tune)
   try:
     obj.ReadDatabase()
   except SystemExit:
     return redirect('/tune/%s' % tune, code=303)
+  if not CanEditTune(obj):
+    return redirect('/authorize/tune/%s/edit' % tune, code=303)
 
   # Save original wrapped history before overwriting
   original_history = obj.history
@@ -5889,6 +5904,64 @@ def tune_save(tune):
   gTuneCountCache.clear()
 
   return redirect('/tune/%s' % tune, code=303)
+
+@app.route('/tune/<tune>/delete', methods=['GET', 'POST'])
+def tune_delete(tune):
+  obj = utils.CTune(tune)
+  try:
+    obj.ReadDatabase()
+  except SystemExit:
+    return redirect('/index', code=303)
+
+  in_use = utils.TuneInUseBy(tune)
+  allowed, force_warning = CanDeleteTune(obj, in_use=bool(in_use))
+
+  if not allowed and not in_use:
+    return redirect('/authorize/tune/%s' % tune, code=303)
+  if not allowed and in_use:
+    # Not allowed to delete in-use tune
+    parts = [
+      CH("Cannot Delete: %s" % obj.title, 1),
+      CParagraph("This tune cannot be deleted because it is in use:"),
+    ]
+    for use_type, use_name in in_use:
+      parts.extend([CText("- %s: %s" % (use_type, use_name)), CBreak()])
+    parts.extend([CBreak(), CText("Return to tune", href='/tune/%s' % tune)])
+    return PageWrapper(parts, 'index', show_eye_candy=False)
+
+  if request.method == 'POST':
+    # Perform the deletion
+    spec_path = os.path.join(utils.kDatabaseDir, tune + '.spec')
+    if os.path.exists(spec_path):
+      os.remove(spec_path)
+    # Remove associated .abc file
+    abc_path = os.path.join(utils.kSheetMusicDir, tune + '.abc')
+    if os.path.exists(abc_path):
+      os.remove(abc_path)
+    # Remove associated .mp3 recording
+    mp3_path = os.path.join(utils.kRecordingsDir, tune + '.mp3')
+    if os.path.exists(mp3_path):
+      os.remove(mp3_path)
+    obj.InvalidateCaches()
+    utils.InvalidateTuneIndex()
+    gTuneCountCache.clear()
+    return redirect('/index', code=303)
+
+  # GET: show confirmation page
+  parts = [CH("Delete Tune: %s" % obj.title, 1)]
+  if in_use and force_warning:
+    parts.append(CParagraph(CText("Warning: This tune is currently in use!", bold=1)))
+    for use_type, use_name in in_use:
+      parts.extend([CText("- %s: %s" % (use_type, use_name)), CBreak()])
+    parts.append(CBreak())
+  parts.append(CParagraph("Are you sure you want to permanently delete this tune? "
+                           "This will remove the .spec file and any associated recording and ABC notation file."))
+  parts.append(CForm([
+    CInput(type='SUBMIT', value='Yes, Delete This Tune', hclass='red-button'),
+    CNBSP(2),
+    CText('Cancel', href='/tune/%s' % tune),
+  ], action='/tune/%s/delete' % tune, method='POST'))
+  return PageWrapper(parts, 'index', show_eye_candy=False)
 
 def _ReconstructChords(form):
   """Reconstruct formatted chord text from the structured edit form fields."""
@@ -6476,6 +6549,18 @@ cursor:pointer;
 .footer-logout:hover {
 background-color:#4a7a4a;
 }
+.footer-login {
+padding:1px 6px;
+font-size:75%;
+background-color:#3a6a3a;
+color:#ffffff;
+border:1px solid #1a3a1a;
+border-radius:3px;
+cursor:pointer;
+}
+.footer-login:hover {
+background-color:#4a7a4a;
+}
 @media only screen and (max-width: 500px) {
 .footer-auth {
 float:none;
@@ -6884,6 +6969,22 @@ text-decoration:none;
 }
 a.green-button:hover {
 background-color:#4a7a4a;
+color:#ffffff;
+text-decoration:none;
+}
+a.red-button, input.red-button, button.red-button {
+display:inline-block;
+padding:4px 14px;
+background-color:#8a2a2a;
+color:#ffffff;
+border:1px solid #5a1a1a;
+border-radius:3px;
+font-size:95%;
+text-decoration:none;
+cursor:pointer;
+}
+a.red-button:hover, input.red-button:hover, button.red-button:hover {
+background-color:#aa3a3a;
 color:#ffffff;
 text-decoration:none;
 }
@@ -7641,7 +7742,7 @@ text-align:left;
 }
 }
 @media (max-width: 595px) {
-a.green-button { display:none; }
+a.green-button, a.red-button { display:none; }
 }
 @media (max-width: 1024px) {
 .edit-form .ve-tool-btn {
@@ -7681,20 +7782,24 @@ display:none !important;
 @app.route('/events/undelete/<undelete>')
 def events(delete=None, undelete=None):
 
-  editor = HasCapability(kCapManageEvents)
-   
-  if delete and editor:
-    utils.DeleteEvent(delete)
+  if delete:
+    evt = utils.CEvent(delete)
+    evt.ReadEvent()
+    if CanDeleteEvent(evt):
+      utils.DeleteEvent(delete)
     return redirect('/events', code=303)
-  if undelete and editor:
-    utils.DeleteEvent(undelete, undelete=True)
+  if undelete:
+    evt = utils.CEvent(undelete)
+    evt.ReadEvent(deleted=True)
+    if CanDeleteEvent(evt):
+      utils.DeleteEvent(undelete, undelete=True)
     return redirect('/events', code=303)
-  
+
   utils.PurgeDeletedEvents()
-  
+
   parts = []
   parts.append(CH("Events", 1))
-  
+
   parts.append("Events make it easier to play together as a group.  The group "
                "leader creates the event, adds sets to it, and specifies which set "
                "is currently being played.  Other musicians can watch the event "
@@ -7715,34 +7820,32 @@ def events(delete=None, undelete=None):
       ])
   else:
     parts.append(CParagraph(CText("There are no active events right now.", italic=1)))
-    
-  if not editor:
-    parts.append(LoginButton('/events'))
-    parts.append(CDiv(style='clear:both'))
-    return PageWrapper(parts, 'event')
 
-  parts.append(CForm([
-    CBreak(), 
-    CText("Create a New Event:", bold=1),
-    CBreak(1),
-    CText("Title:"), CInput(type='TEXT', name='title', id='event-title', maxlength=200, style='width:55%'),
-    CBreak(2),
-    CInput(type='SUBMIT', value='Create'), 
-  ], action='/event', method='POST', id="event-form"))
-  
-  parts.append(CBreak())
-  
-  inactive = utils.ReadEvents(deleted=True)
-  if inactive:
-    parts.append(CParagraph(CText("Recently deleted events:", bold=1)))
-    for event in inactive:
-      expires = time.strftime('%x %X', time.localtime(event.GetExpiration()))
-      parts.extend([
-        CSpan(event.title+' - Expires '+expires+' - '),
-        CText("Undelete", href='/event/undelete/%s' % event.name),
-        CBreak(), 
-      ])
-  
+  if IsLoggedIn():
+    parts.append(CForm([
+      CBreak(),
+      CText("Create a New Event:", bold=1),
+      CBreak(1),
+      CText("Title:"), CInput(type='TEXT', name='title', id='event-title', maxlength=200, style='width:55%'),
+      CBreak(2),
+      CInput(type='SUBMIT', value='Create'),
+    ], action='/event', method='POST', id="event-form"))
+
+    parts.append(CBreak())
+
+    inactive = utils.ReadEvents(deleted=True)
+    if inactive:
+      parts.append(CParagraph(CText("Recently deleted events:", bold=1)))
+      for event in inactive:
+        expires = time.strftime('%x %X', time.localtime(event.GetExpiration()))
+        parts.extend([
+          CSpan(event.title+' - Expires '+expires+' - '),
+          CText("Undelete", href='/event/undelete/%s' % event.name),
+          CBreak(),
+        ])
+  else:
+    parts.append(LoginButton('/events'))
+
   parts.append(CDiv(style='clear:both'))
 
   return PageWrapper(parts, 'event')
@@ -7757,8 +7860,6 @@ def events(delete=None, undelete=None):
 @app.route('/event/<sid>/select/<selector>')
 def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, selector=None):
 
-  editor = HasCapability(kCapManageEvents)
-  
   def get_set_title(s):
     titles = []
     for tid in s.split('&'):
@@ -7767,14 +7868,15 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
       titles.append(tune.title)
     titles = ' - '.join(titles)
     return titles
-  
+
   if request.environ['REQUEST_METHOD'] == 'POST':
     title = request.form['title']
-    sid = utils.CreateEvent(title)
-    
+    sid = utils.CreateEvent(title, owner=GetUserEmail())
+
   event = utils.CEvent(sid)
   event.ReadEvent()
-  
+  editor = CanEditEvent(event)
+
   if add is not None and editor:
     if old is not None:
       pos = event.sets.index(old)
@@ -8118,6 +8220,13 @@ def authorize(target):
 @app.route('/logout/<path:target>')
 def logout(target=''):
   Logout()
+  # Redirect to home if the target page requires login
+  parts = target.strip('/').split('/')
+  if (len(parts) >= 3 and parts[0] == 'tune' and parts[2] in ('edit', 'save', 'delete')) \
+      or target.startswith('tune/new') \
+      or target.startswith('dev/clear-cache') \
+      or target.startswith('dev/rebuild-books'):
+    return redirect('/', code=303)
   return redirect('/'+target, code=303)
 
 @app.route('/ajax/event/<sid>/current')
@@ -8145,10 +8254,19 @@ def GetAdminEmails():
   raw = config.get('admin_emails', '')
   return [e.strip().lower() for e in raw.split(',') if e.strip()]
 
+def GetEditorEmails():
+  """Return list of editor email addresses from config."""
+  config = ReadEmailConfig()
+  raw = config.get('editor_emails', '')
+  return [e.strip().lower() for e in raw.split(',') if e.strip()]
+
 def GetPermissionLevel(email):
-  """Return 'admin' or 'regular' based on email."""
-  if email.lower() in GetAdminEmails():
+  """Return 'admin', 'editor', or 'regular' based on email."""
+  lower = email.lower()
+  if lower in GetAdminEmails():
     return 'admin'
+  if lower in GetEditorEmails():
+    return 'editor'
   return 'regular'
 
 def IsLoggedIn():
@@ -8176,6 +8294,94 @@ def GetUserEmail():
     return session.get('email')
   return None
 
+def _OwnsItem(item_obj):
+  """Check if current user owns the given item (CTune or CEvent)."""
+  email = GetUserEmail()
+  if not email or not item_obj.owner:
+    return False
+  return email.lower() == item_obj.owner.lower()
+
+def CanEditTune(tune_obj):
+  """Check if current user can edit this tune."""
+  if HasCapability(kCapEditAnyTune):
+    return True
+  if HasCapability(kCapEditTunes) and _OwnsItem(tune_obj):
+    return True
+  return False
+
+def CanDeleteTune(tune_obj, in_use=False):
+  """Check if current user can delete this tune.
+  Returns (allowed, force_warning) tuple."""
+  if not CanEditTune(tune_obj):
+    return (False, False)
+  if not in_use:
+    return (True, False)
+  # In-use: only admin can force-delete
+  if HasCapability(kCapDeleteInUse):
+    return (True, True)
+  return (False, False)
+
+def CanEditEvent(event_obj):
+  """Check if current user can edit this event."""
+  if HasCapability(kCapManageAnyEvent):
+    return True
+  if HasCapability(kCapManageEvents) and _OwnsItem(event_obj):
+    return True
+  return False
+
+def CanDeleteEvent(event_obj):
+  """Check if current user can delete this event."""
+  return CanEditEvent(event_obj)
+
+# Profile system
+kProfileDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'profiles')
+if not os.path.exists(kProfileDir):
+  os.makedirs(kProfileDir)
+
+def _ProfilePath(email):
+  """Return path to profile file for the given email."""
+  h = hashlib.md5(email.lower().encode('utf-8')).hexdigest()
+  return os.path.join(kProfileDir, h + '.profile')
+
+def GetOrCreateProfile(email):
+  """Read or create profile for email. Returns dict with 'email' and 'display_name'."""
+  path = _ProfilePath(email)
+  if os.path.exists(path):
+    profile = {}
+    with open(path) as f:
+      for line in f:
+        line = line.strip()
+        if '=' in line:
+          key, val = line.split('=', 1)
+          profile[key.strip()] = val.strip()
+    return profile
+  profile = {'email': email.lower(), 'display_name': 'Anonymous'}
+  _WriteProfile(profile)
+  return profile
+
+def _WriteProfile(profile):
+  """Write profile dict to file."""
+  path = _ProfilePath(profile['email'])
+  with open(path, 'w') as f:
+    for key, val in sorted(profile.items()):
+      f.write('%s=%s\n' % (key, val))
+
+def GetDisplayName(email):
+  """Return display name for email, or 'Anonymous'."""
+  if not email:
+    return 'Anonymous'
+  profile = GetOrCreateProfile(email)
+  return profile.get('display_name', 'Anonymous')
+
+# Seed initial profiles for known users
+for _email, _name in [
+    ('stephan@deibel.net', 'Stephan'),
+    ('gdeibel@gmail.com', 'Gretchen'),
+    ('mcinbass@gmail.com', 'Ed'),
+]:
+  if not os.path.exists(_ProfilePath(_email)):
+    _WriteProfile({'email': _email, 'display_name': _name})
+
 def Logout():
   """Clear auth session keys."""
   for key in ('email', 'permission_level', 'login_time'):
@@ -8183,7 +8389,7 @@ def Logout():
 
 def GenerateToken(email, target, login_type):
   """Create a token file, return the token string.
-  login_type is 'admin' or 'regular'."""
+  login_type is 'admin', 'editor', or 'regular'."""
   raw = '%s-%s-%s' % (email, time.time(), os.urandom(16).encode('hex'))
   token = hashlib.sha256(raw.encode('utf-8')).hexdigest()
   path = os.path.join(kTokenDir, token + '.token')
@@ -8386,14 +8592,24 @@ def LoginButton(target, label="Log in to create or edit events"):
   return CDiv(parts)
 
 def FooterAuth():
-  """Return auth status display for the footer, or empty string."""
+  """Return auth status display for the footer, or login button."""
   email = GetUserEmail()
   if not email:
-    return ''
+    return CSpan([
+      '<button type="button" class="footer-login login-trigger" data-login-target="/">Login</button>',
+    ], hclass='footer-auth')
+  display_name = GetDisplayName(email)
+  level = session.get('permission_level', 'regular')
+  if level == 'admin':
+    role_label = CSpan(' (admin)', hclass='user-email-display')
+  elif level == 'editor':
+    role_label = CSpan(' (editor)', hclass='user-email-display')
+  else:
+    role_label = ''
   return CSpan([
     CText('Logged in as: ', bold=1),
-    CSpan(email, hclass='user-email-display'),
-    CSpan(' (admin)', hclass='user-email-display') if session.get('permission_level') == 'admin' else '',
+    CSpan(display_name, hclass='user-email-display'),
+    role_label,
     CNBSP(2),
     '<button class="footer-logout" type="button" onclick="location.href=\'/logout\'+location.pathname">Logout</button>',
   ], hclass='footer-auth')
@@ -8520,7 +8736,7 @@ def CreateTuneSetPDF(name, title, subtitle, tunes):
   pdf = book.GeneratePDF(include_index=False, generate=True)
   return send_file(pdf, mimetype='application/pdf')
   
-def CreateTuneHTML(name, pagetype='both', metadata=False, editor=False):
+def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_delete=False):
 
   obj = utils.CTune(name)
   try:
@@ -8623,8 +8839,14 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, editor=False):
   else:
     refs = ''
     
-  if editor:
-    edit_link = CDiv('<a href="/tune/%s/edit" class="green-button">Edit Tune</a>' % name, style='clear:right; float:right; margin-top:4px')
+  action_buttons = []
+  if can_edit:
+    action_buttons.append('<a href="/tune/%s/edit" class="green-button">Edit Tune</a>' % name)
+  if can_delete:
+    action_buttons.append(CNBSP())
+    action_buttons.append('<a href="/tune/%s/delete" class="red-button">Delete Tune</a>' % name)
+  if action_buttons:
+    edit_link = CDiv(action_buttons, style='clear:right; float:right; margin-top:4px')
   else:
     edit_link = ''
 

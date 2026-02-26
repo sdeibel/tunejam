@@ -12,7 +12,11 @@
 # from_address=user@example.com
 #
 # Comma-separated list of email addresses with admin access.
-# Admin users can edit tunes and manage the cache.
-# Regular users can create and manage events.
+# Admin users can edit/delete any tune or event and manage the cache.
 #
 # admin_emails=admin@example.com,other@example.com
+#
+# Comma-separated list of email addresses with editor access.
+# Editors can edit any tune but cannot manage others' events.
+#
+# editor_emails=editor@example.com

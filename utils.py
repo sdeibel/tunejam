@@ -115,6 +115,7 @@ class CTune:
         self.raw_notes = ''
         self.chords = ''
         self.sheet = ''
+        self.owner = None
         self._field_order = []  # Track original field order for round-trip fidelity
 
     def ReadDatabase(self):
@@ -144,6 +145,7 @@ class CTune:
             'L': 'unit',
             'M': 'meter',
             'S': 'structure',
+            'W': 'owner',
         }
         
         kPartMap = {
@@ -267,6 +269,7 @@ class CTune:
         # Map field keys to how they should be written
         kFieldToAttr = {
             'T': 'title',
+            'W': 'owner',
             'C': 'klass',
             'S': 'structure',
             'A': 'author',
@@ -285,11 +288,11 @@ class CTune:
         if self._field_order:
             field_order = list(self._field_order)
             # Add any fields not in the original order (new fields added during edit)
-            for key in ('T', 'C', 'S', 'A', 'O', 'H', 'U', 'R', 'K', 'L', 'M'):
+            for key in ('T', 'W', 'C', 'S', 'A', 'O', 'H', 'U', 'R', 'K', 'L', 'M'):
                 if key not in field_order:
                     field_order.append(key)
         else:
-            field_order = ['T', 'C', 'S', 'A', 'O', 'H', 'U', 'R', 'K', 'L', 'M']
+            field_order = ['T', 'W', 'C', 'S', 'A', 'O', 'H', 'U', 'R', 'K', 'L', 'M']
 
         # Metadata section
         for key in field_order:
@@ -1734,6 +1737,7 @@ class CEvent:
         self.sets = []
         self.current_set = ''
         self.on_air = 0
+        self.owner = None
         self.stats = collections.defaultdict(list)
         
     def ReadEvent(self, deleted=False):
@@ -1758,7 +1762,9 @@ class CEvent:
         self.sets = []
         curr_set = None
         for l in lines[3:]:
-            if l == l.lstrip() and l.strip():
+            if l.startswith('owner:'):
+                self.owner = l[len('owner:'):].strip()
+            elif l == l.lstrip() and l.strip():
                 self.sets.append(l)
                 curr_set = l
             elif l.strip():
@@ -1769,9 +1775,11 @@ class CEvent:
         fn = os.path.join(kEventsLoc, self.name+'.evt')
         lines = [
             self.title,
-            self.current_set, 
-            str(self.on_air), 
+            self.current_set,
+            str(self.on_air),
         ]
+        if self.owner:
+            lines.append('owner:%s' % self.owner)
         for sid in self.sets:
             lines.append(sid)
             for ptime in self.stats[sid]:
@@ -1808,8 +1816,47 @@ def ReadEvents(deleted=False):
             
     return events
 
-def CreateEvent(title):
-    
+def TuneInUseBy(tune_name):
+    """Check if a tune is referenced by any books, saved sets, or events.
+    Returns list of (type, name) tuples describing where the tune is used."""
+    results = []
+
+    # Check .book files in db/
+    for fn in os.listdir(kDatabaseDir):
+        if fn.endswith('.book'):
+            with open(os.path.join(kDatabaseDir, fn)) as f:
+                for line in f:
+                    if tune_name in line.split():
+                        results.append(('book', fn[:-5]))
+                        break
+
+    # Check saved sets
+    if os.path.exists(kSaveLoc):
+        for fn in os.listdir(kSaveLoc):
+            if fn.endswith('.book'):
+                with open(os.path.join(kSaveLoc, fn)) as f:
+                    for line in f:
+                        if tune_name in line.split():
+                            results.append(('saved-set', fn[:-5]))
+                            break
+
+    # Check events
+    for dirname, label in [(kEventsLoc, 'event'), (kEventArchiveLoc, 'archived-event')]:
+        if not os.path.exists(dirname):
+            continue
+        for fn in os.listdir(dirname):
+            if fn.endswith('.evt'):
+                with open(os.path.join(dirname, fn)) as f:
+                    for line in f:
+                        line = line.strip()
+                        if tune_name in line.split('&'):
+                            results.append((label, fn[:-4]))
+                            break
+
+    return results
+
+def CreateEvent(title, owner=None):
+
     parts = title.split()
     first = [p[0] for p in parts]
     name = ''.join(first)
@@ -1820,13 +1867,14 @@ def CreateEvent(title):
         event_file = os.path.join(kEventsLoc, name + ('-%i' % i) +'.evt')
     if i:
         name = name + '-%i' % i
-        
+
     name = name.lower()
-    
+
     event = CEvent(name)
     event.title = title
+    event.owner = owner
     event.WriteEvent()
-    
+
     return name
         
 def DeleteEvent(sid, undelete=False):
