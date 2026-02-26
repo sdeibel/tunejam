@@ -5,6 +5,8 @@ import tempfile
 import sys
 import time
 import collections
+import random
+import string
 from html import * 
 
 # Configuration
@@ -1738,6 +1740,9 @@ class CEvent:
         self.current_set = ''
         self.on_air = 0
         self.owner = None
+        self.private = 0
+        self.share_id = ''
+        self.coowners = []
         self.stats = collections.defaultdict(list)
         
     def ReadEvent(self, deleted=False):
@@ -1764,6 +1769,12 @@ class CEvent:
         for l in lines[3:]:
             if l.startswith('owner:'):
                 self.owner = l[len('owner:'):].strip()
+            elif l.startswith('private:'):
+                self.private = int(l[len('private:'):].strip())
+            elif l.startswith('share:'):
+                self.share_id = l[len('share:'):].strip()
+            elif l.startswith('coowner:'):
+                self.coowners.append(l[len('coowner:'):].strip())
             elif l == l.lstrip() and l.strip():
                 self.sets.append(l)
                 curr_set = l
@@ -1780,6 +1791,12 @@ class CEvent:
         ]
         if self.owner:
             lines.append('owner:%s' % self.owner)
+        if self.private:
+            lines.append('private:%d' % self.private)
+        if self.share_id:
+            lines.append('share:%s' % self.share_id)
+        for coowner in self.coowners:
+            lines.append('coowner:%s' % coowner)
         for sid in self.sets:
             lines.append(sid)
             for ptime in self.stats[sid]:
@@ -1815,6 +1832,31 @@ def ReadEvents(deleted=False):
             events.append(event)
             
     return events
+
+def GenerateShareId():
+    """Generate a unique 8-char alphanumeric share ID for an event."""
+    existing = set()
+    for fn in os.listdir(kEventsLoc):
+        if fn.endswith('.evt'):
+            evt = CEvent(fn[:-len('.evt')])
+            evt.ReadEvent()
+            if evt.share_id:
+                existing.add(evt.share_id)
+    chars = string.ascii_lowercase + string.digits
+    while True:
+        share_id = ''.join(random.choice(chars) for _ in range(8))
+        if share_id not in existing:
+            return share_id
+
+def LookupEventByShareId(share_id):
+    """Find an event by its share_id. Returns CEvent or None."""
+    for fn in os.listdir(kEventsLoc):
+        if fn.endswith('.evt'):
+            evt = CEvent(fn[:-len('.evt')])
+            evt.ReadEvent()
+            if evt.share_id == share_id:
+                return evt
+    return None
 
 def TuneInUseBy(tune_name):
     """Check if a tune is referenced by any books, saved sets, or events.

@@ -6264,6 +6264,9 @@ def doprint(format=None, bookname=None):
     import sessbook
     event = utils.CEvent(bookname)
     event.ReadEvent()
+    if event.private and not CanViewEvent(event) and not session.get('share_access_%s' % bookname):
+      parts.append(CParagraph('This event is private.'))
+      return PageWrapper(parts, 'print')
     book = sessbook.CEventBook(event)
     target, up_to_date = book._GetCacheFile('.pdf')
     fn = os.path.join(utils.kEventsLoc, event.name+'.evt')
@@ -7841,7 +7844,8 @@ def events(delete=None, undelete=None):
                "as the event changes.")
 
   events = utils.ReadEvents()
-  events.sort(key=lambda s:s.title)
+  events = [e for e in events if not e.private or CanViewEvent(e)]
+  events.sort(key=lambda s: s.title.lower())
 
   parts.append(CParagraph(CText("The following events have been created:", bold=1)))
 
@@ -7868,6 +7872,9 @@ def events(delete=None, undelete=None):
     parts.append(CBreak())
 
     inactive = utils.ReadEvents(deleted=True)
+    # Filter deleted events: admin/editor sees all, regular users see only their own
+    if not HasCapability(kCapManageAnyEvent) and not HasCapability(kCapEditAnyTune):
+      inactive = [e for e in inactive if _OwnsItem(e)]
     if inactive:
       parts.append(CParagraph(CText("Recently deleted events:", bold=1)))
       for event in inactive:
@@ -7909,6 +7916,16 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
 
   event = utils.CEvent(sid)
   event.ReadEvent()
+
+  # Access check for private events
+  if event.private and not CanViewEvent(event) and not session.get('share_access_%s' % sid):
+    parts = []
+    parts.append(CH("Private Event", 1))
+    parts.append(CParagraph("This event is private. You need a share link or to be added as a co-owner to view it."))
+    parts.append(CBreak())
+    parts.append(CText('Return to event list', href='/events'))
+    return PageWrapper(parts, 'event')
+
   editor = CanEditEvent(event)
 
   if add is not None and editor:
@@ -7982,16 +7999,37 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
   parts = []
   if editor:
     parts.append('<h1>Event: <span id="event-title" contenteditable="true">%s</span>'
-                 ' <button id="dup-btn" style="font-size:0.5em;vertical-align:middle;cursor:pointer"'
+                 ' <button id="dup-btn" style="font-size:0.5em;vertical-align:middle;cursor:pointer;padding:3px 8px"'
                  '>Duplicate</button></h1>' % event.title)
   elif IsLoggedIn():
     parts.append('<h1>Event: %s'
-                 ' <button id="dup-btn" style="font-size:0.5em;vertical-align:middle;cursor:pointer"'
+                 ' <button id="dup-btn" style="font-size:0.5em;vertical-align:middle;cursor:pointer;padding:3px 8px"'
                  '>Duplicate</button></h1>' % event.title)
   else:
     parts.append(CH("Event: %s" % event.title, 1))
+  if editor:
+    settings_url = '/event/%s/settings' % sid
+    checked_attr = ' checked' if event.private else ''
+    parts.append(CBreak())
+    parts.append(
+      '<form method="POST" action="%s" style="display:inline">'
+      '<input type="hidden" name="action" value="toggle_private">'
+      '<label><input type="checkbox" name="private" onchange="this.form.submit()"%s> Private</label>'
+      '</form>' % (settings_url, checked_attr))
+    if event.private:
+      share_url = request.host_url.rstrip('/') + '/ev/' + event.share_id
+      parts.extend([
+        CNBSP(3),
+        CText("Share with: ", bold=1),
+        CText(share_url, href=share_url),
+        CNBSP(2),
+        '<button onclick="navigator.clipboard.writeText(\'%s\');'
+        'this.textContent=\'Copied!\';var btn=this;setTimeout(function(){btn.textContent=\'Copy Link\'},2000);'
+        'return false" '
+        'style="font-size:0.85em;vertical-align:middle;cursor:pointer;padding:3px 8px">Copy Link</button>' % share_url,
+      ])
   parts.append(CParagraph(""))
-  
+
   if not event.title:
     parts.extend([
       CParagraph("This event has been deleted"),
@@ -8129,15 +8167,45 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
       CInput(type="SUBMIT", value="Add a Set"),
     ], action='/sets/sid/%s' % sid, method='GET', id="add-set-form"))
 
+    # Co-owners section
+    settings_url = '/event/%s/settings' % sid
+    parts.append(CBreak(2))
+    if event.coowners:
+      parts.append(CText("Co-owners: ", bold=1))
+      user_email = GetUserEmail()
+      is_owner = user_email and event.owner and user_email.lower() == event.owner.lower()
+      for i, coowner in enumerate(event.coowners):
+        if i > 0:
+          parts.append(CText(', '))
+        parts.append(CText(coowner))
+        can_remove = is_owner or (user_email and user_email.lower() == coowner.lower())
+        if can_remove:
+          parts.append(CForm([
+            CInput(type="HIDDEN", name="action", value="remove_coowner"),
+            CInput(type="HIDDEN", name="email", value=coowner),
+            CInput(type="SUBMIT", value="x",
+                   style="font-size:0.7em;padding:0 4px;cursor:pointer;margin-left:2px"),
+          ], action=settings_url, method='POST', style="display:inline"))
+      parts.append(CBreak())
+    parts.append(CForm([
+      CInput(type="HIDDEN", name="action", value="add_coowner"),
+      CText("Add co-owner: "),
+      CInput(type="TEXT", name="email", placeholder="email@example.com",
+             style="width:200px;font-size:0.9em"),
+      CNBSP(),
+      CInput(type="SUBMIT", value="Add",
+             style="font-size:0.85em;padding:2px 8px;cursor:pointer"),
+    ], action=settings_url, method='POST', style="display:inline"))
+
   parts.extend([
-    CBreak(),
+    CBreak(2),
     CText('Print this event', href='/print/event/%s' % sid),
     CText(' (this may take a while)'),
     CBreak(),
     CText('Return to event list', href='/events'),
     CBreak(),
   ])
-  if editor:
+  if CanDeleteEvent(event):
     parts.extend([
       CBreak(),
       '<a href="/events/delete/%s" class="red-button" onclick="return confirm(\'Are you sure you want to delete this event?\')">Delete Event</a>' % event.name,
@@ -8147,6 +8215,53 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
     parts.append(LoginButton('/event/%s' % event.name))
 
   return PageWrapper(parts, 'event', show_eye_candy=False)
+
+@app.route('/ev/<share_id>')
+def event_share(share_id):
+  """Share URL access for private events."""
+  evt = utils.LookupEventByShareId(share_id)
+  if evt is None:
+    parts = []
+    parts.append(CH("Not Found", 1))
+    parts.append(CParagraph("This share link is not valid or the event no longer exists."))
+    parts.append(CBreak())
+    parts.append(CText('Return to event list', href='/events'))
+    return PageWrapper(parts, 'event')
+  session['share_access_%s' % evt.name] = True
+  return redirect('/event/%s' % evt.name, code=303)
+
+@app.route('/event/<sid>/settings', methods=['POST'])
+def event_settings(sid):
+  """Manage event privacy, share URL, and co-owners."""
+  event = utils.CEvent(sid)
+  event.ReadEvent()
+  if not CanEditEvent(event):
+    return redirect('/event/%s' % sid, code=303)
+
+  action = request.form.get('action', '')
+
+  if action == 'toggle_private':
+    event.private = 1 if request.form.get('private') else 0
+    if event.private and not event.share_id:
+      event.share_id = utils.GenerateShareId()
+    event.WriteEvent()
+
+  elif action == 'add_coowner':
+    email = request.form.get('email', '').strip().lower()
+    if email and email not in [c.lower() for c in event.coowners]:
+      event.coowners.append(email)
+      event.WriteEvent()
+
+  elif action == 'remove_coowner':
+    email = request.form.get('email', '').strip().lower()
+    user_email = GetUserEmail()
+    is_owner = user_email and event.owner and user_email.lower() == event.owner.lower()
+    is_self = user_email and user_email.lower() == email
+    if is_owner or is_self or HasCapability(kCapManageAnyEvent):
+      event.coowners = [c for c in event.coowners if c.lower() != email]
+      event.WriteEvent()
+
+  return redirect('/event/%s' % sid, code=303)
 
 @app.route('/watch/<sid>')
 @app.route('/watch/<type>/<sid>')
@@ -8158,13 +8273,21 @@ def watch(sid, type=None):
   event = utils.CEvent(sid)
   event.ReadEvent()
 
+  # Access check for private events
+  if event.private and not CanViewEvent(event) and not session.get('share_access_%s' % sid):
+    parts = []
+    parts.append(CH("Private Event", 1))
+    parts.append(CParagraph("This event is private."))
+    parts.append(CText('Return to event list', href='/events'))
+    return PageWrapper(parts, 'event')
+
   if event.title:
     title = event.title
   else:
     title = "Deleted"
-    
+
   parts = []
-  
+
   parts.extend(EventReloader(sid))
   
   parts.append(CText("Watching Event: %s" % title, bold=1))
@@ -8416,17 +8539,42 @@ def CanDeleteTune(tune_obj, in_use=False):
     return (True, True)
   return (False, False)
 
+def _IsCoowner(event_obj):
+  """Check if current user is a co-owner of the given event."""
+  email = GetUserEmail()
+  if not email or not event_obj.coowners:
+    return False
+  return email.lower() in [c.lower() for c in event_obj.coowners]
+
 def CanEditEvent(event_obj):
   """Check if current user can edit this event."""
   if HasCapability(kCapManageAnyEvent):
     return True
   if HasCapability(kCapManageEvents) and _OwnsItem(event_obj):
     return True
+  if HasCapability(kCapManageEvents) and _IsCoowner(event_obj):
+    return True
   return False
 
 def CanDeleteEvent(event_obj):
-  """Check if current user can delete this event."""
-  return CanEditEvent(event_obj)
+  """Check if current user can delete this event (owner + admin only, not co-owners)."""
+  if HasCapability(kCapManageAnyEvent):
+    return True
+  if HasCapability(kCapManageEvents) and _OwnsItem(event_obj):
+    return True
+  return False
+
+def CanViewEvent(event_obj):
+  """Check if current user can view this event (relevant for private events)."""
+  if not event_obj.private:
+    return True
+  if HasCapability(kCapManageAnyEvent):
+    return True
+  if HasCapability(kCapManageEvents) and _OwnsItem(event_obj):
+    return True
+  if HasCapability(kCapManageEvents) and _IsCoowner(event_obj):
+    return True
+  return False
 
 # Profile system
 kProfileDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'profiles')
