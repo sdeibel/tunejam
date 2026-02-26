@@ -3189,7 +3189,7 @@ function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEven
   if (mouseEvent) {
     var barEl = findBarAncestor(mouseEvent.target);
     if (barEl) {
-      if (!currentTool || currentTool === 'slur' || currentTool === 'grace' ||
+      if (!currentTool || currentTool === 'beam' || currentTool === 'slur' || currentTool === 'grace' ||
           currentTool === 'sharp' || currentTool === 'flat' || currentTool === 'natural') {
         var barPartIdx = findPartForSvgElement(barEl);
         if (barPartIdx < 0) barPartIdx = partIdx;
@@ -3960,7 +3960,33 @@ function setupToolbar() {
         }
 
         // Special tools act on selection immediately
-        if (tool === 'slur' || tool === 'sharp' || tool === 'flat' || tool === 'natural' || tool === 'grace') {
+        if (tool === 'beam' || tool === 'slur' || tool === 'sharp' || tool === 'flat' || tool === 'natural' || tool === 'grace') {
+          // Immediate action for beam on selected notes (toggle)
+          // If any adjacent selected notes have spaceAfter (broken beam), remove
+          // spaces to join them. Otherwise add spaces to break beams.
+          if (tool === 'beam' && selectedElements.length >= 2) {
+            pushUndo();
+            var sortedSel = selectedElements.slice().sort(function(a, b) { return a.elemIdx - b.elemIdx; });
+            // Check if any selected note (except last) has spaceAfter
+            var anyBroken = false;
+            for (var si = 0; si < sortedSel.length - 1; si++) {
+              var sel = sortedSel[si];
+              var elem = notationModel.parts[sel.partIdx].elements[sel.elemIdx];
+              if (elem.spaceAfter) { anyBroken = true; break; }
+            }
+            // Toggle: if any broken, join all; if all joined, break all
+            for (var si = 0; si < sortedSel.length - 1; si++) {
+              var sel = sortedSel[si];
+              var elem = notationModel.parts[sel.partIdx].elements[sel.elemIdx];
+              if (elem.type === 'note' || elem.type === 'rest') {
+                elem.spaceAfter = !anyBroken;
+              }
+            }
+            syncModelToTextarea();
+            selectedElements = [];
+            highlightSelected();
+            hidePropertyIndicator();
+          }
           // Immediate action for slur on selected range (toggle)
           if (tool === 'slur' && selectedElements.length >= 2) {
             pushUndo();
@@ -4656,8 +4682,9 @@ function setupRubberBandSelection() {
   preview.addEventListener('pointerdown', function(e) {
     if (veMode !== 'visual') return;
     if (currentTool !== null) return;  // Only in selection mode
-    // Don't start rubber-band on toolbar buttons
+    // Don't start rubber-band on toolbar buttons or property UI
     var t = e.target;
+    var onInteractive = false;
     while (t && t !== preview) {
       var cls = (t.getAttribute && t.getAttribute('class')) || '';
       if (cls.indexOf('ve-tool') >= 0 || cls.indexOf('ve-mode') >= 0 ||
@@ -4665,12 +4692,23 @@ function setupRubberBandSelection() {
       // Don't start on existing notes/rests/bars — let normal click handle those
       if (cls.indexOf('abcjs-note') >= 0 || cls.indexOf('abcjs-rest') >= 0 ||
           cls.indexOf('abcjs-bar') >= 0 || cls.indexOf('ve-bar-hitarea') >= 0 ||
-          cls.indexOf('ve-slur-hitarea') >= 0) return;
+          cls.indexOf('ve-slur-hitarea') >= 0) { onInteractive = true; break; }
       t = t.parentElement;
     }
+    if (onInteractive) return;
+    // Prevent native browser drag on SVG elements
+    e.preventDefault();
     // Determine which part we're starting in
     var staff = getStaffAtPoint(e.clientX, e.clientY);
-    if (!staff) return;
+    if (!staff) {
+      // Clicked empty space outside any staff — deselect
+      if (selectedElements.length > 0) {
+        selectedElements = [];
+        highlightSelected();
+        hidePropertyIndicator();
+      }
+      return;
+    }
     rbStartX = e.clientX;
     rbStartY = e.clientY;
     rbPartIdx = staff.partIdx;
@@ -5372,6 +5410,9 @@ def _build_notes_section(obj, tune, meter_options, unit_options):
     ], hclass='ve-tool-group'),
     # Tie / Slur
     CDiv([
+      '<button type="button" class="ve-tool-btn" data-tool="beam" title="Beam: join or break beam grouping">'
+      '<svg viewBox="0 0 24 20" width="20" height="16"><line x1="6" y1="12.5" x2="6" y2="7.5" stroke="currentColor" stroke-width="1.5"/><line x1="18" y1="12.5" x2="18" y2="7.5" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="12.5" x2="18" y2="12.5" stroke="currentColor" stroke-width="2.5"/></svg>'
+      '</button>',
       '<button type="button" class="ve-tool-btn" data-tool="slur" title="Slur: phrasing arc across selected notes">'
       '<svg viewBox="0 0 24 16" width="20" height="14"><path d="M2,4 Q12,16 22,4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>'
       '</button>',
@@ -5381,7 +5422,7 @@ def _build_notes_section(obj, tune, meter_options, unit_options):
     ], hclass='ve-tool-group'),
     # Scissors (split note / break beam)
     CDiv([
-      '<button type="button" class="ve-tool-btn" data-tool="scissors" title="Scissors: split note or break/join beam">'
+      '<button type="button" class="ve-tool-btn" data-tool="scissors" title="Split note, rest, beam, or slur">'
       '<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="7" cy="17" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="17" cy="17" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="9.1" y1="15.2" x2="17" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="14.9" y1="15.2" x2="7" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
       '</button>',
     ], hclass='ve-tool-group'),
