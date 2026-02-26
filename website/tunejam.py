@@ -3142,8 +3142,8 @@ function veDoRenderAbc() {
       var svgMapResult = buildElemSvgMap(pr.tuneObj, pr.partIdx);
       pr.elemSvgMap = svgMapResult.map;
       pr.beamGroups = svgMapResult.beams;
-      // Add wider hit areas to thin bar lines and beam bars for easier clicking
-      if (partSvg) { addBarHitAreas(partSvg); addBeamHitAreas(partSvg, pr.partIdx); }
+      // Add wider hit areas to thin bar lines, beam bars, and slurs for easier clicking
+      if (partSvg) { addBarHitAreas(partSvg); addBeamHitAreas(partSvg, pr.partIdx); addSlurHitAreas(partSvg, pr.partIdx); }
     }
     updatePartHeaders();
     highlightSelected();
@@ -3355,7 +3355,7 @@ function elementAbcLength(el) {
 function veApplyHighlight(el, colorOnly) {
   var cls = (el.getAttribute && el.getAttribute('class')) || '';
   // Skip hit-area rects — they must stay invisible
-  if (cls.indexOf('ve-bar-hitarea') >= 0) return;
+  if (cls.indexOf('ve-bar-hitarea') >= 0 || cls.indexOf('ve-slur-hitarea') >= 0) return;
   el.setAttribute('data-ve-hl', '1');
   var isTieOrSlur = cls.indexOf('abcjs-tie') >= 0 || cls.indexOf('abcjs-slur') >= 0;
   if (isTieOrSlur) {
@@ -3816,26 +3816,8 @@ function setupToolbar() {
           if (currentTool === 'scissors') {
             // Toggle off — return to select
             activateSelectTool();
-            var editorEl = document.querySelector('.edit-form');
-            if (editorEl) editorEl.classList.remove('ve-scissors-active');
-          } else if (selectedElements.length > 0) {
-            // If notes are selected, split them immediately
-            pushUndo();
-            var sortedSel = selectedElements.slice().sort(function(a, b) { return a.elemIdx - b.elemIdx; });
-            var offset = 0;
-            for (var si = 0; si < sortedSel.length; si++) {
-              var sel = sortedSel[si];
-              var part = notationModel.parts[sel.partIdx];
-              var idx = sel.elemIdx + offset;
-              if (splitNoteElement(part, idx)) {
-                offset++; // account for inserted element
-              }
-            }
-            syncModelToTextarea();
-            selectedElements = [];
-            highlightSelected();
           } else {
-            // Activate scissors mode
+            // Activate scissors mode (requires clicking on elements to act)
             clearToolSelection();
             currentTool = 'scissors';
             btn.classList.add('ve-tool-active');
@@ -3873,6 +3855,9 @@ function setupToolbar() {
               if (le.type === 'note') le.slurEnd = true;
             }
             syncModelToTextarea();
+            selectedElements = [];
+            highlightSelected();
+            hidePropertyPanel();
           }
           // Immediate action for accidentals on selected notes
           if ((tool === 'sharp' || tool === 'flat' || tool === 'natural') && selectedElements.length > 0) {
@@ -4107,6 +4092,193 @@ function addBeamHitAreas(svg, partIdx) {
   }
 }
 
+function addSlurHitAreas(svg, partIdx) {
+  // Add invisible wider hit areas over slur arcs so they can be clicked
+  // with the scissors tool to split the slur at the click point.
+  var slurs = svg.querySelectorAll('path[class*="abcjs-slur"]');
+  for (var i = 0; i < slurs.length; i++) {
+    var slur = slurs[i];
+    try {
+      var bbox = slur.getBBox();
+      // Skip very small slur arcs (grace-note-to-note connections)
+      if (bbox.width < 12) continue;
+      var hitRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      hitRect.setAttribute('class', 've-slur-hitarea');
+      hitRect.setAttribute('x', bbox.x);
+      hitRect.setAttribute('y', bbox.y - 3);
+      hitRect.setAttribute('width', bbox.width);
+      hitRect.setAttribute('height', bbox.height + 6);
+      hitRect.setAttribute('fill', 'transparent');
+      hitRect.setAttribute('pointer-events', 'all');
+      svg.appendChild(hitRect);
+      hitRect.addEventListener('pointerdown', function(e) {
+        if (veMode !== 'visual') return;
+        if (currentTool !== 'scissors') return;
+        e.stopPropagation();
+        e.preventDefault();
+        // Find which part rendering this belongs to
+        var pr = null;
+        for (var pi = 0; pi < partRenderings.length; pi++) {
+          if (partRenderings[pi].partIdx === partIdx) { pr = partRenderings[pi]; break; }
+        }
+        if (!pr) return;
+        var svgEl = pr.renderTarget ? pr.renderTarget.querySelector('svg') : null;
+        if (!svgEl) return;
+        var clickSvgX = clientToSvgCoords(svgEl, e.clientX, e.clientY).x;
+        var part = notationModel.parts[partIdx];
+        if (!part) return;
+        var positions = pr.elementPositions || [];
+        // Find the slur (slurStart..slurEnd range) that this click falls within.
+        // Use the hit area bounding box to narrow down the slur, then find the
+        // note boundary closest to the click X for the cut point.
+        var hitBbox = this.getBBox();
+        var slurInfo = findSlurSpanningX(part, positions, hitBbox.x, hitBbox.x + hitBbox.width);
+        if (!slurInfo) return;
+        // Find cut point: boundary between adjacent notes closest to click X
+        var cutIdx = findSlurCutIndex(part, positions, slurInfo, clickSvgX);
+        if (cutIdx < 0) return;
+        pushUndo();
+        // Set slurEnd on cutIdx note, slurStart on cutIdx+1 note
+        // (cutting the slur into two slurs)
+        var cutEl = part.elements[cutIdx];
+        // Find next note after cutIdx that's in the slur range
+        var nextNoteIdx = -1;
+        for (var ni = cutIdx + 1; ni <= slurInfo.endIdx; ni++) {
+          if (part.elements[ni].type === 'note' && !part.elements[ni].grace) {
+            nextNoteIdx = ni; break;
+          }
+        }
+        if (nextNoteIdx < 0) return;
+        var nextEl = part.elements[nextNoteIdx];
+        // Check if we're toggling: if this boundary already has slurEnd+slurStart,
+        // join the slurs instead of splitting
+        if (cutEl.slurEnd && nextEl.slurStart) {
+          // Join: remove the intermediate slurEnd/slurStart
+          cutEl.slurEnd = false;
+          nextEl.slurStart = false;
+        } else {
+          // Split: count non-grace notes on each side to avoid degenerate 1-note slurs
+          var leftNotes = 0, rightNotes = 0;
+          for (var ci = slurInfo.startIdx; ci <= cutIdx; ci++) {
+            if (part.elements[ci].type === 'note' && !part.elements[ci].grace) leftNotes++;
+          }
+          for (var ci = nextNoteIdx; ci <= slurInfo.endIdx; ci++) {
+            if (part.elements[ci].type === 'note' && !part.elements[ci].grace) rightNotes++;
+          }
+          if (leftNotes >= 2) {
+            cutEl.slurEnd = true;
+          } else {
+            // Left sub-slur would be 1 note — remove it instead
+            part.elements[slurInfo.startIdx].slurStart = false;
+          }
+          if (rightNotes >= 2) {
+            nextEl.slurStart = true;
+          } else {
+            // Right sub-slur would be 1 note — remove it instead
+            part.elements[slurInfo.endIdx].slurEnd = false;
+          }
+        }
+        syncModelToTextarea();
+        isDragging = true;
+        setTimeout(function() { isDragging = false; }, 300);
+      });
+      // Suppress click/pointerup propagation like beam hit areas
+      hitRect.addEventListener('click', function(e) {
+        if (currentTool === 'scissors') { e.stopImmediatePropagation(); e.preventDefault(); }
+      }, true);
+      hitRect.addEventListener('click', function(e) {
+        if (currentTool === 'scissors') { e.stopImmediatePropagation(); e.preventDefault(); }
+      });
+      hitRect.addEventListener('pointerup', function(e) {
+        if (currentTool === 'scissors') { e.stopImmediatePropagation(); }
+      }, true);
+      hitRect.addEventListener('pointerup', function(e) {
+        if (currentTool === 'scissors') { e.stopImmediatePropagation(); }
+      });
+    } catch(ex) {}
+  }
+}
+
+// Find the slur (slurStart..slurEnd range) whose notes span the given X range.
+// Returns {startIdx, endIdx} of model indices, or null.
+function findSlurSpanningX(part, positions, hitLeftX, hitRightX) {
+  // Find all slur ranges in the model
+  var slurs = [];
+  var slurStack = [];
+  for (var i = 0; i < part.elements.length; i++) {
+    var el = part.elements[i];
+    if (el.type === 'note' && el.slurStart) slurStack.push(i);
+    if (el.type === 'note' && el.slurEnd && slurStack.length > 0) {
+      slurs.push({startIdx: slurStack.pop(), endIdx: i});
+    }
+  }
+  if (slurs.length === 0) return null;
+  // Find the slur whose notes best match the hit area X range
+  var bestSlur = null;
+  var bestOverlap = -1;
+  for (var si = 0; si < slurs.length; si++) {
+    var s = slurs[si];
+    // Get X positions of start and end notes
+    var startSelIdx = modelIdxToSelectableIdx(part, s.startIdx);
+    var endSelIdx = modelIdxToSelectableIdx(part, s.endIdx);
+    if (startSelIdx < 0 || endSelIdx < 0) continue;
+    if (startSelIdx >= positions.length || endSelIdx >= positions.length) continue;
+    var slurLeftX = positions[startSelIdx].centerX;
+    var slurRightX = positions[endSelIdx].centerX;
+    // Check overlap between hit area and slur span
+    var overlapLeft = Math.max(hitLeftX, slurLeftX);
+    var overlapRight = Math.min(hitRightX, slurRightX);
+    var overlap = overlapRight - overlapLeft;
+    if (overlap > bestOverlap) {
+      bestOverlap = overlap;
+      bestSlur = s;
+    }
+  }
+  return bestSlur;
+}
+
+// Convert model index to selectable index (inverse of selectableIdxToModelIdx)
+function modelIdxToSelectableIdx(part, modelIdx) {
+  var selectableCount = 0;
+  for (var j = 0; j < part.elements.length; j++) {
+    if (part.elements[j].type === 'bar') continue;
+    if (part.elements[j].grace) continue;
+    if (j === modelIdx) return selectableCount;
+    selectableCount++;
+  }
+  return -1;
+}
+
+// Find the note boundary within a slur closest to clickSvgX for cutting.
+// Returns the model index of the note just BEFORE the cut point.
+function findSlurCutIndex(part, positions, slurInfo, clickSvgX) {
+  // Collect the non-grace note indices within the slur range
+  var noteIndices = [];
+  for (var i = slurInfo.startIdx; i <= slurInfo.endIdx; i++) {
+    var el = part.elements[i];
+    if ((el.type === 'note' || el.type === 'rest') && !el.grace) {
+      noteIndices.push(i);
+    }
+  }
+  if (noteIndices.length < 2) return -1;
+  // Find the boundary between adjacent notes closest to click X
+  var bestIdx = -1;
+  var bestDist = Infinity;
+  for (var ni = 0; ni < noteIndices.length - 1; ni++) {
+    var selIdx1 = modelIdxToSelectableIdx(part, noteIndices[ni]);
+    var selIdx2 = modelIdxToSelectableIdx(part, noteIndices[ni + 1]);
+    if (selIdx1 < 0 || selIdx2 < 0) continue;
+    if (selIdx1 >= positions.length || selIdx2 >= positions.length) continue;
+    var midX = (positions[selIdx1].centerX + positions[selIdx2].centerX) / 2;
+    var dist = Math.abs(midX - clickSvgX);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIdx = noteIndices[ni];
+    }
+  }
+  return bestIdx;
+}
+
 function findPartForSvgElement(svgEl) {
   // Find which part rendering contains this SVG element
   for (var i = 0; i < partRenderings.length; i++) {
@@ -4316,7 +4488,8 @@ function setupStaffClick() {
     while (t && t !== preview) {
       var cls = (t.getAttribute && t.getAttribute('class')) || '';
       if (cls.indexOf('abcjs-note') >= 0 || cls.indexOf('abcjs-rest') >= 0 ||
-          cls.indexOf('abcjs-bar') >= 0 || cls.indexOf('ve-bar-hitarea') >= 0) return;
+          cls.indexOf('abcjs-bar') >= 0 || cls.indexOf('ve-bar-hitarea') >= 0 ||
+          cls.indexOf('ve-slur-hitarea') >= 0) return;
       t = t.parentElement;
     }
     // Clicking empty area deactivates scissors tool
@@ -4363,7 +4536,8 @@ function setupRubberBandSelection() {
           cls.indexOf('ve-prop') >= 0) return;
       // Don't start on existing notes/rests/bars — let normal click handle those
       if (cls.indexOf('abcjs-note') >= 0 || cls.indexOf('abcjs-rest') >= 0 ||
-          cls.indexOf('abcjs-bar') >= 0 || cls.indexOf('ve-bar-hitarea') >= 0) return;
+          cls.indexOf('abcjs-bar') >= 0 || cls.indexOf('ve-bar-hitarea') >= 0 ||
+          cls.indexOf('ve-slur-hitarea') >= 0) return;
       t = t.parentElement;
     }
     // Determine which part we're starting in
