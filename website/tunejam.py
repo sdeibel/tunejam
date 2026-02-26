@@ -3052,6 +3052,82 @@ function halfDuration(durStr) {
 
 function gcd(a, b) { while (b) { var t = b; b = a %% b; a = t; } return a; }
 
+// Return the number of unit-note durations that fill one measure.
+// E.g., M:4/4 L:1/8 -> 8; M:6/8 L:1/8 -> 6; M:3/4 L:1/4 -> 3
+function getMeasureCapacity() {
+  var meterSel = document.getElementById('field-meter');
+  var meterStr = meterSel ? meterSel.value : '4/4';
+  if (meterStr === 'C') meterStr = '4/4';
+  var mp = meterStr.split('/');
+  if (mp.length !== 2) return null;
+  var meterNum = parseInt(mp[0]), meterDen = parseInt(mp[1]);
+  if (!meterNum || !meterDen) return null;
+
+  var unitField = document.querySelector('select[name="unit"]');
+  var unitStr = unitField ? unitField.value : '1/8';
+  var up = unitStr.split('/');
+  if (up.length !== 2) return null;
+  var unitNum = parseInt(up[0]), unitDen = parseInt(up[1]);
+  if (!unitNum || !unitDen) return null;
+
+  return (meterNum * unitDen) / (meterDen * unitNum);
+}
+
+// Convert an ABC duration string to a numeric unit count.
+// '' -> 1.0, '2' -> 2.0, '/2' -> 0.5, '3/2' -> 1.5
+function durationToUnits(durStr) {
+  if (durStr === undefined || durStr === null) durStr = '';
+  var num = 1, den = 1;
+  var m = durStr.match(/^(\\d+)\\/(\\d+)$/);
+  if (m) { num = parseInt(m[1]); den = parseInt(m[2]); }
+  else {
+    m = durStr.match(/^\\/(\\d+)$/);
+    if (m) { num = 1; den = parseInt(m[1]); }
+    else {
+      m = durStr.match(/^(\\d+)$/);
+      if (m) { num = parseInt(m[1]); den = 1; }
+    }
+  }
+  return num / den;
+}
+
+// Auto-insert bar lines when a measure becomes full after placing a note/rest.
+// Only inserts after the first existing bar line (preserving pickup/anacrusis area).
+function autoInsertBarLines(part) {
+  var capacity = getMeasureCapacity();
+  if (!capacity) return;
+
+  // Find index of first bar line
+  var firstBar = -1;
+  for (var i = 0; i < part.elements.length; i++) {
+    if (part.elements[i].type === 'bar') { firstBar = i; break; }
+  }
+  if (firstBar < 0) return;  // No bar line found, nothing to track
+
+  var accum = 0;
+  for (var i = firstBar + 1; i < part.elements.length; i++) {
+    var el = part.elements[i];
+    if (el.type === 'bar') {
+      accum = 0;
+      continue;
+    }
+    if (el.grace) continue;  // Grace notes have zero duration
+    if (el.type === 'note' || el.type === 'rest') {
+      accum += durationToUnits(el.duration);
+      if (Math.abs(accum - capacity) < 0.001) {
+        // Measure is exactly full — insert bar if next element isn't one
+        if (i + 1 >= part.elements.length || part.elements[i + 1].type !== 'bar') {
+          part.elements.splice(i + 1, 0, {type: 'bar', subtype: '|'});
+        }
+        accum = 0;
+      } else if (accum > capacity + 0.001) {
+        // Note straddles the boundary — don't insert, wait for next existing bar
+        continue;
+      }
+    }
+  }
+}
+
 // Split a note element in the model at the given index, inserting a second note after it.
 // Returns true if split was performed, false if duration can't be halved further.
 function splitNoteElement(part, elemIdx) {
@@ -4948,6 +5024,10 @@ function placeElementOnStaff(tool, overStaff, clientX) {
     part.elements.push(elem);
   } else {
     part.elements.splice(insertIdx, 0, elem);
+  }
+
+  if (elem.type === 'note' || elem.type === 'rest') {
+    autoInsertBarLines(part);
   }
 
   syncModelToTextarea();

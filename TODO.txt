@@ -1,19 +1,9 @@
 ** Fix note generation on production site
 * Website Phase Three
   ** Coding Tasks Near Term
-    ** Auto-add new regular measure bar once full
-    ** Click on nothing and drag to select all in dragged out rectangle (w/ dotted frame
-       shown during the drag) -- probably need tool palette item for selection mode:
-       toggle off any other tool when click on that and toggle it on if click on and
-       de-activate other current tool
-    ** Click on the note connector bar to select all the connected notes at once  
-    ** A way to break note bar (enters space in the ABC side)
-    ** A way to change length of existing note by clicking on it + doing something (what?)
-    ** When go to ABC Text mode and back and up with lots of blank space below editor before chords
-    ** Undo in the note editor?
-    
-    ** Clean up code (split up tunejam.py into logical sub-systems?)
+    ** Test editing round trip:  Edit one thing and make sure rest of written file is unchanged
     ** Check over for other browsers and iOS/Android
+    
     ** Three user permissions levels:  Regular (create events, add/delete/edit sets,
        delete their event, create tune and then later edit the ones they own), Editor 
        (that plus edit any tune and delete tunes not in use in an event), Admin (that plus 
@@ -39,6 +29,7 @@
       ** January waltz (can't find this anywhere)
 * Website Phase Four+
   * Clean up
+    * Clean up code (split up tunejam.py into logical sub-systems?)
     * Remove old saved sets impl
     * Remove old unused doc generation code
     * error() shouldn't exit but instead show meaningful error to user
