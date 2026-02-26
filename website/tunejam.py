@@ -1667,6 +1667,7 @@ function addUrlField() {
   div.className = 'url-row';
   div.innerHTML = '<input type="text" name="url_' + urlCounter + '" value="" class="url-field" placeholder="Enter URL here" /> ' +
                   '<button type="button" class="url-test-btn" onclick="testUrl(this)">Test</button> ' +
+                  '<button type="button" class="url-open-btn" onclick="openUrl(this)">Open</button> ' +
                   '<button type="button" class="url-remove-btn" onclick="removeUrlField(this)">X</button>';
   container.appendChild(div);
   urlCounter++;
@@ -1695,7 +1696,7 @@ function testUrl(btn) {
       try {
         var data = JSON.parse(xhr.responseText);
         if (data.ok) {
-          window.open(url, '_blank');
+          alert('Link is OK.');
         } else {
           alert('Link appears broken: ' + data.error);
         }
@@ -1712,6 +1713,15 @@ function testUrl(btn) {
     alert('Error checking URL.');
   };
   xhr.send();
+}
+
+function openUrl(btn) {
+  var row = btn.parentNode;
+  var input = row.querySelector('input[type="text"]');
+  var url = input ? input.value.trim() : '';
+  if (!url) { alert('No URL entered.'); return; }
+  if (url.indexOf('://') === -1) url = 'http://' + url;
+  window.open(url, '_blank');
 }
 
 // Chord structure management
@@ -5573,12 +5583,14 @@ def _build_url_fields(url_list):
     rows.append(CDiv([
       CInput(type='text', name='url_%d' % i, value=url, hclass='url-field', placeholder='Enter URL here'),
       ' <button type="button" class="url-test-btn" onclick="testUrl(this)">Test</button>',
+      ' <button type="button" class="url-open-btn" onclick="openUrl(this)">Open</button>',
       ' <button type="button" class="url-remove-btn" onclick="removeUrlField(this)">X</button>',
     ], hclass='url-row'))
   if not url_list:
     rows.append(CDiv([
       CInput(type='text', name='url_0', value='', hclass='url-field', placeholder='Enter URL here'),
       ' <button type="button" class="url-test-btn" onclick="testUrl(this)">Test</button>',
+      ' <button type="button" class="url-open-btn" onclick="openUrl(this)">Open</button>',
       ' <button type="button" class="url-remove-btn" onclick="removeUrlField(this)">X</button>',
     ], hclass='url-row'))
   return rows
@@ -7062,6 +7074,19 @@ font-size:90%;
 }
 .edit-form .url-test-btn:hover {
 background:#4a7a4a;
+}
+.edit-form .url-open-btn {
+background:#336699;
+color:white;
+border:1px solid #1a3a66;
+border-radius:3px;
+padding:2px 8px;
+cursor:pointer;
+margin-left:4px;
+font-size:90%;
+}
+.edit-form .url-open-btn:hover {
+background:#4477aa;
 }
 .edit-form .url-test-btn:disabled {
 background:#999;
