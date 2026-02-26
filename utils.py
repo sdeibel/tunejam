@@ -115,7 +115,8 @@ class CTune:
         self.raw_notes = ''
         self.chords = ''
         self.sheet = ''
-        
+        self._field_order = []  # Track original field order for round-trip fidelity
+
     def ReadDatabase(self):
         """Read one file from the tunes database.  Returns CTune named tuple"""
         
@@ -161,7 +162,7 @@ class CTune:
         part = 0
         notes_part = 0
         for line in lines:
-            if line.startswith('#'):
+            if part == 0 and line.startswith('#'):
                 continue
             if line.strip() == '--':
                 part += 1
@@ -179,6 +180,8 @@ class CTune:
                             value = value.split()
                             value = value[0]
                         setattr(self, field, value)
+                        if key not in self._field_order:
+                            self._field_order.append(key)
                         found = True
                         break
                 if not found:
@@ -261,34 +264,52 @@ class CTune:
 
         lines = []
 
+        # Map field keys to how they should be written
+        kFieldToAttr = {
+            'T': 'title',
+            'C': 'klass',
+            'S': 'structure',
+            'A': 'author',
+            'O': 'origin',
+            'H': 'history',
+            'U': 'url',
+            'R': 'ref',
+            'K': 'key',
+            'L': 'unit',
+            'M': 'meter',
+        }
+        # Multi-line fields where each \n-separated value gets its own line
+        kMultiLineFields = {'H', 'U', 'R'}
+
+        # Use original field order if available, otherwise default
+        if self._field_order:
+            field_order = list(self._field_order)
+            # Add any fields not in the original order (new fields added during edit)
+            for key in ('T', 'C', 'S', 'A', 'O', 'H', 'U', 'R', 'K', 'L', 'M'):
+                if key not in field_order:
+                    field_order.append(key)
+        else:
+            field_order = ['T', 'C', 'S', 'A', 'O', 'H', 'U', 'R', 'K', 'L', 'M']
+
         # Metadata section
-        if self.title:
-            lines.append('T:%s\n' % self.title)
-        if self.klass:
-            lines.append('C:%s\n' % self.klass)
-        if self.structure:
-            lines.append('S:%s\n' % self.structure)
-        if self.author:
-            lines.append('A:%s\n' % self.author)
-        if self.origin:
-            lines.append('O:%s\n' % self.origin)
-        if self.history:
-            for h_line in self.history.split('\n'):
-                lines.append('H:%s\n' % h_line)
-        if self.url:
-            for u_line in self.url.split('\n'):
-                if u_line.strip():
-                    lines.append('U:%s\n' % u_line.strip())
-        if self.ref:
-            for r_line in self.ref.split('\n'):
-                if r_line.strip():
-                    lines.append('R:%s\n' % r_line.strip())
-        if self.key:
-            lines.append('K:%s\n' % self.key)
-        if self.unit:
-            lines.append('L:%s\n' % self.unit)
-        if self.meter:
-            lines.append('M:%s\n' % self.meter)
+        for key in field_order:
+            attr = kFieldToAttr.get(key)
+            if attr is None:
+                continue
+            value = getattr(self, attr, None)
+            if not value and key not in self._field_order:
+                continue  # Skip fields not in original file that have no value
+            if value is None:
+                value = ''
+            if key in kMultiLineFields:
+                for sub_line in value.split('\n'):
+                    if sub_line.strip():
+                        lines.append('%s:%s\n' % (key, sub_line if key == 'H' else sub_line.strip()))
+                    elif key in self._field_order:
+                        # Preserve empty lines for fields present in original file
+                        lines.append('%s:\n' % key)
+            else:
+                lines.append('%s:%s\n' % (key, value))
 
         # Notes section
         lines.append('--\n')

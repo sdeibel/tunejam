@@ -5738,14 +5738,20 @@ def tune_save(tune):
   obj.ref = request.form.get('ref', '').strip() or None
   obj.history = _process_history(request.form, original_history)
 
-  # Collect tune types from checkboxes
-  types = []
+  # Collect tune types from checkboxes, preserving original order
+  selected = set()
   for sname, stitle, slabel in utils.kSections:
     if sname == 'incomplete':
       continue
     if request.form.get('klass_%s' % sname):
-      types.append(sname)
-  if types:
+      selected.add(sname)
+  if selected:
+    # Keep original order for types that were already present
+    orig_types = [t.strip() for t in (obj.klass or '').split(',') if t.strip()]
+    types = [t for t in orig_types if t in selected]
+    for t in selected:
+      if t not in types:
+        types.append(t)
     obj.klass = ','.join(types)
   else:
     obj.klass = 'other'
@@ -5810,11 +5816,12 @@ def _ReconstructChords(form):
       is_last_row = (r == num_rows - 1)
       has_open = has_repeat and is_first_row
       has_close = has_repeat and is_last_row
-      line_data.append((has_open, has_close, chords))
+      is_part_start = is_first_row and not has_open
+      line_data.append((has_open, has_close, is_part_start, chords))
 
   # Check if there's any non-empty chord data
   has_any_chords = False
-  for _, _, chords in line_data:
+  for _, _, _, chords in line_data:
     for c in chords:
       if c:
         has_any_chords = True
@@ -5826,7 +5833,7 @@ def _ReconstructChords(form):
 
   # Compute max width per column position
   col_widths = [0] * max_columns
-  for _, _, chords in line_data:
+  for _, _, _, chords in line_data:
     for i, c in enumerate(chords):
       col_widths[i] = max(col_widths[i], len(c))
 
@@ -5837,9 +5844,11 @@ def _ReconstructChords(form):
   if header_text:
     result_lines.append(header_text)
 
-  for has_open, has_close, chords in line_data:
+  for has_open, has_close, is_part_start, chords in line_data:
     if has_open:
       prefix = '|:'
+    elif is_part_start:
+      prefix = '| '
     else:
       prefix = '  '
 

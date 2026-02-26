@@ -1,7 +1,6 @@
 ** Fix note generation on production site
 * Website Phase Three
   ** Coding Tasks Near Term
-    ** Test editing round trip:  Edit one thing and make sure rest of written file is unchanged
     ** Check over for other browsers and iOS/Android
     
     ** Three user permissions levels:  Regular (create events, add/delete/edit sets,
