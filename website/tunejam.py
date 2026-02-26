@@ -2898,24 +2898,59 @@ function pitchToDisplayName(pitch, octave) {
 
 // --- X to Insertion Index ---
 function xToInsertionIndex(dropX, partIdx) {
-  // Use per-part element positions (from abcjs selectables, which
-  // exclude bar lines) to find where to insert by X coordinate,
-  // then convert that selectable index to a model element index
-  // (which includes bar lines).
-  var positions = (partIdx < partRenderings.length) ? partRenderings[partIdx].elementPositions : [];
-  if (positions.length === 0) return 0;
-  var sorted = positions.slice().sort(function(a, b) { return a.centerX - b.centerX; });
-  // Find position among selectables
-  var posIdx = sorted.length;
-  for (var i = 0; i < sorted.length; i++) {
-    if (dropX < sorted[i].centerX) { posIdx = i; break; }
+  // Build a combined position list of all model elements (notes, rests, AND bars)
+  // so insertion respects bar line boundaries.
+  if (partIdx >= partRenderings.length) return 0;
+  var pr = partRenderings[partIdx];
+  var part = notationModel.parts[pr.partIdx];
+  if (!part) return 0;
+
+  // Collect X positions for all model elements
+  var allPositions = []; // [{modelIdx, centerX}]
+
+  // Get note/rest positions from selectable positions
+  var positions = pr.elementPositions || [];
+  var selIdx = 0;
+  for (var j = 0; j < part.elements.length; j++) {
+    var el = part.elements[j];
+    if (el.type === 'bar') continue;
+    if (el.grace) continue;
+    if (selIdx < positions.length) {
+      allPositions.push({modelIdx: j, centerX: positions[selIdx].centerX});
+    }
+    selIdx++;
   }
-  // Convert selectable index to model index, skipping elements
-  // that are in the model but not in abcjs selectables (bars and
-  // grace notes, which abcjs folds into the following note)
-  var part = notationModel.parts[partIdx];
-  if (!part) return posIdx;
-  return selectableIdxToModelIdx(part, posIdx);
+
+  // Get bar positions from SVG
+  var svg = pr.renderTarget ? pr.renderTarget.querySelector('svg') : null;
+  if (svg) {
+    var barSvgEls = svg.querySelectorAll('.abcjs-bar');
+    var barModelIndices = [];
+    for (var j = 0; j < part.elements.length; j++) {
+      if (part.elements[j].type === 'bar') barModelIndices.push(j);
+    }
+    var limit = Math.min(barSvgEls.length, barModelIndices.length);
+    for (var bi = 0; bi < limit; bi++) {
+      try {
+        var bbox = barSvgEls[bi].getBBox();
+        allPositions.push({modelIdx: barModelIndices[bi], centerX: bbox.x + bbox.width / 2});
+      } catch(ex) {}
+    }
+  }
+
+  if (allPositions.length === 0) return 0;
+
+  // Sort by X position
+  allPositions.sort(function(a, b) { return a.centerX - b.centerX; });
+
+  // Find where the click falls
+  for (var i = 0; i < allPositions.length; i++) {
+    if (dropX < allPositions[i].centerX) {
+      return allPositions[i].modelIdx;
+    }
+  }
+  // Click is after all elements — insert at the end
+  return part.elements.length;
 }
 
 // --- Duration Mapping ---
@@ -3025,11 +3060,17 @@ function veDoRenderAbc() {
   if (!textarea || !previewEl || typeof ABCJS === 'undefined') return;
 
   var raw = textarea.value.trim();
-  if (!raw) {
+  if (!raw && veMode !== 'visual') {
     previewEl.innerHTML = '<div style="color:#666; font-style:italic; padding:20px">Enter ABC notation or use the visual editor above</div>';
     partRenderings = [];
     updatePartHeaders();
     return;
+  }
+  if (!raw && veMode === 'visual') {
+    // Ensure model has at least one part for visual editing
+    if (notationModel.parts.length === 0) {
+      notationModel.parts.push({ label: 'A', elements: [{type: 'bar', subtype: '|'}] });
+    }
   }
 
   var key = document.getElementById('field-key').value || 'C';
@@ -4263,6 +4304,7 @@ function addSlurHitAreas(svg, partIdx) {
       hitRect.setAttribute('width', bbox.width);
       hitRect.setAttribute('height', bbox.height + 6);
       hitRect.setAttribute('fill', 'transparent');
+      hitRect.setAttribute('stroke', 'none');
       hitRect.setAttribute('pointer-events', 'all');
       svg.appendChild(hitRect);
       hitRect.addEventListener('pointerdown', function(e) {
@@ -5002,8 +5044,6 @@ document.addEventListener('DOMContentLoaded', function() {
   var textarea = document.getElementById('raw-notes-textarea');
   if (textarea && textarea.value.trim()) {
     notationModel = parseAbcToModel(textarea.value);
-  } else {
-    notationModel = { parts: [{ label: 'A', elements: [] }] };
   }
 
   // Setup toolbar
@@ -5015,6 +5055,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Start in visual mode
   toggleEditorMode('visual');
+
+  // For new tunes with no ABC, add an initial empty part
+  if (!textarea || !textarea.value.trim()) {
+    addNotePart(0);
+    undoStack = [];
+    redoStack = [];
+  }
 });
 
 </script>
@@ -5381,13 +5428,13 @@ def _build_notes_section(obj, tune, meter_options, unit_options):
       '<svg viewBox="0 0 20 24" width="16" height="20"><line x1="2" y1="14" x2="18" y2="14" stroke="currentColor" stroke-width="1"/><rect x="5" y="10" width="10" height="4" fill="currentColor"/></svg>'
       '</button>',
       '<button type="button" class="ve-tool-btn" data-tool="rest-quarter" title="Quarter rest">'
-      '<svg viewBox="0 0 20 24" width="16" height="20"><path d="M10,3 L7,8 L12,12 L8,17 Q6,20 9,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+      '<svg viewBox="-0.5 -13 9 23" width="12" height="20"><path d="M1.89-11.82c0.12-0.06 0.24-0.06 0.36-0.03c0.09 0.06 4.74 5.58 4.86 5.82c0.21 0.39 0.15 0.78-0.15 1.26c-0.24 0.33-0.72 0.81-1.62 1.56c-0.45 0.36-0.87 0.75-0.96 0.84c-0.93 0.99-1.14 2.49-0.6 3.63c0.18 0.39 0.27 0.48 1.32 1.68c1.92 2.25 1.83 2.16 1.83 2.34c0 0.18-0.18 0.36-0.36 0.39c-0.15 0-0.27-0.06-0.48-0.27c-0.75-0.75-2.46-1.29-3.39-1.08c-0.45 0.09-0.69 0.27-0.9 0.69c-0.12 0.3-0.21 0.66-0.24 1.14c-0.03 0.66 0.09 1.35 0.3 2.01c0.15 0.42 0.24 0.66 0.45 0.96c0.18 0.24 0.18 0.33 0.03 0.42c-0.12 0.06-0.18 0.03-0.45-0.3c-1.08-1.38-2.07-3.36-2.4-4.83c-0.27-1.05-0.15-1.77 0.27-2.07c0.21-0.12 0.42-0.15 0.87-0.15c0.87 0.06 2.1 0.39 3.3 0.9l0.39 0.18l-1.65-1.95c-2.52-2.97-2.61-3.09-2.7-3.27c-0.09-0.24-0.12-0.48-0.03-0.75c0.15-0.48 0.57-0.96 1.83-2.01c0.45-0.36 0.84-0.72 0.93-0.78c0.69-0.75 1.02-1.8 0.9-2.79c-0.06-0.33-0.21-0.84-0.39-1.11c-0.09-0.15-0.45-0.6-0.81-1.05c-0.36-0.42-0.69-0.81-0.72-0.87c-0.09-0.18 0-0.42 0.21-0.51z" fill="currentColor"/></svg>'
       '</button>',
       '<button type="button" class="ve-tool-btn" data-tool="rest-eighth" title="Eighth rest">'
-      '<svg viewBox="0 0 20 24" width="16" height="20"><circle cx="11" cy="7" r="2.5" fill="currentColor"/><path d="M11,9 Q8,14 8,20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+      '<svg viewBox="-0.5 -7 9 15" width="12" height="20"><path d="M1.68-6.12c0.66-0.09 1.23 0.09 1.68 0.51c0.27 0.3 0.39 0.54 0.57 1.26c0.09 0.33 0.18 0.66 0.21 0.72c0.12 0.27 0.33 0.45 0.6 0.48c0.12 0 0.18 0 0.33-0.09c0.39-0.18 1.32-1.29 1.68-1.98c0.09-0.21 0.24-0.3 0.39-0.3c0.12 0 0.27 0.09 0.33 0.18c0.03 0.06-0.27 1.11-1.86 6.42c-1.02 3.48-1.89 6.39-1.92 6.42c0 0.03-0.12 0.12-0.24 0.15c-0.18 0.09-0.21 0.09-0.45 0.09c-0.24 0-0.3 0-0.48-0.06c-0.09-0.06-0.21-0.12-0.21-0.15c-0.06-0.03 0.15-0.57 1.68-4.92c0.96-2.67 1.74-4.89 1.71-4.89l-0.51 0.15c-1.08 0.36-1.74 0.48-2.55 0.48c-0.66 0-0.84-0.03-1.32-0.27c-1.32-0.63-1.77-2.16-1.02-3.3c0.33-0.45 0.84-0.81 1.38-0.9z" fill="currentColor"/></svg>'
       '</button>',
       '<button type="button" class="ve-tool-btn" data-tool="rest-sixteenth" title="Sixteenth rest">'
-      '<svg viewBox="0 0 20 24" width="16" height="20"><circle cx="11" cy="5" r="2.5" fill="currentColor"/><circle cx="11" cy="11" r="2.5" fill="currentColor"/><path d="M11,13 Q8,17 8,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+      '<svg viewBox="-0.5 -7 11 22" width="12" height="20"><path d="M3.33-6.12c0.66-0.09 1.23 0.09 1.68 0.51c0.27 0.3 0.39 0.54 0.57 1.26c0.09 0.33 0.18 0.66 0.21 0.72c0.15 0.39 0.57 0.57 0.87 0.42c0.39-0.18 1.2-1.23 1.62-2.07c0.06-0.15 0.24-0.24 0.36-0.24c0.12 0 0.27 0.09 0.33 0.18c0.03 0.06-0.45 1.86-2.67 10.17c-1.5 5.55-2.73 10.14-2.76 10.17c-0.03 0.03-0.12 0.12-0.24 0.15c-0.18 0.09-0.21 0.09-0.45 0.09c-0.24 0-0.3 0-0.48-0.06c-0.09-0.06-0.21-0.12-0.21-0.15c-0.06-0.03 0.12-0.57 1.44-4.92c0.81-2.67 1.47-4.86 1.47-4.89c-0.03 0-0.27 0.06-0.54 0.15c-1.08 0.36-1.77 0.48-2.58 0.48c-0.66 0-0.84-0.03-1.32-0.27c-1.32-0.63-1.77-2.16-1.02-3.3c0.72-1.05 2.22-1.23 3.06-0.42c0.3 0.33 0.42 0.6 0.6 1.38c0.09 0.45 0.21 0.78 0.33 0.9c0.09 0.09 0.27 0.18 0.45 0.21c0.12 0 0.18 0 0.33-0.09c0.33-0.15 1.02-0.93 1.41-1.59c0.12-0.21 0.18-0.39 0.39-1.08c0.66-2.1 1.17-3.84 1.17-3.87c0 0-0.21 0.06-0.42 0.15c-0.51 0.15-1.2 0.33-1.68 0.42c-0.33 0.06-0.51 0.06-0.96 0.06c-0.66 0-0.84-0.03-1.32-0.27c-1.32-0.63-1.77-2.16-1.02-3.3c0.33-0.45 0.84-0.81 1.38-0.9z" fill="currentColor"/></svg>'
       '</button>',
     ], hclass='ve-tool-group'),
     # Bar lines
