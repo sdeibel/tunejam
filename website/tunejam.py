@@ -1780,9 +1780,9 @@ function addPart() {
   }
 
   var html = '<div class="part-header">';
-  html += '<button type="button" class="part-remove-btn" onclick="removePart(this)" title="Remove part">X</button> ';
   html += '<b>Part ' + label + '</b>';
   html += ' &nbsp; Repeat: <input type="checkbox" name="repeat_' + p + '" value="1" checked />';
+  html += ' <button type="button" class="part-remove-btn" onclick="removePart(this)" title="Remove part">X</button>';
   html += '</div>';
   html += '<table class="edit-chords" style="margin-bottom:2px">';
   for (var r = 0; r < rowsPerPart; r++) {
@@ -1802,6 +1802,7 @@ function addPart() {
   div.className = 'part-wrapper';
   div.innerHTML = html;
   container.appendChild(div);
+  setupOnePartDrag(div);
 
   renumberParts();
   formChanged = true;
@@ -1826,6 +1827,86 @@ function removePart(btn) {
   renumberParts();
   formChanged = true;
   updateChordPreview();
+}
+
+// --- Chord part drag-to-reorder ---
+var chordPartDrag = {dragging: false, fromIdx: -1, el: null, startY: 0, placeholder: null};
+
+function setupChordPartDrag() {
+  var container = document.getElementById('chord-parts-container');
+  if (!container) return;
+  var wrappers = container.querySelectorAll('.part-wrapper');
+  for (var i = 0; i < wrappers.length; i++) {
+    setupOnePartDrag(wrappers[i]);
+  }
+}
+
+function setupOnePartDrag(wrapper) {
+  var handle = wrapper.querySelector('.part-header b');
+  if (!handle || handle._dragSetup) return;
+  handle._dragSetup = true;
+  handle.addEventListener('pointerdown', function(e) {
+    e.preventDefault();
+    chordPartDrag.el = wrapper;
+    chordPartDrag.fromIdx = Array.prototype.indexOf.call(
+      wrapper.parentNode.querySelectorAll('.part-wrapper'), wrapper);
+    chordPartDrag.startY = e.clientY;
+    chordPartDrag.dragging = false;
+    document.addEventListener('pointermove', onChordPartMove);
+    document.addEventListener('pointerup', onChordPartUp);
+  });
+}
+
+function onChordPartMove(e) {
+  var d = chordPartDrag;
+  if (!d.el) return;
+  if (!d.dragging && Math.abs(e.clientY - d.startY) > 5) {
+    d.dragging = true;
+    d.el.style.opacity = '0.5';
+    // Create drop indicator
+    d.placeholder = document.createElement('div');
+    d.placeholder.style.cssText = 'height:3px;background:#3a6a3a;margin:4px 0;width:50%%;';
+  }
+  if (!d.dragging) return;
+  // Find drop position
+  var container = d.el.parentNode;
+  var wrappers = container.querySelectorAll('.part-wrapper');
+  // Remove old placeholder
+  if (d.placeholder.parentNode) d.placeholder.parentNode.removeChild(d.placeholder);
+  var inserted = false;
+  for (var i = 0; i < wrappers.length; i++) {
+    var rect = wrappers[i].getBoundingClientRect();
+    var mid = rect.top + rect.height / 2;
+    if (e.clientY < mid) {
+      container.insertBefore(d.placeholder, wrappers[i]);
+      inserted = true;
+      break;
+    }
+  }
+  if (!inserted) {
+    container.appendChild(d.placeholder);
+  }
+}
+
+function onChordPartUp(e) {
+  document.removeEventListener('pointermove', onChordPartMove);
+  document.removeEventListener('pointerup', onChordPartUp);
+  var d = chordPartDrag;
+  if (!d.el) return;
+  d.el.style.opacity = '';
+  if (d.dragging && d.placeholder && d.placeholder.parentNode) {
+    // Move the part-wrapper to where the placeholder is
+    d.placeholder.parentNode.insertBefore(d.el, d.placeholder);
+    d.placeholder.parentNode.removeChild(d.placeholder);
+    renumberParts();
+    formChanged = true;
+    updateChordPreview();
+  } else if (d.placeholder && d.placeholder.parentNode) {
+    d.placeholder.parentNode.removeChild(d.placeholder);
+  }
+  d.el = null;
+  d.dragging = false;
+  d.placeholder = null;
 }
 
 function addMeasureToRow(btn) {
@@ -2022,6 +2103,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (footerField) footerField.addEventListener('input', updateChordPreview);
   // Initial render
   updateChordPreview();
+  setupChordPartDrag();
 
   // Live ABC preview
   var notesTA = document.getElementById('raw-notes-textarea');
@@ -5358,11 +5440,11 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
         ], hclass='field-row'),
         CDiv(_build_chord_tables(chord_parts, num_columns), id='chord-parts-container'),
         CDiv([
-          CInput(type='text', name='chord_footer', value=footer_text, placeholder='Footer notes', style='width:100%'),
-        ], hclass='field-row'),
-        CDiv([
           '<button type="button" class="add-btn" onclick="addPart()">+ Add Part</button>',
         ], hclass='chord-structure-controls'),
+        CDiv([
+          CInput(type='text', name='chord_footer', value=footer_text, placeholder='Footer notes', style='width:100%'),
+        ], hclass='field-row'),
       ], hclass='chord-editor-pane'),
       # Right: live preview
       CDiv([
@@ -5672,10 +5754,10 @@ def _build_chord_tables(chord_parts, num_columns):
 
     part_content = [
       CDiv([
-        '<button type="button" class="part-remove-btn" onclick="removePart(this)" title="Remove part">X</button> ',
         CText('Part %s' % label, bold=1),
         ' &nbsp; Repeat: ',
         CInput(**repeat_attrs),
+        ' <button type="button" class="part-remove-btn" onclick="removePart(this)" title="Remove part">X</button>',
       ], hclass='part-header'),
       CTable(part_rows_html, width=None, hclass='edit-chords', style='margin-bottom:2px'),
       '<button type="button" class="add-btn" style="font-size:80%; padding:1px 6px; margin-bottom:8px" '
@@ -7097,11 +7179,18 @@ margin-bottom:4px;
 }
 .edit-form .part-header {
 font-weight:bold;
-padding:4px 0;
+padding:4px 6px;
 margin-top:8px;
 background:#e8f0e8;
-padding-left:6px;
 width:50%;
+display:flex;
+align-items:center;
+}
+.edit-form .part-header b {
+cursor:grab;
+}
+.edit-form .part-header b:active {
+cursor:grabbing;
 }
 .edit-form .part-remove-btn {
 background:#cc3333;
@@ -7112,6 +7201,7 @@ font-size:80%;
 padding:1px 5px;
 cursor:pointer;
 font-weight:bold;
+margin-left:auto;
 }
 .edit-form .part-remove-btn:hover {
 background:#aa1111;
