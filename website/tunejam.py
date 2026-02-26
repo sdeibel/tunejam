@@ -2148,6 +2148,7 @@ function doUndo() {
   redoStack.push(JSON.stringify(notationModel));
   notationModel = JSON.parse(undoStack.pop());
   selectedElements = [];
+  hidePropertyIndicator();
   syncModelToTextarea();
 }
 
@@ -2156,6 +2157,7 @@ function doRedo() {
   undoStack.push(JSON.stringify(notationModel));
   notationModel = JSON.parse(redoStack.pop());
   selectedElements = [];
+  hidePropertyIndicator();
   syncModelToTextarea();
 }
 
@@ -3200,7 +3202,7 @@ function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEven
           }
           highlightSelected();
           setTimeout(highlightSelected, 20);
-          showPropertyPanel(barPartIdx, modelIdx);
+          showPropertyIndicator();
           return;
         }
       }
@@ -3235,7 +3237,7 @@ function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEven
         // Click on already-selected element: deselect it
         selectedElements = [];
         highlightSelected();
-        hidePropertyPanel();
+        hidePropertyIndicator();
         return;
       } else {
         selectedElements = [{partIdx: mapped.partIdx, elemIdx: mapped.elemIdx}];
@@ -3243,7 +3245,7 @@ function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEven
       highlightSelected();
       // Re-apply after a short delay in case abcjs modifies elements post-callback
       setTimeout(highlightSelected, 20);
-      showPropertyPanel(mapped.partIdx, mapped.elemIdx);
+      showPropertyIndicator();
       return;
     }
   }
@@ -3251,7 +3253,7 @@ function veClickListener(abcElem, tuneNumber, classes, analysis, drag, mouseEven
   // Deselect if clicking empty area
   selectedElements = [];
   highlightSelected();
-  hidePropertyPanel();
+  hidePropertyIndicator();
 }
 
 // --- Map abcjs element to model ---
@@ -3464,18 +3466,92 @@ function highlightSelected() {
 }
 
 // --- Property Panel ---
-function showPropertyPanel(partIdx, elemIdx) {
-  var panel = document.getElementById('ve-property-panel');
-  if (!panel) return;
+// --- Property Indicator and Panel ---
+// Small indicator button appears near selection; clicking it opens the property panel.
+
+function showPropertyIndicator() {
+  var indicator = document.getElementById('ve-prop-indicator');
+  if (!indicator) return;
+  if (selectedElements.length === 0) { hidePropertyIndicator(); return; }
+  // Find SVG position of the first selected element
+  var sel = selectedElements[0];
+  var pr = null;
+  for (var pi = 0; pi < partRenderings.length; pi++) {
+    if (partRenderings[pi].partIdx === sel.partIdx) { pr = partRenderings[pi]; break; }
+  }
+  if (!pr || !pr.elemSvgMap) { hidePropertyIndicator(); return; }
+  var svgElems = pr.elemSvgMap[sel.elemIdx];
+  if (!svgElems || svgElems.length === 0) { hidePropertyIndicator(); return; }
   var container = document.getElementById('ve-preview-container');
   if (!container) return;
-  if (partIdx >= notationModel.parts.length) return;
-  if (elemIdx >= notationModel.parts[partIdx].elements.length) return;
-  var el = notationModel.parts[partIdx].elements[elemIdx];
-  var html = '';
-  if (el.type === 'note') {
-    html += '<div class="ve-prop-row"><span class="ve-prop-label">Pitch:</span> ' +
-            el.pitch + (el.octave >= 1 ? el.octave : '') + '</div>';
+  var containerRect = container.getBoundingClientRect();
+  var elemRect = svgElems[0].getBoundingClientRect();
+  // Position indicator above the element
+  var left = elemRect.left + elemRect.width / 2 - containerRect.left - 10;
+  var top = elemRect.top - containerRect.top - 24;
+  if (top < 0) top = elemRect.bottom - containerRect.top + 2;
+  indicator.style.left = left + 'px';
+  indicator.style.top = top + 'px';
+  indicator.style.display = 'block';
+}
+
+function hidePropertyIndicator() {
+  var indicator = document.getElementById('ve-prop-indicator');
+  if (indicator) indicator.style.display = 'none';
+  hidePropertyPanel();
+}
+
+function setupPropertyIndicator() {
+  var indicator = document.getElementById('ve-prop-indicator');
+  if (!indicator) return;
+  indicator.addEventListener('pointerdown', function(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    var panel = document.getElementById('ve-property-panel');
+    if (panel && panel.style.display !== 'none') {
+      hidePropertyPanel();
+    } else {
+      showPropertyPanel();
+    }
+  });
+  indicator.addEventListener('click', function(e) {
+    e.stopPropagation();
+    e.preventDefault();
+  });
+  // Prevent clicks on the property panel from propagating to deselect handlers
+  var panel = document.getElementById('ve-property-panel');
+  if (panel) {
+    panel.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+    panel.addEventListener('click', function(e) { e.stopPropagation(); });
+  }
+  // Close property panel when clicking outside it
+  document.addEventListener('pointerdown', function(e) {
+    if (!panel || panel.style.display === 'none') return;
+    if (panel.contains(e.target) || indicator.contains(e.target)) return;
+    hidePropertyPanel();
+  });
+}
+
+function showPropertyPanel() {
+  var panel = document.getElementById('ve-property-panel');
+  if (!panel) return;
+  if (selectedElements.length === 0) return;
+  var sel = selectedElements[0];
+  if (sel.partIdx >= notationModel.parts.length) return;
+  if (sel.elemIdx >= notationModel.parts[sel.partIdx].elements.length) return;
+  var el = notationModel.parts[sel.partIdx].elements[sel.elemIdx];
+  var noteCount = 0;
+  for (var si = 0; si < selectedElements.length; si++) {
+    var se = selectedElements[si];
+    var se_el = notationModel.parts[se.partIdx].elements[se.elemIdx];
+    if (se_el.type === 'note' && !se_el.grace) noteCount++;
+  }
+  var html = '<div class="ve-prop-header"><button type="button" class="ve-prop-close" onclick="hidePropertyPanel()">&times;</button></div>';
+  if (el.type === 'note' || el.type === 'rest') {
+    if (el.type === 'note' && selectedElements.length === 1) {
+      html += '<div class="ve-prop-row"><span class="ve-prop-label">Pitch:</span> ' +
+              el.pitch + (el.octave >= 1 ? el.octave : '') + '</div>';
+    }
     html += '<div class="ve-prop-row"><span class="ve-prop-label">Dur:</span>';
     var durs = [
       {label:'W', dur:getDurForTool('whole'), title:'Whole'},
@@ -3487,53 +3563,29 @@ function showPropertyPanel(partIdx, elemIdx) {
     for (var d = 0; d < durs.length; d++) {
       var active = (el.duration === durs[d].dur) ? ' ve-prop-active' : '';
       html += '<button type="button" class="ve-prop-btn' + active + '" title="' + durs[d].title +
-              '" onclick="vePropSetDuration(' + partIdx + ',' + elemIdx + ',\\'' + durs[d].dur + '\\')">' +
+              '" onclick="vePropSetDuration(\\'' + durs[d].dur + '\\')">' +
               durs[d].label + '</button>';
     }
     html += '</div>';
-    html += '<div class="ve-prop-row"><span class="ve-prop-label">Acc:</span>';
-    var accs = [{label:'\\u266f', val:'^'}, {label:'\\u266d', val:'_'}, {label:'\\u266e', val:'='}];
-    for (var a = 0; a < accs.length; a++) {
-      var active = (el.accidental === accs[a].val) ? ' ve-prop-active' : '';
-      html += '<button type="button" class="ve-prop-btn' + active + '" onclick="vePropToggleAccidental(' +
-              partIdx + ',' + elemIdx + ',\\'' + accs[a].val + '\\')">' + accs[a].label + '</button>';
+    if (el.type === 'note') {
+      html += '<div class="ve-prop-row"><span class="ve-prop-label">Acc:</span>';
+      var accs = [{label:'\\u266f', val:'^'}, {label:'\\u266d', val:'_', big:true}, {label:'\\u266e', val:'=', big:true}];
+      for (var a = 0; a < accs.length; a++) {
+        var active = (el.accidental === accs[a].val) ? ' ve-prop-active' : '';
+        var accCls = accs[a].big ? ' ve-acc-icon' : '';
+        html += '<button type="button" class="ve-prop-btn' + active + accCls + '" onclick="vePropToggleAccidental(\\'' +
+                accs[a].val + '\\')">' + accs[a].label + '</button>';
+      }
+      html += '</div>';
     }
-    html += '</div>';
-    html += '<div class="ve-prop-row"><span class="ve-prop-label">Tie:</span>';
-    var tieActive = el.tied ? ' ve-prop-active' : '';
-    html += '<button type="button" class="ve-prop-btn' + tieActive + '" onclick="vePropToggleTie(' +
-            partIdx + ',' + elemIdx + ')">Tie</button>';
-    html += '</div>';
-    html += '<div class="ve-prop-row"><span class="ve-prop-label">Grace:</span>';
-    var graceActive = el.grace ? ' ve-prop-active' : '';
-    html += '<button type="button" class="ve-prop-btn' + graceActive + '" onclick="vePropToggleGrace(' +
-            partIdx + ',' + elemIdx + ')">Grace</button>';
-    html += '</div>';
-  } else if (el.type === 'rest') {
-    html += '<div class="ve-prop-row"><span class="ve-prop-label">Rest</span></div>';
-    html += '<div class="ve-prop-row"><span class="ve-prop-label">Dur:</span>';
-    var durs = [
-      {label:'W', dur:getDurForTool('whole'), title:'Whole'},
-      {label:'H', dur:getDurForTool('half'), title:'Half'},
-      {label:'Q', dur:getDurForTool('quarter'), title:'Quarter'},
-      {label:'8', dur:getDurForTool('eighth'), title:'Eighth'},
-      {label:'16', dur:getDurForTool('sixteenth'), title:'16th'}
-    ];
-    for (var d = 0; d < durs.length; d++) {
-      var active = (el.duration === durs[d].dur) ? ' ve-prop-active' : '';
-      html += '<button type="button" class="ve-prop-btn' + active + '" title="' + durs[d].title +
-              '" onclick="vePropSetDuration(' + partIdx + ',' + elemIdx + ',\\'' + durs[d].dur + '\\')">' +
-              durs[d].label + '</button>';
-    }
-    html += '</div>';
   } else if (el.type === 'bar') {
     html += '<div class="ve-prop-row"><span class="ve-prop-label">Bar</span></div>';
     var bars = [{label:'|', val:'|'}, {label:'|:', val:'|:'}, {label:':|', val:':|'}];
     html += '<div class="ve-prop-row">';
     for (var b = 0; b < bars.length; b++) {
       var active = (el.subtype === bars[b].val) ? ' ve-prop-active' : '';
-      html += '<button type="button" class="ve-prop-btn' + active + '" onclick="vePropSetBarType(' +
-              partIdx + ',' + elemIdx + ',\\'' + bars[b].val + '\\')">' + bars[b].label + '</button>';
+      html += '<button type="button" class="ve-prop-btn' + active + '" onclick="vePropSetBarType(\\'' +
+              bars[b].val + '\\')">' + bars[b].label + '</button>';
     }
     html += '</div>';
   }
@@ -3545,11 +3597,27 @@ function showPropertyPanel(partIdx, elemIdx) {
 
   var content = document.getElementById('ve-prop-content');
   if (content) content.innerHTML = html;
-  panel.style.display = 'block';
-  // Position near the container top-right
-  panel.style.top = '0px';
-  panel.style.right = '0px';
-  panel.style.left = 'auto';
+  // Position near the indicator
+  var indicator = document.getElementById('ve-prop-indicator');
+  var container = document.getElementById('ve-preview-container');
+  if (indicator && container) {
+    var indLeft = parseInt(indicator.style.left) || 0;
+    var indTop = parseInt(indicator.style.top) || 0;
+    panel.style.left = indLeft + 'px';
+    panel.style.top = (indTop + indicator.offsetHeight + 4) + 'px';
+    panel.style.right = 'auto';
+    panel.style.display = 'block';
+    // Adjust if panel overflows container on the right
+    var panelRect = panel.getBoundingClientRect();
+    var containerRect = container.getBoundingClientRect();
+    if (panelRect.right > containerRect.right - 4) {
+      var adjustedLeft = containerRect.width - panel.offsetWidth - 4;
+      if (adjustedLeft < 0) adjustedLeft = 0;
+      panel.style.left = adjustedLeft + 'px';
+    }
+  } else {
+    panel.style.display = 'block';
+  }
 }
 
 function hidePropertyPanel() {
@@ -3561,43 +3629,80 @@ function getDurForTool(toolName) {
   return toolToDuration(toolName);
 }
 
-// Property panel actions
-function vePropSetDuration(partIdx, elemIdx, dur) {
+// Property panel actions — all operate on selectedElements
+function vePropSetDuration(dur) {
   pushUndo();
-  notationModel.parts[partIdx].elements[elemIdx].duration = dur;
+  for (var si = 0; si < selectedElements.length; si++) {
+    var sel = selectedElements[si];
+    var el = notationModel.parts[sel.partIdx].elements[sel.elemIdx];
+    if (el.type === 'note' || el.type === 'rest') el.duration = dur;
+  }
   syncModelToTextarea();
-  showPropertyPanel(partIdx, elemIdx);
+  hidePropertyPanel();
 }
 
-function vePropToggleAccidental(partIdx, elemIdx, acc) {
+function vePropToggleAccidental(acc) {
   pushUndo();
-  var el = notationModel.parts[partIdx].elements[elemIdx];
-  el.accidental = (el.accidental === acc) ? null : acc;
+  for (var si = 0; si < selectedElements.length; si++) {
+    var sel = selectedElements[si];
+    var el = notationModel.parts[sel.partIdx].elements[sel.elemIdx];
+    if (el.type === 'note') el.accidental = (el.accidental === acc) ? null : acc;
+  }
   syncModelToTextarea();
-  showPropertyPanel(partIdx, elemIdx);
+  hidePropertyPanel();
 }
 
-function vePropToggleTie(partIdx, elemIdx) {
+function vePropToggleTie() {
   pushUndo();
-  var el = notationModel.parts[partIdx].elements[elemIdx];
-  el.tied = !el.tied;
+  for (var si = 0; si < selectedElements.length; si++) {
+    var sel = selectedElements[si];
+    var el = notationModel.parts[sel.partIdx].elements[sel.elemIdx];
+    if (el.type === 'note') el.tied = !el.tied;
+  }
   syncModelToTextarea();
-  showPropertyPanel(partIdx, elemIdx);
+  hidePropertyPanel();
 }
 
-function vePropToggleGrace(partIdx, elemIdx) {
+function vePropToggleGrace() {
+  if (selectedElements.length === 0) return;
   pushUndo();
-  var el = notationModel.parts[partIdx].elements[elemIdx];
-  el.grace = !el.grace;
+  if (selectedElements.length === 1) {
+    // Single note: simple toggle
+    var sel = selectedElements[0];
+    var el = notationModel.parts[sel.partIdx].elements[sel.elemIdx];
+    if (el.type === 'note') el.grace = !el.grace;
+  } else if (selectedElements.length === 2) {
+    // Two notes: make first a grace note and slur to second
+    var sortedSel = selectedElements.slice().sort(function(a, b) { return a.elemIdx - b.elemIdx; });
+    var firstEl = notationModel.parts[sortedSel[0].partIdx].elements[sortedSel[0].elemIdx];
+    var secondEl = notationModel.parts[sortedSel[1].partIdx].elements[sortedSel[1].elemIdx];
+    if (firstEl.type === 'note' && secondEl.type === 'note') {
+      if (firstEl.grace) {
+        // Undo: remove grace and slur
+        firstEl.grace = false;
+        firstEl.slurStart = false;
+        secondEl.slurEnd = false;
+      } else {
+        // Make first a grace note with slur to second
+        firstEl.grace = true;
+        firstEl.slurStart = true;
+        secondEl.slurEnd = true;
+      }
+    }
+  }
   syncModelToTextarea();
-  showPropertyPanel(partIdx, elemIdx);
+  hidePropertyPanel();
 }
 
-function vePropSetBarType(partIdx, elemIdx, barType) {
+function vePropSetBarType(barType) {
   pushUndo();
-  notationModel.parts[partIdx].elements[elemIdx].subtype = barType;
+  for (var si = 0; si < selectedElements.length; si++) {
+    var sel = selectedElements[si];
+    var el = notationModel.parts[sel.partIdx].elements[sel.elemIdx];
+    if (el.type === 'bar') el.subtype = barType;
+  }
   syncModelToTextarea();
-  showPropertyPanel(partIdx, elemIdx);
+  hidePropertyPanel();
 }
 
 // --- Delete ---
@@ -3616,7 +3721,7 @@ function veDeleteSelected() {
     }
   }
   selectedElements = [];
-  hidePropertyPanel();
+  hidePropertyIndicator();
   syncModelToTextarea();
 }
 
@@ -3660,7 +3765,7 @@ function removeNotePart(index) {
     notationModel.parts[i].label = i < partLabels.length ? partLabels[i] : '' + i;
   }
   selectedElements = [];
-  hidePropertyPanel();
+  hidePropertyIndicator();
   syncModelToTextarea();
 }
 
@@ -3679,7 +3784,7 @@ function reorderPart(fromIdx, toIdx) {
     notationModel.parts[i].label = i < partLabels.length ? partLabels[i] : '' + i;
   }
   selectedElements = [];
-  hidePropertyPanel();
+  hidePropertyIndicator();
   syncModelToTextarea();
 }
 
@@ -3823,7 +3928,7 @@ function setupToolbar() {
             btn.classList.add('ve-tool-active');
             selectedElements = [];
             highlightSelected();
-            hidePropertyPanel();
+            hidePropertyIndicator();
             var editorEl = document.querySelector('.edit-form');
             if (editorEl) editorEl.classList.add('ve-scissors-active');
           }
@@ -3857,7 +3962,7 @@ function setupToolbar() {
             syncModelToTextarea();
             selectedElements = [];
             highlightSelected();
-            hidePropertyPanel();
+            hidePropertyIndicator();
           }
           // Immediate action for accidentals on selected notes
           if ((tool === 'sharp' || tool === 'flat' || tool === 'natural') && selectedElements.length > 0) {
@@ -3899,7 +4004,7 @@ function setupToolbar() {
         btn.classList.add('ve-tool-active');
         selectedElements = [];
         highlightSelected();
-        hidePropertyPanel();
+        hidePropertyIndicator();
 
         // Start drag from palette
         startPaletteDrag(e, btn, tool);
@@ -4067,7 +4172,7 @@ function addBeamHitAreas(svg, partIdx) {
         selectedElements = beamSel;
         highlightSelected();
         setTimeout(highlightSelected, 20);
-        showPropertyPanel(beamSel[0].partIdx, beamSel[0].elemIdx);
+        showPropertyIndicator();
         // Suppress deselect handlers that fire on subsequent click/pointerup
         isDragging = true;
         setTimeout(function() { isDragging = false; }, 300);
@@ -4463,7 +4568,7 @@ function setupStaffClick() {
     }
     highlightSelected();
     setTimeout(highlightSelected, 20);
-    showPropertyPanel(barPartIdx, modelIdx);
+    showPropertyIndicator();
   });
   // Beam group selection — double-click a note to select all notes in its
   // beam group (the notes connected by the same horizontal beam bar).
@@ -4475,7 +4580,7 @@ function setupStaffClick() {
     selectedElements = beamSel;
     highlightSelected();
     setTimeout(highlightSelected, 20);
-    showPropertyPanel(beamSel[0].partIdx, beamSel[0].elemIdx);
+    showPropertyIndicator();
     e.preventDefault();
   });
   // Deselect when clicking empty area (not on a note/rest/bar)
@@ -4500,7 +4605,7 @@ function setupStaffClick() {
     if (selectedElements.length === 0) return;
     selectedElements = [];
     highlightSelected();
-    hidePropertyPanel();
+    hidePropertyIndicator();
   });
   preview.addEventListener('pointerup', function(e) {
     if (veMode !== 'visual') return;
@@ -4645,9 +4750,9 @@ function setupRubberBandSelection() {
       // Suppress the click handler from deselecting
       isDragging = true;
       setTimeout(function() { isDragging = false; }, 50);
-      // Show property panel for first selected element
+      // Show property indicator for selection
       if (selectedElements.length > 0) {
-        showPropertyPanel(selectedElements[0].partIdx, selectedElements[0].elemIdx);
+        showPropertyIndicator();
       }
     }
   }
@@ -4795,7 +4900,7 @@ function setupKeyboardShortcuts() {
       selectedElements = [];
       clearToolSelection();
       highlightSelected();
-      hidePropertyPanel();
+      hidePropertyIndicator();
       return;
     }
     // Left arrow: select previous note
@@ -4805,7 +4910,7 @@ function setupKeyboardShortcuts() {
       if (sel.elemIdx > 0) {
         selectedElements = [{partIdx: sel.partIdx, elemIdx: sel.elemIdx - 1}];
         highlightSelected();
-        showPropertyPanel(sel.partIdx, sel.elemIdx - 1);
+        showPropertyIndicator();
       }
       return;
     }
@@ -4817,7 +4922,7 @@ function setupKeyboardShortcuts() {
       if (sel.elemIdx < maxIdx) {
         selectedElements = [{partIdx: sel.partIdx, elemIdx: sel.elemIdx + 1}];
         highlightSelected();
-        showPropertyPanel(sel.partIdx, sel.elemIdx + 1);
+        showPropertyIndicator();
       }
       return;
     }
@@ -4845,6 +4950,7 @@ document.addEventListener('DOMContentLoaded', function() {
   setupStaffClick();
   setupRubberBandSelection();
   setupKeyboardShortcuts();
+  setupPropertyIndicator();
 
   // Start in visual mode
   toggleEditorMode('visual');
@@ -5238,8 +5344,8 @@ def _build_notes_section(obj, tune, meter_options, unit_options):
     # Accidentals
     CDiv([
       '<button type="button" class="ve-tool-btn" data-tool="sharp" title="Sharp">&#9839;</button>',
-      '<button type="button" class="ve-tool-btn" data-tool="flat" title="Flat">&#9837;</button>',
-      '<button type="button" class="ve-tool-btn" data-tool="natural" title="Natural">&#9838;</button>',
+      '<button type="button" class="ve-tool-btn ve-acc-icon" data-tool="flat" title="Flat">&#9837;</button>',
+      '<button type="button" class="ve-tool-btn ve-acc-icon" data-tool="natural" title="Natural">&#9838;</button>',
     ], hclass='ve-tool-group'),
     # Tie / Slur
     CDiv([
@@ -5277,14 +5383,14 @@ def _build_notes_section(obj, tune, meter_options, unit_options):
   ], id='ve-textarea-pane', style='display:none')
 
   # Preview pane with overlay container for staff interaction
+  # Property panel is inside the preview container so position:absolute works correctly
   preview_pane = CDiv([
     CDiv('', id='abcjs-preview', hclass='ve-staff-area'),
+    CDiv('&#9881;', id='ve-prop-indicator', hclass='ve-prop-indicator', style='display:none'),
+    CDiv([
+      CDiv('', id='ve-prop-content'),
+    ], hclass='ve-property-panel', id='ve-property-panel', style='display:none'),
   ], hclass='notes-preview-pane ve-preview-container', id='ve-preview-container')
-
-  # Property panel (hidden, shown when a note is selected)
-  property_panel = CDiv([
-    CDiv('', id='ve-prop-content'),
-  ], hclass='ve-property-panel', id='ve-property-panel', style='display:none')
 
   # Pitch label (follows ghost during drag)
   pitch_label = CDiv('', id='ve-pitch-label', hclass='ve-pitch-label', style='display:none')
@@ -5297,7 +5403,6 @@ def _build_notes_section(obj, tune, meter_options, unit_options):
       textarea_pane,
       preview_pane,
     ], hclass='notes-layout'),
-    property_panel,
     pitch_label,
   ]
 
@@ -6642,6 +6747,7 @@ font-size:95%;
 .edit-form .notes-preview-pane {
 flex:1;
 min-width:300px;
+position:relative;
 }
 .edit-form .chord-layout {
 display:flex;
@@ -6851,6 +6957,12 @@ color:white;
 .edit-form .ve-tool-btn svg {
 display:block;
 }
+.edit-form .ve-tool-btn.ve-acc-icon {
+font-size:19px;
+}
+.ve-property-panel .ve-prop-btn.ve-acc-icon {
+font-size:16px;
+}
 .ve-rubber-band {
 position:fixed;
 border:1px dashed #4A90D9;
@@ -6998,6 +7110,28 @@ fill:none !important;
 stroke:#cc3333 !important;
 }
 
+/* Visual Editor - Property Indicator */
+.ve-prop-indicator {
+position:absolute;
+z-index:199;
+background:#f0f0f0;
+border:1px solid #999;
+border-radius:3px;
+cursor:pointer;
+font-size:14px;
+line-height:20px;
+width:20px;
+height:20px;
+text-align:center;
+color:#555;
+user-select:none;
+}
+.ve-prop-indicator:hover {
+background:#e0e0e0;
+border-color:#666;
+color:#333;
+}
+
 /* Visual Editor - Property Panel */
 .edit-form .ve-property-panel {
 position:absolute;
@@ -7008,6 +7142,24 @@ border-radius:4px;
 box-shadow:0 2px 8px rgba(0,0,0,0.2);
 padding:6px 8px;
 min-width:160px;
+}
+.ve-prop-header {
+display:flex;
+justify-content:flex-end;
+margin-bottom:2px;
+}
+.ve-prop-close {
+background:none;
+border:none;
+cursor:pointer;
+font-size:20px;
+line-height:16px;
+color:#555;
+padding:0 3px;
+font-weight:bold;
+}
+.ve-prop-close:hover {
+color:#cc3333;
 }
 .ve-property-panel .ve-prop-row {
 display:flex;
