@@ -1012,29 +1012,59 @@ function FilterTunes() {
   var filter = $("#filterselect").val();
   var textfilter = $("#filtertext").val();
   var tunes = $("#alltunes").find("li");
-  tunes.each(function (idx, li) {
-    var item = $(li);
-    var visible = 0;
-    if (filter == "all") {
-      visible = 1;
-    }
-    else if (filter == "ax4" ) {
-      visible = (item.hasClass("reel") ||
-                 item.hasClass("hornpipe") ||
-                 item.hasClass("march") ||
-                 item.hasClass("rag"));
-    } else {
-      visible = item.hasClass(filter);
-    }
-    if (textfilter != "") {
-      if (item.text().toLowerCase().search(textfilter.toLowerCase()) == -1) {
-        visible = 0;
+  var words = textfilter.trim() === "" ? [] : textfilter.trim().toLowerCase().split(/\s+/);
+  if (words.length > 0) {
+    // Collect matches grouped by which word they matched first
+    var groups = [];
+    for (var w = 0; w < words.length; w++) groups.push([]);
+    var hidden = [];
+    tunes.each(function (idx, li) {
+      var item = $(li);
+      var classVisible = false;
+      if (filter == "all") classVisible = true;
+      else if (filter == "ax4") classVisible = (item.hasClass("reel") || item.hasClass("hornpipe") || item.hasClass("march") || item.hasClass("rag"));
+      else classVisible = item.hasClass(filter);
+      if (!classVisible) { item.css("display", "none"); return; }
+      var text = item.text().toLowerCase();
+      var matched = -1;
+      for (var w = 0; w < words.length; w++) {
+        if (text.indexOf(words[w]) !== -1) { matched = w; break; }
       }
+      if (matched >= 0) {
+        groups[matched].push(li);
+        item.css("display", "");
+      } else {
+        item.css("display", "none");
+        hidden.push(li);
+      }
+    });
+    // Sort each group alphabetically, then reorder DOM
+    var parent = document.getElementById("alltunes");
+    for (var w = 0; w < groups.length; w++) {
+      groups[w].sort(function(a, b) { return a.innerHTML > b.innerHTML ? 1 : -1; });
+      for (var i = 0; i < groups[w].length; i++) parent.appendChild(groups[w][i]);
     }
-    if (visible) {
-      item.css("display", "");
-    } else {
-      item.css("display", "none");
+    // Append hidden items at end (preserve alpha order for when filter clears)
+    hidden.sort(function(a, b) { return a.innerHTML > b.innerHTML ? 1 : -1; });
+    for (var i = 0; i < hidden.length; i++) parent.appendChild(hidden[i]);
+  } else {
+    // No text filter: just show/hide by type, alpha sort
+    tunes.each(function (idx, li) {
+      var item = $(li);
+      var visible = false;
+      if (filter == "all") visible = true;
+      else if (filter == "ax4") visible = (item.hasClass("reel") || item.hasClass("hornpipe") || item.hasClass("march") || item.hasClass("rag"));
+      else visible = item.hasClass(filter);
+      item.css("display", visible ? "" : "none");
+    });
+    $("li", "#alltunes").sortElements(function(a, b) { return a.innerHTML > b.innerHTML ? 1 : -1; });
+  }
+}
+function AddAllVisible() {
+  var tunes = $("#alltunes").find("li");
+  tunes.each(function(idx, li) {
+    if ($(li).css("display") !== "none") {
+      $(li).appendTo("#selectedtunes");
     }
   });
 }
@@ -1059,6 +1089,7 @@ function RandomThree() {
   }
 }
 function FilterSubmit() {
+  AddAllVisible();
   return false;
 }
 function ClearTunes() {
@@ -1206,8 +1237,10 @@ padding-bottom:0.5em;
             onchange='FilterTunes()', id='filterselect'),
     CInput(type='TEXT', name='text_filter', onkeyup='FilterTunes()', id='filtertext'), 
     CInput(type='RESET', value='X', id='filter-reset', onclick='setTimeout(function() { FilterTunes(); })', style="border:0px; font-weight:bold;"),
-    CNBSP(2), 
-    CInput(type='BUTTON', value='-> Random 3', onclick='setTimeout(function() { RandomThree(); })'), 
+    CNBSP(2),
+    CInput(type='BUTTON', value='-> Add All', onclick='AddAllVisible()'),
+    CNBSP(2),
+    CInput(type='BUTTON', value='-> Random 3', onclick='setTimeout(function() { RandomThree(); })'),
   ], onsubmit="return FilterSubmit();", id="filter-form"))
   parts.append(CBreak())
   
@@ -1252,7 +1285,7 @@ padding-bottom:0.5em;
   
   parts.append(CDiv([
     CDiv([CDiv(CText("Available:"), hclass='list-title'), CBreak(), tunes_list], hclass='list-left'),
-    CDiv([CDiv(CText("Selected:"), hclass='list-title'), CBreak(), selected_list], hclass='list-right'), 
+    CDiv([CDiv(CText("Selected:"), hclass='list-title'), CBreak(), selected_list], hclass='list-right'),
   ], hclass='list-area'))
   parts.append(CBreak())
   parts.append(CDiv(hclass="clear"))

@@ -1,7 +1,6 @@
 ** Fix note generation on production site
 * Website Phase Three
   ** Coding Tasks Near Term
-    ** Easier selection by typed fragments to quickly make sets (do OR on each word)
     ** Ability to press record button to listen to a tune being played and analyze
        with AI to prefill the New Tune form
   ** Content
