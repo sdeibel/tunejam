@@ -569,7 +569,8 @@ M:%(meter)s
         if up_to_date:
             return png_file
 
-        cmd = 'gs -dBATCH -dNOPAUSE -q -sDEVICE=pngmono -r%i -dEPSCrop -sOutputFile=%s %s' % (density, png_file, eps_file)
+        bindir = '%s/bin' % kBaseDir
+        cmd = 'PATH=$PATH:%s gs -dBATCH -dNOPAUSE -q -sDEVICE=pngmono -r%i -dEPSCrop -sOutputFile=%s %s' % (bindir, density, png_file, eps_file)
         os.system(cmd)
 
         if not os.path.exists(png_file):
@@ -585,7 +586,8 @@ M:%(meter)s
         if up_to_date:
             return png_file
 
-        cmd = 'gs -dBATCH -dNOPAUSE -q -sDEVICE=pngmono -r%i -dEPSCrop -sOutputFile=%s %s' % (density, png_file, eps_file)
+        bindir = '%s/bin' % kBaseDir
+        cmd = 'PATH=$PATH:%s gs -dBATCH -dNOPAUSE -q -sDEVICE=pngmono -r%i -dEPSCrop -sOutputFile=%s %s' % (bindir, density, png_file, eps_file)
         os.system(cmd)
 
         if not os.path.exists(png_file):
