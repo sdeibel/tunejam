@@ -1,6 +1,19 @@
 ** Fix note generation on production site
 * Website Phase Three
   ** Coding Tasks Near Term
+    ** Fix all existing sets that have duplicate tunes (due to old/fixed bug)
+    ** User page where can see name given, change email, see list of all tunes, events, and notes
+    ** When tested notes, files appeared in git status -- why??
+    ** When drag order on event and on air, doesn't update other viewers list
+    ** Put the whole page header/footer also on the events sets view pages
+    ** Fix notes on server (permissions no doubt)
+    ** Email notifications of activity
+    ** Have new events start private. If want public, requires admin approval (email sent)
+       Until approval can share with private link.
+    ** Add notes in sets within events (one for each tune in set)
+    ** Add through-site editing of admin and editor user lists
+    ** Add Request Editor Access and Request a Tune functionality
+    ** Audit site to make sure that security is on the Python side and not in Javascript
     ** Ability to press record button to listen to a tune being played and analyze
        with AI to prefill the New Tune form
   ** Content
