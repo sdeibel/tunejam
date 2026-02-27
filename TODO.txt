@@ -1,10 +1,6 @@
 ** Fix note generation on production site
 * Website Phase Three
   ** Coding Tasks Near Term
-    ** Description area for event
-    ** A way for logged-in users to add notes to events, sets within events, or tunes; these
-       should only be visible to that user, they are private annotations
-    ** Store recently deleted tunes + show as for events + after expire put in permanent archive area
     ** Easier selection by typed fragments to quickly make sets (do OR on each word)
     ** Ability to press record button to listen to a tune being played and analyze
        with AI to prefill the New Tune form

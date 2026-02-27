@@ -1743,6 +1743,7 @@ class CEvent:
         self.private = 0
         self.share_id = ''
         self.coowners = []
+        self.description = ''
         self.stats = collections.defaultdict(list)
         
     def ReadEvent(self, deleted=False):
@@ -1775,6 +1776,8 @@ class CEvent:
                 self.share_id = l[len('share:'):].strip()
             elif l.startswith('coowner:'):
                 self.coowners.append(l[len('coowner:'):].strip())
+            elif l.startswith('description:'):
+                self.description = l[len('description:'):].strip().replace('\\n', '\n')
             elif l == l.lstrip() and l.strip():
                 self.sets.append(l)
                 curr_set = l
@@ -1797,6 +1800,8 @@ class CEvent:
             lines.append('share:%s' % self.share_id)
         for coowner in self.coowners:
             lines.append('coowner:%s' % coowner)
+        if self.description:
+            lines.append('description:%s' % self.description.replace('\n', '\\n'))
         for sid in self.sets:
             lines.append(sid)
             for ptime in self.stats[sid]:
@@ -1901,7 +1906,7 @@ def CreateEvent(title, owner=None):
 
     parts = title.split()
     first = [p[0] for p in parts]
-    name = ''.join(first)
+    name = ''.join(first).lower()
     event_file = os.path.join(kEventsLoc, name+'.evt')
     i = 0
     while os.path.exists(event_file):
@@ -1909,8 +1914,6 @@ def CreateEvent(title, owner=None):
         event_file = os.path.join(kEventsLoc, name + ('-%i' % i) +'.evt')
     if i:
         name = name + '-%i' % i
-
-    name = name.lower()
 
     event = CEvent(name)
     event.title = title

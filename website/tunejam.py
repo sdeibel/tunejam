@@ -4,6 +4,7 @@ import sys, os
 import time
 import struct
 import json
+import glob
 from html import *
 import tempfile
 import datetime
@@ -7993,13 +7994,15 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
     
   parts = []
   if editor:
-    parts.append('<h1>Event: <span id="event-title" contenteditable="true">%s</span>'
-                 ' <button id="dup-btn" style="font-size:0.5em;vertical-align:middle;cursor:pointer;padding:3px 8px"'
-                 '>Duplicate</button></h1>' % event.title)
+    parts.append('<div style="display:flex;align-items:baseline;justify-content:space-between">'
+                 '<h1 style="margin:0">Event: <span id="event-title" contenteditable="true">%s</span></h1>'
+                 '<a id="dup-btn" href="#" style="color:#999;font-style:italic;white-space:nowrap">Duplicate</a>'
+                 '</div>' % event.title)
   elif IsLoggedIn():
-    parts.append('<h1>Event: %s'
-                 ' <button id="dup-btn" style="font-size:0.5em;vertical-align:middle;cursor:pointer;padding:3px 8px"'
-                 '>Duplicate</button></h1>' % event.title)
+    parts.append('<div style="display:flex;align-items:baseline;justify-content:space-between">'
+                 '<h1 style="margin:0">Event: %s</h1>'
+                 '<a id="dup-btn" href="#" style="color:#999;font-style:italic;white-space:nowrap">Duplicate</a>'
+                 '</div>' % event.title)
   else:
     parts.append(CH("Event: %s" % event.title, 1))
   if editor:
@@ -8023,6 +8026,33 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
         'return false" '
         'style="font-size:0.85em;vertical-align:middle;cursor:pointer;padding:3px 8px">Copy Link</button>' % share_url,
       ])
+
+  # Description area
+  def _desc_to_html(text):
+    return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
+
+  if editor:
+    if event.description:
+      parts.append(
+        '<div id="desc-wrap" style="margin:8px 0">'
+        '<div id="event-description" style="cursor:pointer">%s</div>'
+        '</div>' % _desc_to_html(event.description))
+    else:
+      parts.append(
+        '<div id="desc-wrap" style="margin:16px 0 8px 0">'
+        '<a id="desc-add-link" href="#" style="color:#999;font-style:italic">Add Description</a>'
+        '<div id="event-description" style="display:none"></div>'
+        '</div>')
+    parts.append(
+      '<textarea id="desc-input" style="display:none;font-size:1em;width:100%;box-sizing:border-box;'
+      'border:1px dashed #ccc;outline:none;padding:4px;font-family:inherit;resize:none;overflow:hidden" rows="1"></textarea>'
+      '<button id="desc-save-btn" style="display:none;font-size:0.85em;cursor:pointer;padding:3px 8px;margin-top:4px">Save</button>')
+  elif event.description:
+    parts.append(
+      '<div style="margin:8px 0">'
+      '<span id="event-description">%s</span>'
+      '</div>' % _desc_to_html(event.description))
+
   parts.append(CParagraph(""))
 
   if not event.title:
@@ -8146,9 +8176,10 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
       if editor:
         parts.extend([
           CText(' - '),
-          CText("Edit", href='/sets/sid/%s/edit/%s' % (sid, s)),
+          '<a href="/sets/sid/%s/edit/%s" style="color:#999;font-style:italic">Edit</a>' % (sid, s),
           CText(' - '),
-          CText("Delete", href='/event/%s/delete/%s' % (sid, s)),
+          '<a href="/event/%s/delete/%s" style="color:#999;font-style:italic" '
+          'onclick="return confirm(\'Delete this set from the event?\')">Delete</a>' % (sid, s),
         ])
 
       parts.append('</span>')
@@ -8198,14 +8229,27 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
     CText('Return to event list', href='/events'),
     CBreak(),
   ])
+  # Action row: Add Note on left, Delete Event on right
+  logged_in = IsLoggedIn()
+  can_make_public = CanEditEvent(event)
+  left_items = []
+  right_items = []
+  if logged_in:
+    left_items.append('<a href="#" id="add-note-link-trigger" style="color:#999;font-style:italic">Add Note</a>')
   if CanDeleteEvent(event):
-    parts.extend([
-      CBreak(),
-      '<a href="/events/delete/%s" class="red-button" onclick="return confirm(\'Are you sure you want to delete this event?\')">Delete Event</a>' % event.name,
-    ])
-  elif not IsLoggedIn():
+    right_items.append(
+      '<a href="/events/delete/%s" class="red-button" onclick="return confirm(\'Are you sure you want to delete this event?\')">Delete Event</a>' % event.name
+    )
+  if left_items or right_items:
+    parts.append(
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">'
+      '<div>%s</div><div>%s</div></div>' % (''.join(left_items), ''.join(right_items))
+    )
+  elif not logged_in:
     parts.append(CBreak())
     parts.append(LoginButton('/event/%s' % event.name))
+
+  parts.append(_RenderNotesSection('event', sid, can_make_public))
 
   return PageWrapper(parts, 'event', show_eye_candy=False)
 
@@ -8394,11 +8438,23 @@ def logout(target=''):
     return redirect('/', code=303)
   return redirect('/'+target, code=303)
 
+@app.route('/ajax/event/<sid>/description', methods=['POST'])
+def ajax_event_description(sid):
+  event = utils.CEvent(sid)
+  event.ReadEvent()
+  if not CanEditEvent(event):
+    return '{"ok":false}', 403
+  data = request.get_json(force=True)
+  event.description = data.get('description', '').strip()
+  event.WriteEvent()
+  return '{"ok":true}'
+
 @app.route('/ajax/event/<sid>/current')
 def ajax_event_current(sid):
   s = utils.CEvent(sid)
   s.ReadEvent()
-  return s.current_set + '&' + str(len(s.sets)) + '&' + str(s.on_air)
+  content_hash = hashlib.md5((s.title + '\n' + s.description).encode('utf-8')).hexdigest()[:8]
+  return s.current_set + '&' + str(len(s.sets)) + '&' + str(s.on_air) + '&' + content_hash
 
 @app.route('/event/<sid>/rename', methods=['POST'])
 def event_rename(sid):
@@ -8441,6 +8497,115 @@ def ajax_event_reorder(sid):
   event.sets = new_order
   event.WriteEvent()
   return json.dumps({'ok': True})
+
+@app.route('/ajax/notes/add', methods=['POST'])
+def ajax_notes_add():
+  email = GetUserEmail()
+  if not email:
+    return '{"ok":false,"error":"not logged in"}', 403
+  data = request.get_json(force=True)
+  target_type = data.get('target_type', '').strip()
+  target_id = data.get('target_id', '').strip()
+  text = data.get('text', '').strip()
+  if not target_type or not target_id or not text:
+    return json.dumps({'ok': False, 'error': 'missing fields'})
+  if target_type not in ('tune', 'event'):
+    return json.dumps({'ok': False, 'error': 'invalid target_type'})
+  note = _AddNote(email, target_type, target_id, text)
+  return json.dumps({'ok': True, 'note': note})
+
+@app.route('/ajax/notes/delete', methods=['POST'])
+def ajax_notes_delete():
+  email = GetUserEmail()
+  if not email:
+    return '{"ok":false,"error":"not logged in"}', 403
+  data = request.get_json(force=True)
+  owner_email = data.get('owner_email', '').strip()
+  note_id = int(data.get('note_id', 0))
+  is_admin = HasCapability(kCapManageAnyEvent)
+  if owner_email.lower() != email.lower() and not is_admin:
+    return '{"ok":false,"error":"permission denied"}', 403
+  if _DeleteNote(owner_email, note_id):
+    return '{"ok":true}'
+  return json.dumps({'ok': False, 'error': 'note not found'})
+
+@app.route('/ajax/notes/toggle-public', methods=['POST'])
+def ajax_notes_toggle_public():
+  email = GetUserEmail()
+  if not email:
+    return '{"ok":false,"error":"not logged in"}', 403
+  data = request.get_json(force=True)
+  owner_email = data.get('owner_email', '').strip()
+  note_id = int(data.get('note_id', 0))
+  target_type = data.get('target_type', '').strip()
+  target_id = data.get('target_id', '').strip()
+  is_admin = HasCapability(kCapManageAnyEvent)
+  is_own = owner_email.lower() == email.lower()
+  # Must be own note + have edit permission on target, or admin
+  can_toggle = False
+  if is_admin:
+    can_toggle = True
+  elif is_own:
+    if target_type == 'tune':
+      obj = utils.CTune(target_id)
+      try:
+        obj.ReadDatabase()
+      except SystemExit:
+        pass
+      can_toggle = CanEditTune(obj)
+    elif target_type == 'event':
+      obj = utils.CEvent(target_id)
+      obj.ReadEvent()
+      can_toggle = CanEditEvent(obj)
+  if not can_toggle:
+    return '{"ok":false,"error":"permission denied"}', 403
+  # Read current state and toggle
+  notes = _ReadNotes(owner_email)
+  for n in notes:
+    if n['id'] == note_id:
+      n['public'] = not n.get('public', False)
+      _WriteNotes(owner_email, notes)
+      return json.dumps({'ok': True, 'public': n['public']})
+  return json.dumps({'ok': False, 'error': 'note not found'})
+
+@app.route('/ajax/profile/display-name', methods=['POST'])
+def ajax_profile_display_name():
+  email = GetUserEmail()
+  if not email:
+    return '{"ok":false,"error":"not logged in"}', 403
+  data = request.get_json(force=True)
+  display_name = data.get('display_name', '').strip()
+  if not display_name:
+    return json.dumps({'ok': False, 'error': 'empty name'})
+  profile = GetOrCreateProfile(email)
+  profile['display_name'] = display_name
+  _WriteProfile(profile)
+  return json.dumps({'ok': True, 'display_name': display_name})
+
+@app.route('/ajax/notes/edit', methods=['POST'])
+def ajax_notes_edit():
+  email = GetUserEmail()
+  if not email:
+    return '{"ok":false,"error":"not logged in"}', 403
+  data = request.get_json(force=True)
+  owner_email = data.get('owner_email', '').strip()
+  note_id = int(data.get('note_id', 0))
+  text = data.get('text', '').strip()
+  is_admin = HasCapability(kCapManageAnyEvent)
+  if owner_email.lower() != email.lower() and not is_admin:
+    return '{"ok":false,"error":"permission denied"}', 403
+  notes = _ReadNotes(owner_email)
+  for n in notes:
+    if n['id'] == note_id:
+      if not text:
+        # Empty text = delete the note
+        notes = [x for x in notes if x['id'] != note_id]
+        _WriteNotes(owner_email, notes)
+        return json.dumps({'ok': True, 'deleted': True})
+      n['text'] = text
+      _WriteNotes(owner_email, notes)
+      return json.dumps({'ok': True})
+  return json.dumps({'ok': False, 'error': 'note not found'})
 
 def ReadEmailConfig():
   """Read email config file, return dict of key=value pairs."""
@@ -8613,6 +8778,111 @@ for _email, _name in [
 ]:
   if not os.path.exists(_ProfilePath(_email)):
     _WriteProfile({'email': _email, 'display_name': _name})
+
+# Notes system
+kNotesDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'notes')
+if not os.path.exists(kNotesDir):
+  os.makedirs(kNotesDir)
+
+def _NotesPath(email):
+  """Return path to notes file for the given email."""
+  h = hashlib.md5(email.lower().encode('utf-8')).hexdigest()
+  return os.path.join(kNotesDir, h + '.notes')
+
+def _ReadNotes(email):
+  """Load notes array from JSON file. Returns [] if no file."""
+  path = _NotesPath(email)
+  if not os.path.exists(path):
+    return []
+  try:
+    with open(path) as f:
+      return json.loads(f.read())
+  except (ValueError, IOError):
+    return []
+
+def _WriteNotes(email, notes):
+  """Save notes array to JSON file."""
+  path = _NotesPath(email)
+  with open(path, 'w') as f:
+    f.write(json.dumps(notes, indent=1))
+
+def _AddNote(email, target_type, target_id, text):
+  """Append a new note for user. Returns the new note dict."""
+  notes = _ReadNotes(email)
+  max_id = max([n['id'] for n in notes]) if notes else 0
+  note = {
+    'id': max_id + 1,
+    'target_type': target_type,
+    'target_id': target_id,
+    'text': text,
+    'timestamp': time.time(),
+    'public': False,
+  }
+  notes.append(note)
+  _WriteNotes(email, notes)
+  return note
+
+def _DeleteNote(email, note_id):
+  """Remove a note by ID. Returns True if found and removed."""
+  notes = _ReadNotes(email)
+  before = len(notes)
+  notes = [n for n in notes if n['id'] != note_id]
+  if len(notes) < before:
+    _WriteNotes(email, notes)
+    return True
+  return False
+
+def _SetNotePublic(email, note_id, public):
+  """Set the public flag on a note. Returns True if found."""
+  notes = _ReadNotes(email)
+  for n in notes:
+    if n['id'] == note_id:
+      n['public'] = public
+      _WriteNotes(email, notes)
+      return True
+  return False
+
+def _EmailFromHash(md5_hash):
+  """Read email from the matching .profile file (both systems use same hash)."""
+  path = os.path.join(kProfileDir, md5_hash + '.profile')
+  if not os.path.exists(path):
+    return None
+  with open(path) as f:
+    for line in f:
+      line = line.strip()
+      if line.startswith('email='):
+        return line.split('=', 1)[1].strip()
+  return None
+
+def GetNotesForTarget(target_type, target_id, viewer_email):
+  """Return visible notes for a target as list of (note, owner_email, display_name, is_own) tuples.
+  Own notes oldest-first, then others' public notes most-recent-first. Admins see all."""
+  is_admin = HasCapability(kCapManageAnyEvent)
+  results = []
+  for path in glob.glob(os.path.join(kNotesDir, '*.notes')):
+    basename = os.path.basename(path)
+    md5_hash = basename.rsplit('.', 1)[0]
+    owner_email = _EmailFromHash(md5_hash)
+    if not owner_email:
+      continue
+    is_own = viewer_email and viewer_email.lower() == owner_email.lower()
+    try:
+      with open(path) as f:
+        notes = json.loads(f.read())
+    except (ValueError, IOError):
+      continue
+    for note in notes:
+      if note.get('target_type') != target_type or note.get('target_id') != target_id:
+        continue
+      if is_own or note.get('public') or is_admin:
+        display_name = GetDisplayName(owner_email)
+        results.append((note, owner_email, display_name, is_own))
+  # Sort: own notes oldest-first, then others' public notes most-recent-first
+  own = [(n, e, d, o) for n, e, d, o in results if o]
+  own.sort(key=lambda x: x[0].get('timestamp', 0))
+  others = [(n, e, d, o) for n, e, d, o in results if not o]
+  others.sort(key=lambda x: x[0].get('timestamp', 0), reverse=True)
+  return own + others
 
 def Logout():
   """Clear auth session keys."""
@@ -8849,17 +9119,83 @@ function duplicateEvent() {
   }
 }
 """ % (json.dumps(e.title + ' copy'), sid)
-  ready_calls += '  $("#dup-btn").on("click", function() { duplicateEvent(); });\n'
+  ready_calls += '  $("#dup-btn").on("click", function(ev) { ev.preventDefault(); duplicateEvent(); });\n'
+
+  if editor:
+    extra_js += """
+var origDesc = %s;
+var descEditing = false;
+function autoGrow(el) {
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
+}
+function startDescEdit() {
+  descEditing = true;
+  $("#desc-add-link").hide();
+  $("#event-description").hide();
+  var ta = $("#desc-input");
+  ta.val(origDesc).show();
+  autoGrow(ta[0]);
+  ta.focus();
+  $("#desc-save-btn").show();
+}
+function saveDesc() {
+  var val = $("#desc-input").val().trim();
+  descEditing = false;
+  if (val !== origDesc) {
+    $.ajax({
+      url: "/ajax/event/%s/description",
+      type: "POST",
+      contentType: "application/json",
+      data: JSON.stringify({description: val}),
+      success: function(resp) {
+        var data = typeof resp === "string" ? JSON.parse(resp) : resp;
+        if (data.ok) { origDesc = val; }
+      }
+    });
+  }
+  $("#desc-input, #desc-save-btn").hide();
+  if (val) {
+    var html = val.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\\n/g,"<br>");
+    $("#event-description").html(html).show();
+    $("#desc-add-link").hide();
+  } else {
+    $("#event-description").empty().hide();
+    $("#desc-add-link").show();
+  }
+}
+""" % (json.dumps(e.description), sid)
+    ready_calls += """  $("#event-description").on("click", function() { startDescEdit(); });
+  $("#desc-add-link").on("click", function(ev) { ev.preventDefault(); startDescEdit(); });
+  $("#desc-input").on("input", function() { autoGrow(this); });
+  $("#desc-input").on("keydown", function(ev) {
+    if (ev.which === 27) { ev.preventDefault(); descEditing = false; $("#desc-input, #desc-save-btn").hide(); $("#event-description").show(); if (!origDesc) $("#desc-add-link").show(); }
+  });
+  $("#desc-save-btn").on("click", function() { saveDesc(); });
+  $(document).on("mousedown", function(ev) {
+    if (descEditing && !$(ev.target).closest("#desc-input, #desc-save-btn").length) { saveDesc(); }
+  });
+"""
+
+  content_hash = hashlib.md5((e.title + '\n' + e.description).encode('utf-8')).hexdigest()[:8]
+  initial_snapshot = e.current_set + '&' + str(len(e.sets)) + '&' + str(e.on_air) + '&' + content_hash
 
   parts.extend([
     """<script>
 %s
+var lastOnAir = %d;
+var lastSnapshot = "%s";
 function CheckEvent() {
   $.ajax({
     url: "/ajax/event/%s/current",
     cache: false,
     success: function(txt){
-      if (txt.trim() != "%s") {
+      var trimmed = txt.trim();
+      var parts = trimmed.split("&");
+      var nowOnAir = parseInt(parts[parts.length - 2]);
+      if (lastOnAir != nowOnAir) {
+        location.reload();
+      } else if (nowOnAir && trimmed != lastSnapshot) {
         location.reload();
       }
     }
@@ -8869,8 +9205,7 @@ $(document).ready(function() {
    setInterval(CheckEvent, 5000);
 %s
 });
-</script>""" % (extra_js, sid, e.current_set + '&' + str(len(e.sets)) + '&' + str(e.on_air),
-                ready_calls)
+</script>""" % (extra_js, e.on_air, initial_snapshot, sid, ready_calls)
 
   ])
 
@@ -9042,7 +9377,308 @@ def CreateTuneSetPDF(name, title, subtitle, tunes):
   book = utils.CSetBook(name, title, subtitle, tunes)
   pdf = book.GeneratePDF(include_index=False, generate=True)
   return send_file(pdf, mimetype='application/pdf')
-  
+
+# Notes rendering
+
+def _RenderOneNote(note, owner_email, display_name, is_own, can_make_public, is_admin):
+  """Render a single note as inline text with edit-in-place support."""
+  note_id = note['id']
+  is_public = note.get('public', False)
+  raw_text = note.get('text', '')
+  # Escape HTML in text, convert newlines to <br>
+  text_html = raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
+  escaped_raw = raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace('\n', '&#10;')
+
+  # Display name logic: show email prefix if "Anonymous"
+  shown_name = display_name
+  if display_name == 'Anonymous' and owner_email:
+    shown_name = owner_email.split('@')[0]
+  esc_name = shown_name.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+  # Attribution line
+  attr_parts = []
+  attr_parts.append('<span style="font-size:0.85em;color:#888">&mdash; %s' % esc_name)
+  if display_name == 'Anonymous' and is_own:
+    attr_parts.append(' <a href="#" class="note-change-name" style="color:#888">(Change)</a>')
+  if is_public:
+    attr_parts.append(' &middot; <i>public</i>')
+  attr_parts.append('</span>')
+
+  # Controls (inline, after attribution)
+  if (is_own and can_make_public) or is_admin:
+    checked = ' checked' if is_public else ''
+    attr_parts.append(
+      ' <label style="font-size:0.85em;color:#888;cursor:pointer">'
+      '<input type="checkbox" class="note-public-toggle" data-owner="%s" data-note-id="%d"%s> Make Public'
+      '</label>' % (owner_email, note_id, checked)
+    )
+  if is_own or is_admin:
+    attr_parts.append(
+      ' <a href="#" class="note-delete" data-owner="%s" data-note-id="%d" '
+      'style="color:#c00;font-size:1.1em;font-weight:bold;text-decoration:none" '
+      'title="Delete note">&times;</a>' % (owner_email, note_id)
+    )
+
+  can_edit_note = is_own or is_admin
+  cursor = 'cursor:pointer' if can_edit_note else ''
+
+  return (
+    '<div class="note-card" data-owner="%(owner)s" data-note-id="%(nid)d" style="margin-bottom:6px">'
+    '<div class="note-display" data-raw="%(raw)s" style="%(cursor)s">%(text)s</div>'
+    '<textarea class="note-edit-input" rows="1" style="display:none;font-size:1em;width:100%%;'
+    'box-sizing:border-box;border:1px dashed #ccc;outline:none;padding:4px;font-family:inherit;'
+    'resize:none;overflow:hidden"></textarea>'
+    '<div><button class="note-edit-save" style="display:none;font-size:0.85em;cursor:pointer;'
+    'padding:3px 8px;margin-top:4px">Save</button></div>'
+    '<div class="note-attr">%(attr)s</div>'
+    '</div>'
+  ) % {
+    'owner': owner_email,
+    'nid': note_id,
+    'raw': escaped_raw,
+    'cursor': cursor,
+    'text': text_html,
+    'attr': ''.join(attr_parts),
+  }
+
+def _NotesJS(target_type, target_id, can_make_public, is_admin):
+  """Return <script> block for notes interactions. Vanilla JS, no jQuery."""
+  return '''<script>
+(function() {
+  var tt = %s, tid = %s;
+  var activeCard = null;
+
+  function checkNotesHeader() {
+    var hdr = document.getElementById("notes-header");
+    if (hdr && container && !container.querySelector(".note-card")) {
+      hdr.style.display = "none";
+    }
+  }
+
+  function ajax(url, data, cb) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4) {
+        var resp;
+        try { resp = JSON.parse(xhr.responseText); } catch(e) { resp = {}; }
+        if (cb) cb(resp, xhr.status);
+      }
+    };
+    xhr.send(JSON.stringify(data));
+  }
+
+  function autoGrow(el) {
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\\n/g,"<br>");
+  }
+
+  // -- Inline editing for existing notes --
+  function startNoteEdit(card) {
+    if (activeCard && activeCard !== card) finishNoteEdit(activeCard);
+    activeCard = card;
+    var display = card.querySelector(".note-display");
+    var ta = card.querySelector(".note-edit-input");
+    var saveBtn = card.querySelector(".note-edit-save");
+    var raw = display.getAttribute("data-raw");
+    display.style.display = "none";
+    ta.value = raw;
+    ta.style.display = "";
+    autoGrow(ta);
+    ta.focus();
+    saveBtn.style.display = "";
+  }
+
+  function finishNoteEdit(card) {
+    if (!card) return;
+    var display = card.querySelector(".note-display");
+    var ta = card.querySelector(".note-edit-input");
+    var saveBtn = card.querySelector(".note-edit-save");
+    var owner = card.getAttribute("data-owner");
+    var nid = parseInt(card.getAttribute("data-note-id"));
+    var val = ta.value.trim();
+    var origRaw = display.getAttribute("data-raw");
+    ta.style.display = "none";
+    saveBtn.style.display = "none";
+    if (val !== origRaw) {
+      if (!val) {
+        // Empty = delete
+        ajax("/ajax/notes/edit", {owner_email: owner, note_id: nid, text: ""}, function(resp) {
+          if (resp.ok) { card.parentNode.removeChild(card); checkNotesHeader(); }
+        });
+        activeCard = null;
+        return;
+      }
+      ajax("/ajax/notes/edit", {owner_email: owner, note_id: nid, text: val}, function(resp) {
+        if (resp.ok) {
+          display.setAttribute("data-raw", val);
+          display.innerHTML = escHtml(val);
+        }
+      });
+    }
+    display.style.display = "";
+    activeCard = null;
+  }
+
+  // -- Add Note: inline textarea --
+  var trigger = document.getElementById("add-note-link-trigger");
+  var addWrap = document.getElementById("add-note-form");
+  var addTa = addWrap ? addWrap.querySelector("textarea") : null;
+  var addSaveBtn = document.getElementById("add-note-save");
+
+  function startAddNote() {
+    if (activeCard) finishNoteEdit(activeCard);
+    if (trigger) trigger.style.display = "none";
+    addWrap.style.display = "";
+    addTa.value = "";
+    addTa.style.height = "auto";
+    autoGrow(addTa);
+    addTa.focus();
+    if (addSaveBtn) addSaveBtn.style.display = "";
+  }
+
+  function finishAddNote() {
+    var val = addTa.value.trim();
+    addWrap.style.display = "none";
+    if (trigger) trigger.style.display = "";
+    if (!val) return;
+    ajax("/ajax/notes/add", {target_type: tt, target_id: tid, text: val}, function(resp) {
+      if (resp.ok) location.reload();
+      else alert(resp.error || "Error adding note");
+    });
+  }
+
+  if (trigger && addWrap) {
+    trigger.addEventListener("click", function(e) { e.preventDefault(); startAddNote(); });
+  }
+  if (addTa) {
+    addTa.addEventListener("input", function() { autoGrow(addTa); });
+    addTa.addEventListener("keydown", function(e) {
+      if (e.which === 27) { e.preventDefault(); addWrap.style.display = "none"; if (trigger) trigger.style.display = ""; }
+    });
+  }
+  if (addSaveBtn) {
+    addSaveBtn.addEventListener("click", function(e) { e.preventDefault(); finishAddNote(); });
+  }
+
+  // -- Event delegation on notes-section --
+  var container = document.getElementById("notes-section");
+  if (container) {
+    container.addEventListener("click", function(e) {
+      // Click on note-display to edit
+      var display = e.target.closest ? e.target.closest(".note-display") : null;
+      if (display && display.style.cursor === "pointer") {
+        startNoteEdit(display.closest(".note-card"));
+        return;
+      }
+      // Save button on existing note
+      var esave = e.target.closest ? e.target.closest(".note-edit-save") : null;
+      if (esave) { e.preventDefault(); finishNoteEdit(esave.closest(".note-card")); return; }
+      // Delete
+      var del = e.target.closest ? e.target.closest(".note-delete") : null;
+      if (del) {
+        e.preventDefault();
+        if (!confirm("Delete this note?")) return;
+        var owner = del.getAttribute("data-owner");
+        var nid = parseInt(del.getAttribute("data-note-id"));
+        ajax("/ajax/notes/delete", {owner_email: owner, note_id: nid}, function(resp) {
+          if (resp.ok) {
+            var card = del.closest(".note-card");
+            if (card) { card.parentNode.removeChild(card); checkNotesHeader(); }
+          } else { alert(resp.error || "Error deleting note"); }
+        });
+        return;
+      }
+      // Change name
+      var chname = e.target.closest ? e.target.closest(".note-change-name") : null;
+      if (chname) {
+        e.preventDefault();
+        var name = prompt("Enter your display name:");
+        if (name && name.trim()) {
+          ajax("/ajax/profile/display-name", {display_name: name.trim()}, function(resp) {
+            if (resp.ok) location.reload();
+            else alert(resp.error || "Error updating name");
+          });
+        }
+        return;
+      }
+    });
+    // Toggle public
+    container.addEventListener("change", function(e) {
+      var toggle = e.target.closest ? e.target.closest(".note-public-toggle") : null;
+      if (toggle) {
+        var owner = toggle.getAttribute("data-owner");
+        var nid = parseInt(toggle.getAttribute("data-note-id"));
+        ajax("/ajax/notes/toggle-public", {owner_email: owner, note_id: nid, target_type: tt, target_id: tid}, function(resp, status) {
+          if (!resp.ok) { alert(resp.error || "Error toggling public"); toggle.checked = !toggle.checked; }
+        });
+      }
+    });
+    // Blur: save on click-away (like description editor)
+    document.addEventListener("mousedown", function(e) {
+      if (activeCard && !e.target.closest(".note-card")) finishNoteEdit(activeCard);
+      if (addWrap && addWrap.style.display !== "none" && !e.target.closest("#add-note-form") && e.target !== trigger) finishAddNote();
+    });
+    // Input auto-grow for edit textareas
+    container.addEventListener("input", function(e) {
+      if (e.target.classList.contains("note-edit-input")) autoGrow(e.target);
+    });
+    // Escape to cancel edit
+    container.addEventListener("keydown", function(e) {
+      if (e.which === 27 && e.target.classList.contains("note-edit-input")) {
+        e.preventDefault();
+        var card = e.target.closest(".note-card");
+        e.target.style.display = "none";
+        card.querySelector(".note-edit-save").style.display = "none";
+        card.querySelector(".note-display").style.display = "";
+        activeCard = null;
+      }
+    });
+  }
+})();
+</script>''' % (json.dumps(target_type), json.dumps(target_id))
+
+def _RenderNotesSection(target_type, target_id, can_make_public):
+  """Return HTML string for the notes section on a tune or event page."""
+  viewer_email = GetUserEmail()
+  is_admin = HasCapability(kCapManageAnyEvent)
+  notes = GetNotesForTarget(target_type, target_id, viewer_email)
+  logged_in = IsLoggedIn()
+
+  if not notes and not logged_in:
+    return ''
+
+  parts = []
+  parts.append('<div id="notes-section" style="clear:both;margin-top:12px">')
+  if notes:
+    parts.append('<div id="notes-header">'
+                 '<hr style="border:none;border-top:1px solid #ccc;margin:8px 0">'
+                 '<b style="font-size:1.05em">Notes</b></div>')
+
+  for note, owner_email, display_name, is_own in notes:
+    parts.append(_RenderOneNote(note, owner_email, display_name, is_own, can_make_public, is_admin))
+
+  # Add note form (hidden by default) — inline textarea like Add Description
+  if logged_in:
+    parts.append(
+      '<div id="add-note-form" style="display:none;margin-top:8px;width:100%">'
+      '<textarea rows="1" style="font-size:1em;width:100%;box-sizing:border-box;'
+      'border:1px dashed #ccc;outline:none;padding:4px;font-family:inherit;resize:none;'
+      'overflow:hidden" placeholder="Add a note..."></textarea>'
+      '<div><button id="add-note-save" style="display:none;font-size:0.85em;cursor:pointer;'
+      'padding:3px 8px;margin-top:4px">Save</button></div>'
+      '</div>'
+    )
+
+  parts.append(_NotesJS(target_type, target_id, can_make_public, is_admin))
+  parts.append('</div>')
+  return '\n'.join(parts)
+
 def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_delete=False):
 
   obj = utils.CTune(name)
@@ -9146,16 +9782,25 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
   else:
     refs = ''
     
-  action_buttons = []
+  # Action row: Add Note on left, Edit/Delete on right
+  can_make_public = can_edit
+  logged_in = IsLoggedIn()
+  left_items = []
+  if logged_in:
+    left_items.append('<a href="#" id="add-note-link-trigger" style="color:#999;font-style:italic">Add Note</a>')
+  right_items = []
   if can_edit:
-    action_buttons.append('<a href="/tune/%s/edit" class="green-button">Edit Tune</a>' % name)
+    right_items.append('<a href="/tune/%s/edit" class="green-button">Edit Tune</a>' % name)
   if can_delete:
-    action_buttons.append(CNBSP())
-    action_buttons.append('<a href="/tune/%s/delete" class="red-button">Delete Tune</a>' % name)
-  if action_buttons:
-    edit_link = CDiv(action_buttons, style='clear:right; float:right; margin-top:4px')
+    right_items.append(str(CNBSP()))
+    right_items.append('<a href="/tune/%s/delete" class="red-button">Delete Tune</a>' % name)
+  if left_items or right_items:
+    action_row = '<div style="clear:both;display:flex;justify-content:space-between;align-items:center;margin-top:4px">'\
+      '<div>%s</div><div>%s</div></div>' % (''.join(left_items), ''.join(right_items))
   else:
-    edit_link = ''
+    action_row = ''
+
+  notes_section = _RenderNotesSection('tune', name, can_make_public) if metadata else ''
 
   tune = CDiv([
     CH([
@@ -9170,10 +9815,13 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
     refs,
     notes,
     chords,
-    edit_link,
+    action_row,
   ], hclass='tune')
 
-  return [tune]
+  result = [tune]
+  if notes_section:
+    result.append(notes_section)
+  return result
   
 def GetNumColumns(chords):
   counts = collections.defaultdict(int)
