@@ -6,7 +6,6 @@ log/*.log
 *.pyc
 __pycache__/
 *.wpu
-*.wpr
 *.mid
 *.midi
 website/cache/
