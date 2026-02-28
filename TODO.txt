@@ -1,7 +1,6 @@
 ** Fix note generation on production site
 * Website Phase Three
   ** Coding Tasks Near Term
-    ** Fix all existing sets that have duplicate tunes (due to old/fixed bug)
     ** User page where can see name given, change email, see list of all tunes, events, and notes
     ** When tested notes, files appeared in git status -- why??
     ** When drag order on event and on air, doesn't update other viewers list
