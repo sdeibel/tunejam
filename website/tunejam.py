@@ -906,7 +906,7 @@ def sets(spec=None, sid=None):
 
           parts.extend([CBreak(2), CDiv(bottom_items, style="overflow:auto"), CBreak(2)])
           
-        return PageWrapper(parts)
+        return PageWrapper(parts, 'event', show_eye_candy=False)
 
   filter = request.form.get('filter')
   if filter == 'all':

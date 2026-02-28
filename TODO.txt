@@ -1,9 +1,6 @@
 ** Fix note generation on production site
 * Website Phase Three
   ** Coding Tasks Near Term
-    ** When tested notes, files appeared in git status -- why??
-    ** When drag order on event and on air, doesn't update other viewers list
-    ** Put the whole page header/footer also on the events sets view pages
     ** Fix notes on server (permissions no doubt)
     ** Email notifications of activity
     ** Have new events start private. If want public, requires admin approval (email sent)
