@@ -7848,6 +7848,38 @@ display:none !important;
     """
   return Response(css, mimetype='text/css')
 
+def _AddEventWidget():
+  """Return HTML for an 'Add an Event' toggle link with inline creation form."""
+  return (
+    '<div class="add-event-widget">'
+    '<a href="#" class="add-event-toggle" style="color:#999;font-style:italic">Add an Event</a>'
+    '<div class="add-event-form" style="display:none;margin-top:4px">'
+    '<form method="POST" action="/event" style="display:inline">'
+    '<input type="text" name="title" placeholder="Event title" maxlength="200" '
+    'style="font-size:1em;padding:4px;width:250px"> '
+    '<button type="submit" style="font-size:0.85em;cursor:pointer;padding:4px 8px">Create</button>'
+    ' <button type="button" class="add-event-cancel" '
+    'style="font-size:0.85em;cursor:pointer;padding:4px 8px">Cancel</button>'
+    '</form>'
+    '</div>'
+    '</div>'
+    '<script>'
+    '(function(){'
+    'var ws=document.querySelectorAll(".add-event-widget");'
+    'for(var i=0;i<ws.length;i++){(function(w){'
+    'var tog=w.querySelector(".add-event-toggle");'
+    'var frm=w.querySelector(".add-event-form");'
+    'var cancel=w.querySelector(".add-event-cancel");'
+    'function show(){tog.style.display="none";frm.style.display="";'
+    'frm.querySelector("input[name=title]").focus();}'
+    'function hide(){frm.style.display="none";tog.style.display="";}'
+    'tog.addEventListener("click",function(e){e.preventDefault();show();});'
+    'cancel.addEventListener("click",function(e){e.preventDefault();hide();});'
+    '})(ws[i]);}'
+    '})();'
+    '</script>'
+  )
+
 @app.route('/events')
 @app.route('/events/delete/<delete>')
 @app.route('/events/undelete/<undelete>')
@@ -7894,15 +7926,8 @@ def events(delete=None, undelete=None):
     parts.append(CParagraph(CText("There are no active events right now.", italic=1)))
 
   if IsLoggedIn():
-    parts.append(CForm([
-      CBreak(),
-      CText("Create a New Event:", bold=1),
-      CBreak(1),
-      CText("Title:"), CInput(type='TEXT', name='title', id='event-title', maxlength=200, style='width:55%'),
-      CBreak(2),
-      CInput(type='SUBMIT', value='Create'),
-    ], action='/event', method='POST', id="event-form"))
-
+    parts.append(CBreak())
+    parts.append(_AddEventWidget())
     parts.append(CBreak())
 
     inactive = utils.ReadEvents(deleted=True)
@@ -8640,6 +8665,579 @@ def ajax_notes_edit():
       return json.dumps({'ok': True})
   return json.dumps({'ok': False, 'error': 'note not found'})
 
+# -- Profile page --
+
+@app.route('/profile/<uid>')
+def profile_page(uid):
+  """Show a user's profile page with their tunes, events, and notes."""
+  # Look up profile from UID hash
+  profile_email = _EmailFromHash(uid)
+  if not profile_email:
+    parts = [
+      CH("Profile Not Found", 1),
+      CParagraph("No profile exists for this user."),
+      CText("Return Home", href='/'),
+    ]
+    return PageWrapper(parts, 'event', show_eye_candy=False)
+
+  profile = GetOrCreateProfile(profile_email)
+  display_name = profile.get('display_name', 'Anonymous')
+
+  viewer_email = GetUserEmail()
+  is_own = viewer_email and viewer_email.lower() == profile_email.lower()
+  is_admin = HasCapability(kCapManageAnyEvent)
+
+  # Error flash from delete actions
+  error_msg = request.args.get('error', '')
+  error_tune = request.args.get('tune', '')
+
+  parts = []
+
+  # Error alert
+  if error_msg == 'tune-in-use':
+    parts.append('<div style="background:#fee;border:1px solid #c00;padding:8px 12px;margin-bottom:12px;'
+                 'border-radius:4px;color:#c00"><b>Cannot delete tune "%s"</b> &mdash; '
+                 'it is currently in use by a book, saved set, or event.</div>' % (
+                   error_tune.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'),))
+
+  # Heading with display name
+  esc_display = display_name.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+  if is_own:
+    parts.append('<h1 id="profile-name" contenteditable="true" '
+                 'style="outline:none;border-bottom:1px dashed transparent;cursor:text" '
+                 'title="Click to edit your display name">%s</h1>' % esc_display)
+  else:
+    parts.append(CH(display_name, 1))
+
+  # Email (only visible to owner)
+  if is_own:
+    esc_email = profile_email.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    parts.append('<p style="color:#666">Email: <b>%s</b> '
+                 '<a href="#" id="change-email-btn" '
+                 'style="color:#999;font-style:italic;margin-left:8px">Change</a></p>' % esc_email)
+    parts.append('<div id="change-email-form" style="display:none;margin-bottom:12px">'
+                 '<input type="email" id="new-email-input" placeholder="New email address" '
+                 'style="font-size:1em;padding:4px;width:250px">'
+                 ' <button type="button" id="send-email-confirm" '
+                 'style="font-size:0.85em;cursor:pointer;padding:4px 8px">Send Confirmation</button>'
+                 ' <span id="email-change-status" style="font-size:0.85em;color:#666"></span>'
+                 '</div>')
+
+  # -- Tunes section --
+  user_tunes = []
+  for fn in os.listdir(utils.kDatabaseDir):
+    if not fn.endswith('.spec'):
+      continue
+    tune_name = fn[:-5]
+    obj = utils.CTune(tune_name)
+    try:
+      obj.ReadDatabase()
+    except SystemExit:
+      continue
+    if obj.owner and obj.owner.lower() == profile_email.lower():
+      user_tunes.append((obj.title, tune_name))
+  user_tunes.sort(key=lambda x: x[0].lower())
+
+  kAddLinkStyle = 'color:#999;font-style:italic'
+  if user_tunes or is_own:
+    if user_tunes:
+      parts.append(CH("Tunes", 2))
+    if is_own:
+      parts.append('<div style="margin:2px 0"><a href="/tune/new" style="%s">Add a Tune</a></div>' % kAddLinkStyle)
+    for title, tune_name in user_tunes:
+      esc_title = title.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+      line = '<div style="margin:2px 0"><a href="/tune/%s">%s</a>' % (tune_name, esc_title)
+      if is_own:
+        line += (' <a href="/profile/%s/delete-tune/%s" '
+                 'style="color:#c00;text-decoration:none;font-weight:bold;margin-left:6px" '
+                 'title="Delete tune" '
+                 'onclick="return confirm(\'Delete %s?\')">&times;</a>' % (
+                   uid, tune_name, esc_title.replace("'", "\\'")))
+      line += '</div>'
+      parts.append(line)
+
+  # -- Events section --
+  user_events = []
+  try:
+    all_events = utils.ReadEvents()
+  except:
+    all_events = []
+  for event in all_events:
+    is_owner = event.owner and event.owner.lower() == profile_email.lower()
+    is_coowner = profile_email.lower() in [c.lower() for c in event.coowners]
+    if is_owner or is_coowner:
+      user_events.append((event.title, event.name, is_coowner and not is_owner))
+  user_events.sort(key=lambda x: x[0].lower())
+
+  if user_events or is_own:
+    if user_events:
+      parts.append(CH("Events", 2))
+    if is_own:
+      parts.append('<div style="margin:2px 0">%s</div>' % _AddEventWidget())
+    for title, event_name, coowner_only in user_events:
+      esc_title = title.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+      line = '<div style="margin:2px 0"><a href="/event/%s">%s</a>' % (event_name, esc_title)
+      if coowner_only:
+        line += ' <span style="color:#888;font-size:0.85em">(co-owner)</span>'
+      if is_own and not coowner_only:
+        line += (' <a href="/profile/%s/delete-event/%s" '
+                 'style="color:#c00;text-decoration:none;font-weight:bold;margin-left:6px" '
+                 'title="Delete event" '
+                 'onclick="return confirm(\'Delete %s?\')">&times;</a>' % (
+                   uid, event_name, esc_title.replace("'", "\\'")))
+      line += '</div>'
+      parts.append(line)
+
+  # -- Notes section --
+  all_notes = _ReadNotes(profile_email)
+  all_notes.sort(key=lambda n: n.get('timestamp', 0), reverse=True)
+
+  if all_notes:
+    parts.append(CH("Notes", 2))
+    parts.append('<div id="profile-notes-section">')
+    for note in all_notes:
+      note_id = note['id']
+      target_type = note.get('target_type', '')
+      target_id = note.get('target_id', '')
+      text = note.get('text', '')
+      timestamp = note.get('timestamp', 0)
+      is_public = note.get('public', False)
+
+      # Resolve target name and link
+      target_label = target_id
+      target_link = '#'
+      if target_type == 'tune':
+        tobj = utils.CTune(target_id)
+        try:
+          tobj.ReadDatabase()
+          target_label = tobj.title
+        except SystemExit:
+          target_label = target_id
+        target_link = '/tune/%s' % target_id
+      elif target_type == 'event':
+        try:
+          evt = utils.CEvent(target_id)
+          evt.ReadEvent()
+          if evt.title:
+            target_label = evt.title
+        except:
+          target_label = target_id
+        target_link = '/event/%s' % target_id
+
+      esc_text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
+      esc_label = target_label.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+      time_str = time.strftime('%b %d, %Y', time.localtime(timestamp)) if timestamp else ''
+      public_str = ' &middot; <i>public</i>' if is_public else ''
+
+      line = '<div class="profile-note-card" data-owner="%s" data-note-id="%d" style="margin-bottom:8px;padding:6px 0;border-bottom:1px solid #eee">' % (profile_email, note_id)
+      line += '<div>%s</div>' % esc_text
+      line += '<div style="font-size:0.85em;color:#888">on <a href="%s" style="color:#888">%s</a> &middot; %s%s' % (
+        target_link, esc_label, time_str, public_str)
+      if is_own or is_admin:
+        line += (' <a href="#" class="profile-note-delete" data-owner="%s" data-note-id="%d" '
+                 'style="color:#c00;text-decoration:none;font-weight:bold;margin-left:6px" '
+                 'title="Delete note">&times;</a>' % (profile_email, note_id))
+      line += '</div></div>'
+      parts.append(line)
+    parts.append('</div>')
+
+  # JavaScript for profile page interactions
+  parts.append(_ProfileJS(uid, profile_email))
+
+  return PageWrapper(parts, 'event', show_eye_candy=False)
+
+def _ProfileJS(uid, profile_email):
+  """Return <script> block for profile page interactions."""
+  return '''<script>
+(function() {
+  function ajax(url, data, cb) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4) {
+        var resp;
+        try { resp = JSON.parse(xhr.responseText); } catch(e) { resp = {}; }
+        if (cb) cb(resp, xhr.status);
+      }
+    };
+    xhr.send(JSON.stringify(data));
+  }
+
+  // -- Name editing (contenteditable) --
+  var nameEl = document.getElementById("profile-name");
+  if (nameEl) {
+    var origName = nameEl.textContent;
+    nameEl.addEventListener("focus", function() {
+      nameEl.style.borderBottomColor = "#aaa";
+    });
+    nameEl.addEventListener("blur", function() {
+      nameEl.style.borderBottomColor = "transparent";
+      var val = nameEl.textContent.trim();
+      if (val && val !== origName) {
+        ajax("/ajax/profile/display-name", {display_name: val}, function(resp) {
+          if (resp.ok) { origName = val; }
+          else { nameEl.textContent = origName; alert(resp.error || "Error updating name"); }
+        });
+      } else if (!val) {
+        nameEl.textContent = origName;
+      }
+    });
+    nameEl.addEventListener("keydown", function(e) {
+      if (e.which === 13) { e.preventDefault(); nameEl.blur(); }
+      if (e.which === 27) { e.preventDefault(); nameEl.textContent = origName; nameEl.blur(); }
+    });
+  }
+
+  // -- Email change --
+  var changeBtn = document.getElementById("change-email-btn");
+  var changeForm = document.getElementById("change-email-form");
+  var newEmailInput = document.getElementById("new-email-input");
+  var sendBtn = document.getElementById("send-email-confirm");
+  var statusSpan = document.getElementById("email-change-status");
+  if (changeBtn && changeForm) {
+    changeBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      var showing = changeForm.style.display === "none";
+      changeForm.style.display = showing ? "" : "none";
+      changeBtn.textContent = showing ? "Cancel" : "Change";
+      if (showing) newEmailInput.focus();
+    });
+    sendBtn.addEventListener("click", function() {
+      var em = newEmailInput.value.trim();
+      if (!em || em.indexOf("@") < 0) { statusSpan.textContent = "Please enter a valid email."; return; }
+      statusSpan.textContent = "Sending...";
+      sendBtn.disabled = true;
+      ajax("/ajax/profile/change-email", {new_email: em}, function(resp) {
+        sendBtn.disabled = false;
+        if (resp.ok) {
+          statusSpan.style.color = "#090";
+          statusSpan.textContent = "Confirmation sent! Check your new email.";
+        } else {
+          statusSpan.style.color = "#c00";
+          statusSpan.textContent = resp.error || "Error sending confirmation.";
+        }
+      });
+    });
+  }
+
+  // -- Note deletion --
+  var notesSection = document.getElementById("profile-notes-section");
+  if (notesSection) {
+    notesSection.addEventListener("click", function(e) {
+      var del = e.target.closest ? e.target.closest(".profile-note-delete") : null;
+      if (del) {
+        e.preventDefault();
+        if (!confirm("Delete this note?")) return;
+        var owner = del.getAttribute("data-owner");
+        var nid = parseInt(del.getAttribute("data-note-id"));
+        ajax("/ajax/notes/delete", {owner_email: owner, note_id: nid}, function(resp) {
+          if (resp.ok) {
+            var card = del.closest(".profile-note-card");
+            if (card) card.parentNode.removeChild(card);
+          } else { alert(resp.error || "Error deleting note"); }
+        });
+      }
+    });
+  }
+
+  // -- Tune-in-use error alert on load --
+  var params = new URLSearchParams(window.location.search);
+  if (params.get("error") === "tune-in-use") {
+    // Already shown as banner; clean the URL
+    if (window.history.replaceState) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }
+})();
+</script>'''
+
+@app.route('/profile/<uid>/delete-tune/<tune_name>')
+def profile_delete_tune(uid, tune_name):
+  """Delete a tune from the profile page."""
+  profile_email = _EmailFromHash(uid)
+  if not profile_email:
+    return redirect('/profile/%s' % uid, code=303)
+  viewer_email = GetUserEmail()
+  if not viewer_email or viewer_email.lower() != profile_email.lower():
+    return redirect('/profile/%s' % uid, code=303)
+
+  obj = utils.CTune(tune_name)
+  try:
+    obj.ReadDatabase()
+  except SystemExit:
+    return redirect('/profile/%s' % uid, code=303)
+
+  # Check ownership
+  if not obj.owner or obj.owner.lower() != profile_email.lower():
+    return redirect('/profile/%s' % uid, code=303)
+
+  # Check if in use
+  in_use = utils.TuneInUseBy(tune_name)
+  if in_use and not HasCapability(kCapDeleteInUse):
+    return redirect('/profile/%s?error=tune-in-use&tune=%s' % (uid, tune_name), code=303)
+
+  # Perform deletion
+  spec_path = os.path.join(utils.kDatabaseDir, tune_name + '.spec')
+  if os.path.exists(spec_path):
+    os.remove(spec_path)
+  abc_path = os.path.join(utils.kSheetMusicDir, tune_name + '.abc')
+  if os.path.exists(abc_path):
+    os.remove(abc_path)
+  mp3_path = os.path.join(utils.kRecordingsDir, tune_name + '.mp3')
+  if os.path.exists(mp3_path):
+    os.remove(mp3_path)
+  obj.InvalidateCaches()
+  utils.InvalidateTuneIndex()
+  gTuneCountCache.clear()
+
+  return redirect('/profile/%s' % uid, code=303)
+
+@app.route('/profile/<uid>/delete-event/<event_name>')
+def profile_delete_event(uid, event_name):
+  """Soft-delete an event from the profile page."""
+  profile_email = _EmailFromHash(uid)
+  if not profile_email:
+    return redirect('/profile/%s' % uid, code=303)
+  viewer_email = GetUserEmail()
+  is_admin = HasCapability(kCapManageAnyEvent)
+  if not viewer_email or (viewer_email.lower() != profile_email.lower() and not is_admin):
+    return redirect('/profile/%s' % uid, code=303)
+
+  # Verify ownership
+  event = utils.CEvent(event_name)
+  event.ReadEvent()
+  if not event.owner or event.owner.lower() != profile_email.lower():
+    if not is_admin:
+      return redirect('/profile/%s' % uid, code=303)
+
+  utils.DeleteEvent(event_name)
+  return redirect('/profile/%s' % uid, code=303)
+
+@app.route('/ajax/profile/change-email', methods=['POST'])
+def ajax_profile_change_email():
+  """Send a confirmation email to change the user's email address."""
+  email = GetUserEmail()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'Not logged in.'}), 403
+  data = request.get_json(force=True)
+  new_email = data.get('new_email', '').strip().lower()
+  if not new_email or '@' not in new_email:
+    return json.dumps({'ok': False, 'error': 'Please enter a valid email address.'})
+  if new_email == email.lower():
+    return json.dumps({'ok': False, 'error': 'That is already your current email.'})
+  # Check if new email already has a profile
+  new_profile_path = _ProfilePath(new_email)
+  if os.path.exists(new_profile_path):
+    return json.dumps({'ok': False, 'error': 'That email is already associated with another profile.'})
+
+  # Generate token: email field = new_email, target = old_email, login_type = email-change
+  token = GenerateToken(new_email, email, 'email-change')
+
+  # Send confirmation to NEW email
+  try:
+    _SendEmailChangeConfirmation(new_email, token)
+  except Exception as e:
+    return json.dumps({'ok': False, 'error': 'Failed to send confirmation email.'})
+
+  return json.dumps({'ok': True})
+
+def _SendEmailChangeConfirmation(new_email, token):
+  """Send email change confirmation link to the new email address."""
+  config = ReadEmailConfig()
+  if not config.get('host'):
+    raise Exception('Email not configured')
+
+  if sys.platform == 'darwin':
+    base_url = 'http://localhost:60080'
+  else:
+    base_url = 'http://music.cambridgeny.net'
+
+  link = '%s/profile/confirm-email/%s' % (base_url, token)
+
+  body = ('Someone requested to change their Cambridge NY Traditional Music account email to this address.\n\n'
+          'Click the link below to confirm:\n\n'
+          '%s\n\n'
+          'This link expires in 1 hour. If you did not request this, you can ignore this email.\n' % link)
+  subject = 'Confirm Email Change - Cambridge NY Traditional Music'
+  from_addr = config.get('from_address', config['username'])
+
+  if sys.platform == 'darwin':
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = from_addr
+    msg['To'] = new_email
+    server = smtplib.SMTP(config['host'], int(config.get('port', 587)))
+    server.starttls()
+    server.login(config['username'], config['password'])
+    server.sendmail(from_addr, [new_email], msg.as_string())
+    server.quit()
+  else:
+    import subprocess
+    script = """
+import smtplib
+from email.mime.text import MIMEText
+msg = MIMEText(%r)
+msg['Subject'] = %r
+msg['From'] = %r
+msg['To'] = %r
+server = smtplib.SMTP(%r, %d)
+server.starttls()
+server.login(%r, %r)
+server.sendmail(%r, [%r], msg.as_string())
+server.quit()
+""" % (body, subject, from_addr, new_email,
+       config['host'], int(config.get('port', 587)),
+       config['username'], config['password'],
+       from_addr, new_email)
+    proc = subprocess.Popen(['/usr/bin/python3', '-c', script],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = proc.communicate()
+    if proc.returncode != 0:
+      raise Exception('Email send failed: %s' % err)
+
+@app.route('/profile/confirm-email/<token>')
+def profile_confirm_email(token):
+  """Validate email-change token and migrate profile data."""
+  path = os.path.join(kTokenDir, token + '.token')
+  if not os.path.exists(path):
+    parts = [
+      CH("Link Expired", 2),
+      CParagraph("This email change link has expired or has already been used."),
+      CText("Return Home", href='/'),
+    ]
+    return PageWrapper(parts, 'event', show_eye_candy=False)
+
+  with open(path) as f:
+    lines = f.read().strip().split('\n')
+  os.remove(path)
+  if len(lines) < 4:
+    parts = [
+      CH("Invalid Link", 2),
+      CParagraph("This link is invalid."),
+      CText("Return Home", href='/'),
+    ]
+    return PageWrapper(parts, 'event', show_eye_candy=False)
+
+  new_email, old_email, created, login_type = lines[0], lines[1], float(lines[2]), lines[3]
+
+  if login_type != 'email-change':
+    parts = [
+      CH("Invalid Link", 2),
+      CParagraph("This is not an email change link."),
+      CText("Return Home", href='/'),
+    ]
+    return PageWrapper(parts, 'event', show_eye_candy=False)
+
+  if time.time() - created > kTokenExpirySeconds:
+    parts = [
+      CH("Link Expired", 2),
+      CParagraph("This email change link has expired. Please try again."),
+      CText("Return Home", href='/'),
+    ]
+    return PageWrapper(parts, 'event', show_eye_candy=False)
+
+  # 1. Read old profile, create new profile with same display_name
+  old_profile = GetOrCreateProfile(old_email)
+  new_profile = {
+    'email': new_email.lower(),
+    'display_name': old_profile.get('display_name', 'Anonymous'),
+  }
+  _WriteProfile(new_profile)
+
+  # 2. Move notes: read from old hash path, write to new hash path, delete old
+  old_notes = _ReadNotes(old_email)
+  if old_notes:
+    _WriteNotes(new_email, old_notes)
+  old_notes_path = _NotesPath(old_email)
+  if os.path.exists(old_notes_path):
+    os.remove(old_notes_path)
+
+  # 3. Update .spec files: scan all, if owner matches old email, set to new
+  for fn in os.listdir(utils.kDatabaseDir):
+    if not fn.endswith('.spec'):
+      continue
+    tune_name = fn[:-5]
+    obj = utils.CTune(tune_name)
+    try:
+      obj.ReadDatabase()
+    except SystemExit:
+      continue
+    if obj.owner and obj.owner.lower() == old_email.lower():
+      obj.owner = new_email
+      obj.WriteSpec()
+
+  # 4. Update events: scan all .evt files
+  try:
+    all_events = utils.ReadEvents()
+    for event in all_events:
+      changed = False
+      if event.owner and event.owner.lower() == old_email.lower():
+        event.owner = new_email
+        changed = True
+      new_coowners = []
+      for c in event.coowners:
+        if c.lower() == old_email.lower():
+          new_coowners.append(new_email)
+          changed = True
+        else:
+          new_coowners.append(c)
+      if changed:
+        event.coowners = new_coowners
+        event.WriteEvent()
+  except:
+    pass
+
+  # 5. Update admin/editor email config if applicable
+  _UpdateEmailConfigForChange(old_email, new_email)
+
+  # 6. Delete old profile file
+  old_profile_path = _ProfilePath(old_email)
+  if os.path.exists(old_profile_path):
+    os.remove(old_profile_path)
+
+  # 7. Update current session to new email
+  if session.get('email', '').lower() == old_email.lower():
+    session['email'] = new_email
+    session['permission_level'] = GetPermissionLevel(new_email)
+
+  # 8. Show success page with link to new profile
+  new_uid = _ProfileHash(new_email)
+  parts = [
+    CH("Email Changed Successfully", 1),
+    CParagraph("Your email has been changed to %s." % new_email),
+    CText("Go to your profile", href='/profile/%s' % new_uid),
+  ]
+  return PageWrapper(parts, 'event', show_eye_candy=False)
+
+def _UpdateEmailConfigForChange(old_email, new_email):
+  """If old_email is in admin_emails or editor_emails config, replace with new_email."""
+  if not os.path.exists(kEmailConf):
+    return
+  with open(kEmailConf) as f:
+    content = f.read()
+  old_lower = old_email.lower()
+  changed = False
+  new_lines = []
+  for line in content.split('\n'):
+    stripped = line.strip()
+    if stripped.startswith('admin_emails=') or stripped.startswith('editor_emails='):
+      key, val = stripped.split('=', 1)
+      emails = [e.strip() for e in val.split(',') if e.strip()]
+      new_emails = []
+      for e in emails:
+        if e.lower() == old_lower:
+          new_emails.append(new_email)
+          changed = True
+        else:
+          new_emails.append(e)
+      new_lines.append('%s=%s' % (key, ','.join(new_emails)))
+    else:
+      new_lines.append(line)
+  if changed:
+    with open(kEmailConf, 'w') as f:
+      f.write('\n'.join(new_lines))
+
 def ReadEmailConfig():
   """Read email config file, return dict of key=value pairs."""
   config = {}
@@ -8768,10 +9366,13 @@ kProfileDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 if not os.path.exists(kProfileDir):
   os.makedirs(kProfileDir)
 
+def _ProfileHash(email):
+  """Return MD5 hex digest for an email, used as profile identifier in URLs."""
+  return hashlib.md5(email.lower().encode('utf-8')).hexdigest()
+
 def _ProfilePath(email):
   """Return path to profile file for the given email."""
-  h = hashlib.md5(email.lower().encode('utf-8')).hexdigest()
-  return os.path.join(kProfileDir, h + '.profile')
+  return os.path.join(kProfileDir, _ProfileHash(email) + '.profile')
 
 def GetOrCreateProfile(email):
   """Read or create profile for email. Returns dict with 'email' and 'display_name'."""
@@ -9283,7 +9884,7 @@ def FooterAuth():
     role_label = ''
   return CSpan([
     CText('Logged in as: ', bold=1),
-    CSpan(display_name, hclass='user-email-display'),
+    CText(display_name, href='/profile/%s' % _ProfileHash(email), hclass='user-email-display'),
     role_label,
     CNBSP(2),
     '<button class="footer-logout" type="button" onclick="location.href=\'/logout\'+location.pathname">Logout</button>',
@@ -9430,7 +10031,7 @@ def _RenderOneNote(note, owner_email, display_name, is_own, can_make_public, is_
 
   # Attribution line
   attr_parts = []
-  attr_parts.append('<span style="font-size:0.85em;color:#888">&mdash; %s' % esc_name)
+  attr_parts.append('<span style="font-size:0.85em;color:#888">&mdash; <a href="/profile/%s" style="color:#888;text-decoration:underline">%s</a>' % (_ProfileHash(owner_email), esc_name))
   if display_name == 'Anonymous' and is_own:
     attr_parts.append(' <a href="#" class="note-change-name" style="color:#888">(Change)</a>')
   if is_public:
