@@ -8511,7 +8511,7 @@ def ajax_event_description(sid):
 def ajax_event_current(sid):
   s = utils.CEvent(sid)
   s.ReadEvent()
-  content_hash = hashlib.md5((s.title + '\n' + s.description).encode('utf-8')).hexdigest()[:8]
+  content_hash = hashlib.md5((s.title + '\n' + s.description + '\n' + '\n'.join(s.sets)).encode('utf-8')).hexdigest()[:8]
   return s.current_set + '&' + str(len(s.sets)) + '&' + str(s.on_air) + '&' + content_hash
 
 @app.route('/event/<sid>/rename', methods=['POST'])
@@ -8793,6 +8793,7 @@ def profile_page(uid):
   all_notes.sort(key=lambda n: n.get('timestamp', 0), reverse=True)
 
   if all_notes:
+    parts.append('<div id="profile-notes-wrapper">')
     parts.append(CH("Notes", 2))
     parts.append('<div id="profile-notes-section">')
     for note in all_notes:
@@ -8839,6 +8840,7 @@ def profile_page(uid):
                  'title="Delete note">&times;</a>' % (profile_email, note_id))
       line += '</div></div>'
       parts.append(line)
+    parts.append('</div>')
     parts.append('</div>')
 
   # JavaScript for profile page interactions
@@ -8935,6 +8937,10 @@ def _ProfileJS(uid, profile_email):
           if (resp.ok) {
             var card = del.closest(".profile-note-card");
             if (card) card.parentNode.removeChild(card);
+            if (!notesSection.querySelector(".profile-note-card")) {
+              var wrapper = document.getElementById("profile-notes-wrapper");
+              if (wrapper) wrapper.style.display = "none";
+            }
           } else { alert(resp.error || "Error deleting note"); }
         });
       }
@@ -9811,7 +9817,7 @@ function saveDesc() {
   });
 """
 
-  content_hash = hashlib.md5((e.title + '\n' + e.description).encode('utf-8')).hexdigest()[:8]
+  content_hash = hashlib.md5((e.title + '\n' + e.description + '\n' + '\n'.join(e.sets)).encode('utf-8')).hexdigest()[:8]
   initial_snapshot = e.current_set + '&' + str(len(e.sets)) + '&' + str(e.on_air) + '&' + content_hash
 
   parts.extend([
