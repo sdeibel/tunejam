@@ -875,6 +875,7 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
   # All site users
   all_profiles = _ReadAllProfiles()
   banned = GetBannedEmails()
+  editor_requests = {r['email']: r for r in ReadAllEditorRequests()}
   all_users_items = []
   for p in all_profiles:
     email = p['email']
@@ -893,6 +894,12 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
       entry += ' <a href="#" class="user-unban-link" style="color:#069;font-size:0.85em;font-style:italic">Unban</a>'
     elif role == 'regular':
       entry += ' <a href="#" class="user-ban-link" style="color:#c00;font-size:0.85em;font-style:italic">Ban</a>'
+    if email in editor_requests:
+      entry += (' <span class="editor-req-label" style="color:#960;font-size:0.85em;font-style:italic;margin-left:6px">'
+                'Pending Global Editing Permissions Request:</span>'
+                ' <a href="#" class="editor-approve-link" style="color:#4a4;font-size:0.85em;font-weight:bold">Approve</a>'
+                ' <a href="#" class="editor-deny-link" style="color:#da4;font-size:0.85em;font-weight:bold">Deny</a>'
+                '<span class="editor-req-msg" style="font-size:0.85em;margin-left:6px"></span>')
     entry += '</li>'
     all_users_items.append(entry)
 
@@ -925,7 +932,7 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
 </div>
 <div style="margin:6px 0 16px 0">
   <input type="text" id="admin-add-email" placeholder="email@example.com" size="30">
-  <button type="button" id="admin-add-btn">Add</button>
+  <button type="button" id="admin-add-btn" style="border:1px solid #999;border-radius:2px;padding:2px 8px;cursor:pointer">Add</button>
   <span id="admin-msg" style="color:#c00;font-size:0.85em;margin-left:8px"></span>
 </div>
 
@@ -935,8 +942,21 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
 </div>
 <div style="margin:6px 0 16px 0">
   <input type="text" id="editor-add-email" placeholder="email@example.com" size="30">
-  <button type="button" id="editor-add-btn">Add</button>
+  <button type="button" id="editor-add-btn" style="border:1px solid #999;border-radius:2px;padding:2px 8px;cursor:pointer">Add</button>
   <span id="editor-msg" style="color:#c00;font-size:0.85em;margin-left:8px"></span>
+</div>
+
+<div id="editor-deny-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:1000">
+<div style="position:fixed;top:50%%;left:50%%;transform:translate(-50%%,-50%%);background:white;border-radius:6px;padding:24px;min-width:360px;max-width:480px;box-shadow:0 4px 20px rgba(0,0,0,0.3)">
+  <div style="font-weight:bold;font-size:1.1em;margin-bottom:12px">Deny Global Editing Request</div>
+  <label style="display:block;margin-bottom:4px">Notes to include in denial email (optional):</label>
+  <textarea id="editor-deny-notes" rows="3" style="width:100%%;box-sizing:border-box;font-family:inherit"></textarea>
+  <div style="margin-top:16px;text-align:right">
+    <button type="button" id="editor-deny-cancel" style="margin-left:8px;padding:4px 14px;border-radius:3px;border:1px solid #999;cursor:pointer">Cancel</button>
+    <button type="button" id="editor-deny-only" style="margin-left:8px;padding:4px 14px;border-radius:3px;border:1px solid #c93;cursor:pointer;background:#da4;color:white">Deny Only</button>
+    <button type="button" id="editor-deny-notify" style="margin-left:8px;padding:4px 14px;border-radius:3px;border:1px solid #a22;cursor:pointer;background:#c33;color:white">Deny &amp; Notify</button>
+  </div>
+</div>
 </div>
 
 <script>
@@ -1063,7 +1083,91 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
           }
         });
       }
+      else if (e.target.classList.contains('editor-approve-link')) {
+        e.preventDefault();
+        var msgEl = li.querySelector('.editor-req-msg');
+        fetch(adminRoute + '/editor/approve', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email: email})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            var label = li.querySelector('.editor-req-label');
+            var approve = li.querySelector('.editor-approve-link');
+            var deny = li.querySelector('.editor-deny-link');
+            if (label) label.remove();
+            if (approve) approve.remove();
+            if (deny) deny.remove();
+            if (msgEl) msgEl.remove();
+            // Add editor role label
+            var span = document.createElement('span');
+            span.style.cssText = 'color:#690;font-size:0.85em';
+            span.textContent = '(editor)';
+            // Remove ban link if present (no longer regular user)
+            var banLink = li.querySelector('.user-ban-link');
+            if (banLink) banLink.remove();
+            // Insert before closing
+            li.appendChild(document.createTextNode(' '));
+            li.appendChild(span);
+            // Update the Editor Users list in the Groups section
+            if (data.emails && data.names) {
+              renderList('editor-user-list', data.emails, data.names);
+            }
+          } else {
+            if (msgEl) { msgEl.style.color = '#c00'; msgEl.textContent = data.error || 'error'; }
+          }
+        })
+        .catch(function() { if (msgEl) { msgEl.style.color = '#c00'; msgEl.textContent = 'request failed'; } });
+      }
+      else if (e.target.classList.contains('editor-deny-link')) {
+        e.preventDefault();
+        var overlay = document.getElementById('editor-deny-overlay');
+        var notes = document.getElementById('editor-deny-notes');
+        notes.value = '';
+        overlay.style.display = 'block';
+        overlay._currentEmail = email;
+        overlay._currentLi = li;
+      }
     });
+  }
+
+  // Editor deny dialog handlers
+  var edOverlay = document.getElementById('editor-deny-overlay');
+  if (edOverlay) {
+    edOverlay.addEventListener('click', function(ev) {
+      if (ev.target === edOverlay) edOverlay.style.display = 'none';
+    });
+    document.getElementById('editor-deny-cancel').addEventListener('click', function() {
+      edOverlay.style.display = 'none';
+    });
+    function doDeny(skipEmail) {
+      var email = edOverlay._currentEmail;
+      var li = edOverlay._currentLi;
+      var notes = document.getElementById('editor-deny-notes').value;
+      edOverlay.style.display = 'none';
+      fetch(adminRoute + '/editor/deny', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email: email, notes: notes, skip_email: skipEmail})
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          var label = li.querySelector('.editor-req-label');
+          var approve = li.querySelector('.editor-approve-link');
+          var deny = li.querySelector('.editor-deny-link');
+          var msg = li.querySelector('.editor-req-msg');
+          if (label) label.remove();
+          if (approve) approve.remove();
+          if (deny) deny.remove();
+          if (msg) msg.remove();
+        }
+      });
+    }
+    document.getElementById('editor-deny-only').addEventListener('click', function() { doDeny(true); });
+    document.getElementById('editor-deny-notify').addEventListener('click', function() { doDeny(false); });
   }
 })();
 </script>
@@ -1280,6 +1384,45 @@ def admin_publish_ban():
   LogLogin('banned', email)
   profile_url = '/profile/' + _ProfileHash(email)
   return json.dumps({'ok': True, 'profile_url': profile_url})
+
+@app.route(kAdminRoute + '/editor/approve', methods=['POST'])
+def admin_editor_approve():
+  if not HasCapability(kCapManageCache):
+    return '{"ok":false,"error":"not authorized"}', 403
+  data = request.get_json(force=True)
+  email = data.get('email', '').strip().lower()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'missing email'})
+  # Add to editor list
+  editors = GetEditorEmails()
+  if email not in editors:
+    editors.append(email)
+    WriteEmailConfig('editor_emails', ','.join(editors))
+  DeleteEditorRequest(email)
+  try:
+    _SendEditorApproval(email)
+  except:
+    pass
+  editors = GetEditorEmails()
+  names = {e: GetDisplayName(e) for e in editors}
+  return json.dumps({'ok': True, 'emails': editors, 'names': names})
+
+@app.route(kAdminRoute + '/editor/deny', methods=['POST'])
+def admin_editor_deny():
+  if not HasCapability(kCapManageCache):
+    return '{"ok":false,"error":"not authorized"}', 403
+  data = request.get_json(force=True)
+  email = data.get('email', '').strip().lower()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'missing email'})
+  DeleteEditorRequest(email)
+  if not data.get('skip_email'):
+    notes = data.get('notes', '')
+    try:
+      _SendEditorDenial(email, notes)
+    except:
+      pass
+  return json.dumps({'ok': True})
 
 @app.route('/sets', methods=['GET', 'POST'])
 @app.route('/sets/')
@@ -8582,6 +8725,14 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
                  '</div>' % event.title)
   else:
     parts.append(CH("Event: %s" % event.title, 1))
+  if event.owner:
+    all_owners = [event.owner] + [c for c in event.coowners if c.lower() != event.owner.lower()]
+    owner_links = []
+    for oe in all_owners:
+      on = GetDisplayName(oe).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+      owner_links.append('<a href="/profile/%s" style="color:#666">%s</a>' % (_ProfileHash(oe), on))
+    label = 'Owners' if len(all_owners) > 1 else 'Owner'
+    parts.append('<p style="color:#666;margin:0 0 4px 0">%s: %s</p>' % (label, ', '.join(owner_links)))
   if editor:
     settings_url = '/event/%s/settings' % sid
     is_admin_editor = HasCapability(kCapManageAnyEvent) or HasCapability(kCapEditAnyTune)
@@ -9335,12 +9486,17 @@ def profile_page(uid):
   else:
     parts.append(CH(display_name, 1))
 
-  # Email (only visible to owner)
+  # Email and Group info
+  role = GetPermissionLevel(profile_email)
+  role_label = {'admin': 'Admin', 'editor': 'Editor', 'regular': 'User'}.get(role, 'User')
+  kInfoLabelWidth = '54px'
   if is_own:
     esc_email = profile_email.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-    parts.append('<p style="color:#666">Email: <b>%s</b> '
+    parts.append('<div style="color:#666;margin:0">'
+                 '<span style="display:inline-block;width:%s">Email:</span> <b>%s</b> '
                  '<a href="#" id="change-email-btn" '
-                 'style="color:#999;font-style:italic;margin-left:8px">Change</a></p>' % esc_email)
+                 'style="color:#999;font-style:italic;font-size:0.85em;margin-left:8px">Change</a>'
+                 '</div>' % (kInfoLabelWidth, esc_email))
     parts.append('<div id="change-email-form" style="display:none;margin-bottom:12px">'
                  '<input type="email" id="new-email-input" placeholder="New email address" '
                  'style="font-size:1em;padding:4px;width:250px">'
@@ -9348,6 +9504,23 @@ def profile_page(uid):
                  'style="font-size:0.85em;cursor:pointer;padding:4px 8px">Send Confirmation</button>'
                  ' <span id="email-change-status" style="font-size:0.85em;color:#666"></span>'
                  '</div>')
+  if is_own or is_admin:
+    group_html = ('<div style="color:#666;margin:0">'
+                  '<span style="display:inline-block;width:%s">Group:</span> <b>%s</b>' % (kInfoLabelWidth, role_label))
+    # Request editor link (own profile, regular user, not banned)
+    if is_own and role == 'regular' and not IsBanned(profile_email):
+      if HasPendingEditorRequest(profile_email):
+        group_html += (' <span id="editor-req-section" style="font-style:italic;font-size:0.85em;color:#999;margin-left:8px">'
+                       'Global Editing Permissions Request Pending</span>')
+      else:
+        group_html += (' <span id="editor-req-section">'
+                       '<a href="#" id="request-editor-btn" '
+                       'style="color:#999;font-style:italic;font-size:0.85em;margin-left:8px">'
+                       'Request Global Editing Permissions</a>'
+                       '<span id="editor-req-msg" style="font-size:0.85em;margin-left:8px"></span>'
+                       '</span>')
+    group_html += '</div>'
+    parts.append(group_html)
 
   # -- Admin: banned user unban --
   if is_admin and not is_own and IsBanned(profile_email):
@@ -9386,6 +9559,9 @@ def profile_page(uid):
       'Require Approval</button>' % profile_email.replace('"', '&quot;') +
       '<span id="reset-trusted-msg" style="color:#090;font-size:0.85em;margin-left:8px"></span>'
       '</div>')
+
+  # Spacer before content sections
+  parts.append('<div style="margin-top:16px"></div>')
 
   # -- Tunes section --
   user_tunes = []
@@ -9718,6 +9894,32 @@ def _ProfileJS(uid, profile_email):
     });
   }
 
+  // -- Request editor permissions --
+  var reqEditorBtn = document.getElementById("request-editor-btn");
+  if (reqEditorBtn) {
+    reqEditorBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      var section = document.getElementById("editor-req-section");
+      // Show animated sending indicator
+      section.innerHTML = '<span style="font-style:italic;font-size:0.85em;color:#999;margin-left:8px">' +
+        'Sending<span id="editor-req-dots"></span></span>';
+      var dots = document.getElementById("editor-req-dots");
+      var dotCount = 0;
+      var dotTimer = setInterval(function() {
+        dotCount = (dotCount + 1) % 4;
+        dots.textContent = Array(dotCount + 1).join(".");
+      }, 400);
+      ajax("/ajax/profile/request-editor", {}, function(resp) {
+        clearInterval(dotTimer);
+        if (resp.ok) {
+          section.innerHTML = '<span style="font-style:italic;font-size:0.85em;color:#999;margin-left:8px">Global Editing Permissions Request Pending</span>';
+        } else {
+          section.innerHTML = '<span style="font-size:0.85em;color:#c00;margin-left:8px">' + (resp.error || "Error") + '</span>';
+        }
+      });
+    });
+  }
+
   // -- Note deletion --
   var notesSection = document.getElementById("profile-notes-section");
   if (notesSection) {
@@ -9859,6 +10061,23 @@ def ajax_profile_ban():
     banned.append(email)
     WriteEmailConfig('banned_emails', ','.join(banned))
   LogLogin('banned', email)
+  return json.dumps({'ok': True})
+
+@app.route('/ajax/profile/request-editor', methods=['POST'])
+def ajax_profile_request_editor():
+  """Request editor permissions (logged-in regular user only)."""
+  email = GetUserEmail()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'Not logged in.'}), 403
+  if GetPermissionLevel(email) != 'regular':
+    return json.dumps({'ok': False, 'error': 'Already an editor or admin.'})
+  if HasPendingEditorRequest(email):
+    return json.dumps({'ok': False, 'error': 'Request already pending.'})
+  CreateEditorRequest(email)
+  try:
+    _SendEditorRequestNotification(email)
+  except:
+    pass
   return json.dumps({'ok': True})
 
 def _ArchiveTune(tune_name):
@@ -10096,6 +10315,39 @@ def _SendPublishDenial(requestor_email, event_title, event_sid, admin_notes):
   if admin_notes:
     body += '\nNotes from admin:\n%s\n' % admin_notes
   subject = 'Publish Request Denied: %s' % event_title
+  _SendEmail(requestor_email, subject, body)
+
+def _SendEditorRequestNotification(requestor_email):
+  """Notify all admins that a user has requested editor permissions."""
+  if sys.platform == 'darwin':
+    base_url = 'http://localhost:60080'
+  else:
+    base_url = 'http://music.cambridgeny.net'
+
+  admin_url = '%s%s' % (base_url, kAdminRoute)
+  name = GetDisplayName(requestor_email)
+  body = ('%s (%s) has requested global editing permissions.\n\n'
+          'Review the request on the admin page:\n%s\n' % (name, requestor_email, admin_url))
+  subject = 'Editor Request: %s' % name
+  for admin_email in GetAdminEmails():
+    try:
+      _SendEmail(admin_email, subject, body)
+    except:
+      pass
+
+def _SendEditorApproval(requestor_email):
+  """Notify a user that their editor request was approved."""
+  body = ('Your request for global editing permissions on Cambridge NY Traditional Music has been approved.\n\n'
+          'You can now edit any tune on the site.\n')
+  subject = 'Global Editing Permissions Granted'
+  _SendEmail(requestor_email, subject, body)
+
+def _SendEditorDenial(requestor_email, admin_notes):
+  """Notify a user that their editor request was denied."""
+  body = 'Your request for global editing permissions on Cambridge NY Traditional Music was not approved.\n'
+  if admin_notes:
+    body += '\nNotes from admin:\n%s\n' % admin_notes
+  subject = 'Editor Request Denied'
   _SendEmail(requestor_email, subject, body)
 
 def _SendEmailChangeConfirmation(new_email, token):
@@ -10353,6 +10605,66 @@ def IncrementPublishApprovals(email):
 def HasPendingPublishRequest(event_sid):
   """Check if an event has a pending publish request."""
   path = os.path.join(kPublishRequestDir, event_sid + '.req')
+  return os.path.exists(path)
+
+# Editor permission request storage
+kEditorRequestDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'editor-requests')
+if not os.path.exists(kEditorRequestDir):
+  os.makedirs(kEditorRequestDir)
+
+def _EditorRequestPath(email):
+  """Return file path for an editor request by email."""
+  safe = email.lower().replace('@', '_at_').replace('.', '_')
+  return os.path.join(kEditorRequestDir, safe + '.req')
+
+def CreateEditorRequest(email):
+  """Create an editor permission request file."""
+  path = _EditorRequestPath(email)
+  with open(path, 'w') as f:
+    f.write('email:%s\n' % email.lower())
+    f.write('timestamp:%s\n' % time.time())
+
+def ReadEditorRequest(email):
+  """Read an editor request. Returns dict or None."""
+  path = _EditorRequestPath(email)
+  if not os.path.exists(path):
+    return None
+  data = {}
+  with open(path) as f:
+    for line in f:
+      line = line.strip()
+      if ':' in line:
+        key, val = line.split(':', 1)
+        data[key.strip()] = val.strip()
+  return data
+
+def ReadAllEditorRequests():
+  """Read all pending editor requests. Returns list of dicts."""
+  results = []
+  for fn in os.listdir(kEditorRequestDir):
+    if not fn.endswith('.req'):
+      continue
+    path = os.path.join(kEditorRequestDir, fn)
+    data = {}
+    with open(path) as f:
+      for line in f:
+        line = line.strip()
+        if ':' in line:
+          key, val = line.split(':', 1)
+          data[key.strip()] = val.strip()
+    if data.get('email'):
+      results.append(data)
+  return results
+
+def DeleteEditorRequest(email):
+  """Delete an editor request file."""
+  path = _EditorRequestPath(email)
+  if os.path.exists(path):
+    os.remove(path)
+
+def HasPendingEditorRequest(email):
+  """Check if a user has a pending editor request."""
+  path = _EditorRequestPath(email)
   return os.path.exists(path)
 
 def GetAdminEmails():
