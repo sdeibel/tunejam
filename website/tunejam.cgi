@@ -19,6 +19,10 @@
 #</VirtualHost>
 
 import sys, os
+
+# Suppress setuptools UserWarning about .python-eggs on every CGI invocation
+os.environ['PYTHON_EGG_CACHE'] = '/tmp/.python-eggs'
+
 fp = os.path.abspath(__file__)
 src_dir = os.path.dirname(os.path.dirname(fp))
 sys.path.append(src_dir)
