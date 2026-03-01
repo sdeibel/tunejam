@@ -1303,17 +1303,19 @@ def _AdminNotificationsHTML(admin_emails):
   pending_count = len(_ReadNotificationsSince(_GetLastNotificationRead()))
   if pending_count > 0:
     count_label = '%d pending' % pending_count
+    count_style = 'color:#960;font-size:0.85em;font-style:italic'
     disabled = ''
   else:
     count_label = 'none pending'
+    count_style = 'color:#999;font-size:0.85em;font-style:italic'
     disabled = ' disabled'
 
   return """<h2>&#9834; Notifications</h2>
 <p>Admin digest email recipients:</p>
 %s
-<div style="margin-top:12px">
+<div style="margin-top:12px;margin-bottom:16px">
 <button id="notif-send-now" type="button" style="padding:2px 10px"%s> Send Now </button>
-<span id="notif-send-status" style="margin-left:10px;color:#666">%s</span>
+<span id="notif-send-status" style="margin-left:10px;%s">%s</span>
 </div>
 <script>
 (function() {
@@ -1359,7 +1361,7 @@ def _AdminNotificationsHTML(admin_emails):
   });
 })();
 </script>
-""" % ('\n'.join(checkboxes), disabled, count_label, admin_route_js)
+""" % ('\n'.join(checkboxes), disabled, count_style, count_label, admin_route_js)
 
 @app.route(kAdminRoute)
 def admin_page():
