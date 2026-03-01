@@ -693,9 +693,9 @@ def dev():
         
   
   if HasCapability(kCapManageAnyEvent):
-    parts.append(CH("&#9834; Recently Deleted Tunes", 2))
     archived_specs = sorted(fn for fn in os.listdir(utils.kDatabaseArchiveDir) if fn.endswith('.spec'))
     if archived_specs:
+      parts.append(CH("&#9834; Recently Deleted Tunes", 2))
       for fn in archived_specs:
         tune_name = fn[:-5]
         spec_path = os.path.join(utils.kDatabaseArchiveDir, fn)
@@ -709,7 +709,7 @@ def dev():
               owner = line[2:].strip()
             elif line.strip() == '--':
               break
-        mod_time = os.stat(spec_path)[stat.ST_MTIME]
+        mod_time = os.path.getmtime(spec_path)
         expires = time.strftime('%x %X', time.localtime(mod_time + utils.kEventExpiration))
         entry = [CSpan(title)]
         if owner:
@@ -718,8 +718,6 @@ def dev():
         entry.append(CText("Undelete", href='/dev/undelete-tune/%s' % tune_name))
         entry.append(CBreak())
         parts.extend(entry)
-    else:
-      parts.append(CParagraph(CText("No recently deleted tunes.", italic=1)))
 
   parts.append(CH("&#9834; Source Code", 2))
   parts.append(CParagraph("You can set up your own local copy of this website, which runs on "
@@ -10260,7 +10258,9 @@ def ajax_profile_request_editor():
   return json.dumps({'ok': True})
 
 def _ArchiveTune(tune_name):
-  """Move a tune's files to archive directories."""
+  """Move a tune's files to archive directories.
+  Touch archived files so mtime reflects deletion time (PurgeDeletedTunes
+  uses mtime to determine expiration)."""
   import shutil
   for src_dir, arch_dir, ext in (
       (utils.kDatabaseDir, utils.kDatabaseArchiveDir, '.spec'),
@@ -10268,7 +10268,9 @@ def _ArchiveTune(tune_name):
       (utils.kRecordingsDir, utils.kRecordingsArchiveDir, '.mp3')):
     src = os.path.join(src_dir, tune_name + ext)
     if os.path.exists(src):
-      shutil.move(src, os.path.join(arch_dir, tune_name + ext))
+      dest = os.path.join(arch_dir, tune_name + ext)
+      shutil.move(src, dest)
+      os.utime(dest, None)  # set mtime to now
 
 def _UnarchiveTune(tune_name):
   """Restore a tune's files from archive directories."""
