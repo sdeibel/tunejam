@@ -29,4 +29,4 @@ fi
 
 git add -A
 git commit -m "Auto-commit $(date '+%Y-%m-%d %H:%M')"
-git push origin main 2>/dev/null || echo "data-commit: push failed (will retry next run)"
+git push 2>/dev/null || echo "data-commit: push failed (will retry next run)"
