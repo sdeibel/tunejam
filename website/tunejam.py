@@ -6697,10 +6697,16 @@ def tune_delete(tune):
   if request.method == 'POST':
     # Soft-delete: move files to archive directories
     _ArchiveTune(tune)
-    obj.InvalidateCaches()
+    try:
+      obj.InvalidateCaches()
+    except OSError:
+      pass
     utils.InvalidateTuneIndex()
     gTuneCountCache.clear()
-    LogNotification('tune', 'Tune deleted: "%s" by %s' % (obj.title, GetUserEmail() or 'anonymous'))
+    try:
+      LogNotification('tune', 'Tune deleted: "%s" by %s' % (obj.title, GetUserEmail() or 'anonymous'))
+    except (IOError, OSError):
+      pass
     return redirect('/index', code=303)
 
   # GET: show confirmation page
