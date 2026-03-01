@@ -1,14 +1,6 @@
 ** Fix note generation on production site
 * Website Phase Three
   ** Coding Tasks Near Term
-    ** Audit site to make sure we're not showing emails to anyone but the admin users and 
-       the users themselves
-    ** Make sure that none of the editor-only or admin-only functionality is leaking to the
-       members of the lower groups; don't use the code as the authority, but common sense
-       and see if there are any potential holes
-    ** Audit site to make sure that security is on the Python side and not in Javascript
-    ** Address using git to version the site content:  Need to know what to add or remove or
-       move in repo; need to deal with apache vs. maint user (ask Claude for design suggestions)
     ** Ability to press record button to listen to a tune being played and analyze
        with AI to prefill the New Tune form
   ** Content

@@ -18,34 +18,29 @@ import os
 import sys
 
 SRC_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(os.path.dirname(SRC_DIR), 'data')
 
-DATA_DIRS = [
-  # PDF cache
+# Directories under src/ that apache needs to write to
+SRC_DATA_DIRS = [
   'website/cache',
   'website/cache/tune',
   'website/cache/tuneset',
   'website/cache/book',
-
-  # Generated CSS
   'website/css',
+]
 
-  # User/event data
-  'website/events',
-  'website/events/archive',
-  'website/tokens',
-
-  # Tune database (create/edit/archive)
+# Directories under data/ that apache needs to write to
+DATA_DATA_DIRS = [
+  'events',
+  'events/archive',
+  'tokens',
   'db',
   'db/archive',
   'tunes',
   'tunes/archive',
   'recordings',
   'recordings/archive',
-
-  # Logs
   'log',
-
-  # Config and user data
   'config',
   'config/publish-requests',
   'config/editor-requests',
@@ -61,7 +56,8 @@ def fix(log=True, dry_run=False):
       print("Skipping permission fix on macOS")
     return
 
-  dirs = [os.path.join(SRC_DIR, d) for d in DATA_DIRS]
+  dirs = ([os.path.join(SRC_DIR, d) for d in SRC_DATA_DIRS] +
+          [os.path.join(DATA_DIR, d) for d in DATA_DATA_DIRS])
   sudo = '' if os.geteuid() == 0 else 'sudo '
 
   def run(cmd):

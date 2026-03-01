@@ -33,6 +33,19 @@ else
 fi
 echo ""
 
+# ── Pull data repo ───────────────────────────────────────────
+
+DATA_DIR="$(dirname "$SCRIPT_DIR")/data"
+if [ -d "$DATA_DIR/.git" ]; then
+  if [ "$TEST_MODE" = true ]; then
+    echo "# Would run: git -C $DATA_DIR pull"
+  else
+    echo "Pulling data repo changes..."
+    git -C "$DATA_DIR" pull || echo "Warning: data repo pull failed"
+  fi
+  echo ""
+fi
+
 # ── Fix permissions ───────────────────────────────────────────
 
 if [ "$TEST_MODE" = true ]; then

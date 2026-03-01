@@ -1,8 +1,4 @@
 .DS_Store
-config/email.conf
-config/notes/
-config/profiles/
-log/*.log
 *.pyc
 __pycache__/
 *.wpu

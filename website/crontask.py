@@ -15,7 +15,7 @@ sys.path.append('/home/maint/music/src')
 import tunejam
 import utils
 
-kConfigDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config')
+kConfigDir = os.path.join(utils.kDataDir, 'config')
 kBookRegenLastRun = os.path.join(kConfigDir, 'books-last-regen.txt')
 kBookRegenIntervalSeconds = 24 * 3600  # Once per day
 

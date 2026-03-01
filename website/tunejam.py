@@ -35,22 +35,22 @@ app.permanent_session_lifetime = timedelta(days=30)
 
 kSiteVersion = '4.0'
 
-# Email config file path (src/config/email.conf)
-kEmailConf = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'email.conf')
+# Email config file path
+kEmailConf = os.path.join(utils.kDataDir, 'config', 'email.conf')
 
 # Token storage directory (auto-created)
-kTokenDir = os.path.join(os.path.dirname(__file__), 'tokens')
+kTokenDir = os.path.join(utils.kDataDir, 'tokens')
 if not os.path.exists(kTokenDir):
   os.makedirs(kTokenDir)
 
 # Login log
-kLogDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'log')
+kLogDir = os.path.join(utils.kDataDir, 'log')
 if not os.path.exists(kLogDir):
   os.makedirs(kLogDir)
 kLoginLog = os.path.join(kLogDir, 'logins.log')
 
 # Notification digest
-kConfigDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config')
+kConfigDir = os.path.join(utils.kDataDir, 'config')
 kNotificationLog = os.path.join(kConfigDir, 'notifications.log')
 kNotificationLastSent = os.path.join(kConfigDir, 'notifications-last-sent.txt')
 kNotificationLastRead = os.path.join(kConfigDir, 'notifications-last-read.txt')
@@ -11038,7 +11038,7 @@ def WriteEmailConfig(key, value):
     f.write('\n'.join(new_lines))
 
 # Publish request storage
-kPublishRequestDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'publish-requests')
+kPublishRequestDir = os.path.join(utils.kDataDir, 'config', 'publish-requests')
 if not os.path.exists(kPublishRequestDir):
   os.makedirs(kPublishRequestDir)
 
@@ -11104,7 +11104,7 @@ def HasPendingPublishRequest(event_sid):
   return os.path.exists(path)
 
 # Editor permission request storage
-kEditorRequestDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'editor-requests')
+kEditorRequestDir = os.path.join(utils.kDataDir, 'config', 'editor-requests')
 if not os.path.exists(kEditorRequestDir):
   os.makedirs(kEditorRequestDir)
 
@@ -11284,7 +11284,7 @@ def CanViewEvent(event_obj):
   return False
 
 # Profile system
-kProfileDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'profiles')
+kProfileDir = os.path.join(utils.kDataDir, 'config', 'profiles')
 if not os.path.exists(kProfileDir):
   os.makedirs(kProfileDir)
 
@@ -11327,7 +11327,7 @@ def GetDisplayName(email):
   return profile.get('display_name', 'Anonymous')
 
 # Notes system
-kNotesDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'notes')
+kNotesDir = os.path.join(utils.kDataDir, 'config', 'notes')
 if not os.path.exists(kNotesDir):
   os.makedirs(kNotesDir)
 
