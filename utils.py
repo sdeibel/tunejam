@@ -1962,7 +1962,7 @@ def DeleteEvent(sid, undelete=False):
     
 kEventExpiration = 7 * 24 * 60 * 60
 def PurgeDeletedEvents():
-    
+
     events = os.listdir(kEventArchiveLoc)
     for event in events:
         if not event.endswith('.evt'):
@@ -1971,7 +1971,16 @@ def PurgeDeletedEvents():
         mod_time = os.stat(fn)[stat.ST_MTIME]
         if mod_time < time.time() - kEventExpiration:
             os.unlink(fn)
-        
+
+def PurgeDeletedTunes():
+    """Permanently remove archived tune files older than kEventExpiration."""
+    cutoff = time.time() - kEventExpiration
+    for arch_dir in (kDatabaseArchiveDir, kSheetMusicArchiveDir, kRecordingsArchiveDir):
+        for fn in os.listdir(arch_dir):
+            fullpath = os.path.join(arch_dir, fn)
+            if os.path.isfile(fullpath) and os.stat(fullpath)[stat.ST_MTIME] < cutoff:
+                os.unlink(fullpath)
+
 _gTuneIndexCache = {}
 
 def InvalidateTuneIndex():

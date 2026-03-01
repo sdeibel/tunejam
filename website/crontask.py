@@ -78,6 +78,10 @@ def regenerate_books(force=False, log=True):
 #########################################################################
 if __name__ == '__main__':
   regenerate_books(force='--force' in sys.argv)
+  try:
+    tunejam._SendNotificationDigest()
+  except:
+    pass
   import fixperms
   fixperms.fix()
   
