@@ -72,6 +72,8 @@ kPermissions = {
               kCapManageAnyEvent, kCapDeleteInUse, kCapManageCache},
 }
 
+kAdminRoute = '/mx7q9p'
+
 kMenu = [
   ('Home', '/', 'home'), 
   ('Index', '/index', 'index'),
@@ -673,39 +675,165 @@ def dev():
                           "contact me</a> for help. I am currently the only developer, and would "
                           "improve packaging and docs if anyone else wants to join in the effort."))
 
-  editor = HasCapability(kCapManageCache)
-  if editor:
+  parts.append(CBreak(2))
+  return PageWrapper(parts, 'dev')
+
+def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
+  """Build HTML + JS for the admin users management section."""
+  import json as _json
+
+  def _render_list_items(emails, names):
+    items = []
+    for e in emails:
+      name = names.get(e, 'Anonymous')
+      esc_name = name.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+      esc_email = e.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+      items.append('<li data-email="%s" style="margin:3px 0">%s (%s) '
+                   '<button type="button" class="user-remove" style="background:#cc3333;color:white;border:1px solid #993333;border-radius:2px;padding:0px 4px;cursor:pointer;margin-left:4px;font-size:75%%">X</button></li>'
+                   % (esc_email, esc_name, esc_email))
+    return '\n'.join(items)
+
+  admin_items = _render_list_items(admin_emails, admin_names)
+  editor_items = _render_list_items(editor_emails, editor_names)
+
+  return """
+<h2>&#9834; Users</h2>
+
+<h3>Admin Users</h3>
+<div id="admin-user-list">
+<ul>%s</ul>
+</div>
+<div style="margin:6px 0 16px 0">
+  <input type="text" id="admin-add-email" placeholder="email@example.com" size="30">
+  <button type="button" id="admin-add-btn">Add</button>
+  <span id="admin-msg" style="color:#c00;font-size:0.85em;margin-left:8px"></span>
+</div>
+
+<h3>Editor Users</h3>
+<div id="editor-user-list">
+<ul>%s</ul>
+</div>
+<div style="margin:6px 0 16px 0">
+  <input type="text" id="editor-add-email" placeholder="email@example.com" size="30">
+  <button type="button" id="editor-add-btn">Add</button>
+  <span id="editor-msg" style="color:#c00;font-size:0.85em;margin-left:8px"></span>
+</div>
+
+<script>
+(function() {
+  var adminRoute = %s;
+
+  function renderList(containerId, emails, names) {
+    var ul = document.querySelector('#' + containerId + ' ul');
+    ul.innerHTML = '';
+    for (var i = 0; i < emails.length; i++) {
+      var e = emails[i];
+      var name = names[e] || 'Anonymous';
+      var li = document.createElement('li');
+      li.setAttribute('data-email', e);
+      li.style.margin = '3px 0';
+      li.innerHTML = escHtml(name) + ' (' + escHtml(e) + ') ' +
+        '<button type="button" class="user-remove" style="background:#cc3333;color:white;border:1px solid #993333;border-radius:2px;padding:0px 4px;cursor:pointer;margin-left:4px;font-size:75%%">X</button>';
+      ul.appendChild(li);
+    }
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function doFetch(url, body, msgId, role, listId) {
+    var msgEl = document.getElementById(msgId);
+    msgEl.textContent = '';
+    fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        renderList(listId, data.emails, data.names);
+      } else {
+        msgEl.textContent = data.error || 'error';
+      }
+    })
+    .catch(function(err) { msgEl.textContent = 'request failed'; });
+  }
+
+  document.getElementById('admin-add-btn').addEventListener('click', function() {
+    var email = document.getElementById('admin-add-email').value.trim();
+    if (!email) return;
+    doFetch(adminRoute + '/users/add', {role:'admin', email:email}, 'admin-msg', 'admin', 'admin-user-list');
+    document.getElementById('admin-add-email').value = '';
+  });
+
+  document.getElementById('editor-add-btn').addEventListener('click', function() {
+    var email = document.getElementById('editor-add-email').value.trim();
+    if (!email) return;
+    doFetch(adminRoute + '/users/add', {role:'editor', email:email}, 'editor-msg', 'editor', 'editor-user-list');
+    document.getElementById('editor-add-email').value = '';
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.classList.contains('user-remove')) return;
+    var li = e.target.closest('li');
+    if (!li) return;
+    var email = li.getAttribute('data-email');
+    var container = li.closest('div[id$="-user-list"]');
+    if (!container) return;
+    var role = container.id.replace('-user-list', '');
+    var msgId = role + '-msg';
+    doFetch(adminRoute + '/users/remove', {role:role, email:email}, msgId, role, container.id);
+  });
+})();
+</script>
+""" % (admin_items, editor_items, _json.dumps(kAdminRoute))
+
+@app.route(kAdminRoute)
+def admin_page():
+  parts = [CH("Admin", 1)]
+
+  if HasCapability(kCapManageCache):
+    # Users section
+    admin_emails = GetAdminEmails()
+    editor_emails = GetEditorEmails()
+    admin_names = {e: GetDisplayName(e) for e in admin_emails}
+    editor_names = {e: GetDisplayName(e) for e in editor_emails}
+    users_html = _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names)
+    parts.append(users_html)
+
     parts.append(CH("&#9834; Cache Management", 2))
     parts.append(CParagraph("Clear cached generated files to force regeneration:"))
     parts.append(CList([
-      CItem([CText("Clear Tune Cache", href='/dev/clear-cache/tune'),
+      CItem([CText("Clear Tune Cache", href=kAdminRoute + '/clear-cache/tune'),
              CText(" -- Individual tune artifacts (notes, chords, sheet music images)")]),
-      CItem([CText("Clear Tune Set Cache", href='/dev/clear-cache/tuneset'),
+      CItem([CText("Clear Tune Set Cache", href=kAdminRoute + '/clear-cache/tuneset'),
              CText(" -- Tune set page PDFs")]),
-      CItem([CText("Clear Book Cache", href='/dev/clear-cache/book'),
+      CItem([CText("Clear Book Cache", href=kAdminRoute + '/clear-cache/book'),
              CText(" -- Full book PDFs")]),
-      CItem([CText("Clear All Caches", href='/dev/clear-cache/all'),
+      CItem([CText("Clear All Caches", href=kAdminRoute + '/clear-cache/all'),
              CText(" -- All of the above")]),
     ]))
     parts.append(CBreak())
     parts.append(CList([
-      CItem([CText("Rebuild All Books", href='/dev/rebuild-books'),
+      CItem([CText("Rebuild All Books", href=kAdminRoute + '/rebuild-books'),
              CText(" -- Regenerate all book PDFs (runs in background)")]),
     ]))
   else:
     parts.append(CBreak())
-    parts.append(LoginButton('/dev', label="Admin login required"))
+    parts.append(LoginButton(kAdminRoute, label="Admin login required"))
 
   parts.append(CBreak(2))
-  return PageWrapper(parts, 'dev')
+  return PageWrapper(parts, 'admin')
 
-@app.route('/dev/clear-cache/<cache_type>')
+@app.route(kAdminRoute + '/clear-cache/<cache_type>')
 def clear_cache(cache_type):
   import shutil
 
   editor = HasCapability(kCapManageCache)
   if not editor:
-    return redirect('/authorize/dev', code=303)
+    return redirect('/authorize' + kAdminRoute, code=303)
 
   cleared = []
   cache_dirs = {
@@ -719,7 +847,7 @@ def clear_cache(cache_type):
   elif cache_type in cache_dirs:
     targets = [cache_type]
   else:
-    return redirect('/dev', code=303)
+    return redirect(kAdminRoute, code=303)
 
   for t in targets:
     d = cache_dirs[t]
@@ -734,19 +862,19 @@ def clear_cache(cache_type):
     CH("Cache Cleared", 2),
     CParagraph("Cleared cache: %s" % ', '.join(cleared)),
     CBreak(),
-    CText("Return to Dev page", href='/dev'),
+    CText("Return to Admin page", href=kAdminRoute),
     CBreak(2),
   ]
-  return PageWrapper(parts, 'dev')
+  return PageWrapper(parts, 'admin')
 
-@app.route('/dev/rebuild-books')
+@app.route(kAdminRoute + '/rebuild-books')
 def rebuild_books():
   import threading
   import crontask
 
   editor = HasCapability(kCapManageCache)
   if not editor:
-    return redirect('/authorize/dev', code=303)
+    return redirect('/authorize' + kAdminRoute, code=303)
 
   thread = threading.Thread(target=crontask.regenerate_books)
   thread.daemon = True
@@ -757,10 +885,55 @@ def rebuild_books():
     CParagraph("All books are being regenerated in the background. "
                "This may take several minutes."),
     CBreak(),
-    CText("Return to Dev page", href='/dev'),
+    CText("Return to Admin page", href=kAdminRoute),
     CBreak(2),
   ]
-  return PageWrapper(parts, 'dev')
+  return PageWrapper(parts, 'admin')
+
+@app.route(kAdminRoute + '/users/add', methods=['POST'])
+def admin_users_add():
+  if not HasCapability(kCapManageCache):
+    return '{"ok":false,"error":"not authorized"}', 403
+  data = request.get_json(force=True)
+  role = data.get('role', '')
+  email = data.get('email', '').strip().lower()
+  if role not in ('admin', 'editor'):
+    return json.dumps({'ok': False, 'error': 'invalid role'})
+  if not email or '@' not in email:
+    return json.dumps({'ok': False, 'error': 'invalid email'})
+  key = 'admin_emails' if role == 'admin' else 'editor_emails'
+  config = ReadEmailConfig()
+  current = [e.strip().lower() for e in config.get(key, '').split(',') if e.strip()]
+  if email in current:
+    return json.dumps({'ok': False, 'error': 'already in list'})
+  current.append(email)
+  WriteEmailConfig(key, ','.join(current))
+  names = {e: GetDisplayName(e) for e in current}
+  return json.dumps({'ok': True, 'emails': current, 'names': names})
+
+@app.route(kAdminRoute + '/users/remove', methods=['POST'])
+def admin_users_remove():
+  if not HasCapability(kCapManageCache):
+    return '{"ok":false,"error":"not authorized"}', 403
+  data = request.get_json(force=True)
+  role = data.get('role', '')
+  email = data.get('email', '').strip().lower()
+  if role not in ('admin', 'editor'):
+    return json.dumps({'ok': False, 'error': 'invalid role'})
+  if not email or '@' not in email:
+    return json.dumps({'ok': False, 'error': 'invalid email'})
+  my_email = GetUserEmail()
+  if role == 'admin' and my_email and email == my_email.lower():
+    return json.dumps({'ok': False, 'error': 'cannot remove yourself from admin list'})
+  key = 'admin_emails' if role == 'admin' else 'editor_emails'
+  config = ReadEmailConfig()
+  current = [e.strip().lower() for e in config.get(key, '').split(',') if e.strip()]
+  if email not in current:
+    return json.dumps({'ok': False, 'error': 'not in list'})
+  current.remove(email)
+  WriteEmailConfig(key, ','.join(current))
+  names = {e: GetDisplayName(e) for e in current}
+  return json.dumps({'ok': True, 'emails': current, 'names': names})
 
 @app.route('/sets', methods=['GET', 'POST'])
 @app.route('/sets/')
@@ -9257,6 +9430,26 @@ def ReadEmailConfig():
         config[key.strip()] = val.strip()
   return config
 
+def WriteEmailConfig(key, value):
+  """Rewrite email.conf, updating a single key's value while preserving all other lines."""
+  if not os.path.exists(kEmailConf):
+    return
+  with open(kEmailConf) as f:
+    content = f.read()
+  new_lines = []
+  found = False
+  for line in content.split('\n'):
+    stripped = line.strip()
+    if stripped.startswith(key + '='):
+      new_lines.append('%s=%s' % (key, value))
+      found = True
+    else:
+      new_lines.append(line)
+  if not found:
+    new_lines.append('%s=%s' % (key, value))
+  with open(kEmailConf, 'w') as f:
+    f.write('\n'.join(new_lines))
+
 def GetAdminEmails():
   """Return list of admin email addresses from config."""
   config = ReadEmailConfig()
@@ -9409,15 +9602,6 @@ def GetDisplayName(email):
     return 'Anonymous'
   profile = GetOrCreateProfile(email)
   return profile.get('display_name', 'Anonymous')
-
-# Seed initial profiles for known users
-for _email, _name in [
-    ('stephan@deibel.net', 'Stephan'),
-    ('gdeibel@gmail.com', 'Gretchen'),
-    ('mcinbass@gmail.com', 'Ed'),
-]:
-  if not os.path.exists(_ProfilePath(_email)):
-    _WriteProfile({'email': _email, 'display_name': _name})
 
 # Notes system
 kNotesDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'notes')
@@ -9927,7 +10111,15 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
         iclass = 'menu-item'
       items.append(CText(title, href=url, hclass=iclass))
       items.append(CNBSP(3))
-  
+
+    if HasCapability(kCapManageCache):
+      if 'admin' == section:
+        iclass = 'menu-item-current'
+      else:
+        iclass = 'menu-item'
+      items.append(CText('Admin', href=kAdminRoute, hclass=iclass))
+      items.append(CNBSP(3))
+
     # Check for eye-candy image matching this section
     # Maps section name to (image filename, width percentage)
     kEyeCandySections = {
