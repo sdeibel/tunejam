@@ -101,7 +101,6 @@ Platform binaries and source tarballs are in `src/platform/`.
 - `src/recordings/*.mp3` — Tune recordings (~200 files)
 - `src/images/` — Web UI images
 - `src/website/cache/` — Generated PDF cache (tuneset/, tune/, book/ subdirs)
-- `src/website/saved-sets/` — User-saved tune sets
 - `src/website/events/` — Event data with `archive/` subdir
 - `src/website/js/` — jQuery UI 1.13.2
 

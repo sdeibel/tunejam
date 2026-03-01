@@ -1726,7 +1726,6 @@ def sets(spec=None, sid=None):
     args = spec.split('&')
     tunes = []
     _print = False
-    save = False
     edit = '/edit/' in request.url and spec is not None
     title = ''
     subtitle = ''
@@ -1736,8 +1735,6 @@ def sets(spec=None, sid=None):
     for arg in args:
       if arg == 'print=1':
         _print = True
-      elif arg == 'save=1':
-        save = True
       elif arg.startswith('title='):
         title = arg[len('title='):].strip()
       elif arg.startswith('subtitle='):
@@ -1752,35 +1749,14 @@ def sets(spec=None, sid=None):
       elif arg:
         tunes.append(arg)
     
-    if save and not title:
-      error = "You need to set a title if you plan to save this set of tunes!  Go back to return to the selected tunes."
-      
-    elif tunes:
+    if tunes:
       
       import hashlib
       md5sum = hashlib.md5()
       for tune in tunes:
         md5sum.update(tune)
       name = 'C-' + md5sum.hexdigest()
-      
-      if save and title and IsLoggedIn():
-        date = time.strftime("%d %B %Y", time.localtime())
-        book = '%s\n%s\n%s\nhttp://cambridgeny.net/index\n--\n' % (
-          title, subtitle, date
-        )
-        page = []
-        for tune in tunes:
-          page.append(tune)
-          if len(page) == 3:
-            book += ' '.join(page) + '\n'
-            page = []
-        if page:
-          book += ' '.join(page) + '\n'
-          page = []
-        f = open(os.path.join(utils.kSaveLoc, '%s.book' % name), 'w')
-        f.write(book)
-        f.close()
-      
+
       if _print:
         return CreateTuneSetPDF(name, title, subtitle, tunes)
         
@@ -2044,26 +2020,20 @@ function ClearTunes() {
   FilterTunes();
 }
 $(document).ready(function() {
-    if($("#save-checkbox").is(":checked") || $("#print-checkbox").is(":checked")) {
+    if($("#print-checkbox").is(":checked")) {
         $('#saveitems').css("display", "");
+        $('#include-radios').css("display", "none");
     } else {
         $('#saveitems').css("display", "none");
     }
 
-    $('#save-checkbox').change(function() {
-        if($("#save-checkbox").is(":checked") || $("#print-checkbox").is(":checked")) {
-            $('#saveitems').css("display", "");
-        } else {
-            $('#saveitems').css("display", "none");
-        }
-    });
     $('#print-checkbox').change(function() {
-        if($("#save-checkbox").is(":checked") || $("#print-checkbox").is(":checked")) {
+        if($("#print-checkbox").is(":checked")) {
             $('#saveitems').css("display", "");
-        $('#include-radios').css("display", "none");
+            $('#include-radios').css("display", "none");
         } else {
             $('#saveitems').css("display", "none");
-        $('#include-radios').css("display", "");
+            $('#include-radios').css("display", "");
         }
     });
     FilterTunes();
@@ -2281,36 +2251,6 @@ padding-bottom:0.5em;
       CInput(type='button', value="Clear Selected", onclick='ClearTunes();'), 
     ], id='eventsetform'))
     
-  saved = []
-  for fn in os.listdir(utils.kSaveLoc):
-    if fn.endswith('.book'):
-      book = utils.CBook(os.path.join(utils.kSaveLoc, fn))
-      saved.append((book.title, book))
-  saved.sort()
-  
-  if saved:
-    parts.extend([
-      CBreak(), 
-      CH("Saved Sets", 1)
-    ])
-    for title, book in saved:
-      if book.subtitle:
-        title = '%s - %s - %s' % (book.title, book.subtitle, book.date)
-      else:
-        title = '%s - %s' % (book.title, book.date)
-      parts.extend([
-        CBreak(), 
-        CText(title, href='/saved/view/%s' % book.name),
-        CNBSP(),
-        CText('-'), 
-        CNBSP(),
-        CText('Print', href='/saved/print/%s' % book.name),
-        CNBSP(),
-        CText('Edit', href='/saved/edit/%s' % book.name), 
-        CNBSP(),
-        CText('Delete', href='/saved/delete/%s' % book.name), 
-      ])
-  
   if sid is not None:
     parts.extend([
       CBreak(2),
@@ -7261,42 +7201,6 @@ def doprint(format=None, bookname=None):
 
   return PageWrapper(parts, 'print', refresh=refresh)
 
-@app.route('/saved/<action>/<book>')
-def saved(action=None, book=None):
-  parts = []
-  if action is None or book is None:
-    parts.append("Book list here")
-    return PageWrapper(parts, 'sets')
-
-  fn = os.path.join(utils.kDatabaseDir, book+'.book')
-  if not os.path.isfile(fn):
-    fn = os.path.join(utils.kSaveLoc, book+'.book')
-  if not os.path.isfile(fn):
-    parts.append(CParagraph("Book %s does not exist" % book))
-    return PageWrapper(parts, 'sets')
-    
-  book = utils.CBook(fn)
-  
-  if action == 'view':
-    parts.append(CreateTuneSetHTML(book.AllTunes()))
-  elif action == 'print':
-    pdf = book.GeneratePDF(generate=True)
-    return send_file(pdf, mimetype='application/pdf')
-  elif action == 'edit':
-    tunes = book.AllTunes()
-    tunes = '&'.join(tunes)
-    return sets(tunes+'&edit=1')
-  elif action == 'delete':
-    if not IsLoggedIn():
-      return redirect('/sets', code=303)
-    fn = os.path.join(utils.kSaveLoc, book.name+'.book')
-    os.unlink(fn)
-    return sets()
-  else:
-    parts.append(CParagraph("Invalid action %s" % action, 'sets'))
-  
-  return PageWrapper(parts)
-
 @app.route('/recording/<tune>')
 def recording(tune):
   obj = utils.CTune(tune)
@@ -9857,7 +9761,7 @@ def profile_page(uid):
   if error_msg == 'tune-in-use':
     parts.append('<div style="background:#fee;border:1px solid #c00;padding:8px 12px;margin-bottom:12px;'
                  'border-radius:4px;color:#c00"><b>Cannot delete tune "%s"</b> &mdash; '
-                 'it is currently in use by a book, saved set, or event.</div>' % (
+                 'it is currently in use by a book or event.</div>' % (
                    error_tune.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'),))
 
   # Heading with display name

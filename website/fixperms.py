@@ -27,7 +27,6 @@ DATA_DIRS = [
   'website/cache/book',
 
   # User/event data
-  'website/saved-sets',
   'website/events',
   'website/events/archive',
   'website/tokens',

@@ -44,7 +44,6 @@ kImageDir = os.path.join(_kSrcDir, 'images')
 kRecordingsDir = os.path.join(_kSrcDir, 'recordings')
 kRecordingsArchiveDir = os.path.join(_kSrcDir, 'recordings', 'archive')
 kCacheLoc = os.path.join(_kSrcDir, 'website', 'cache')
-kSaveLoc = os.path.join(_kSrcDir, 'website', 'saved-sets')
 kEventsLoc = os.path.join(_kSrcDir, 'website', 'events')
 kEventArchiveLoc = os.path.join(kEventsLoc, 'archive')
 kJSDir = os.path.join(_kSrcDir, 'website', 'js')
@@ -1875,7 +1874,7 @@ def LookupEventByShareId(share_id):
     return None
 
 def TuneInUseBy(tune_name):
-    """Check if a tune is referenced by any books, saved sets, or events.
+    """Check if a tune is referenced by any books or events.
     Returns list of (type, name) tuples describing where the tune is used."""
     results = []
 
@@ -1887,16 +1886,6 @@ def TuneInUseBy(tune_name):
                     if tune_name in line.split():
                         results.append(('book', fn[:-5]))
                         break
-
-    # Check saved sets
-    if os.path.exists(kSaveLoc):
-        for fn in os.listdir(kSaveLoc):
-            if fn.endswith('.book'):
-                with open(os.path.join(kSaveLoc, fn)) as f:
-                    for line in f:
-                        if tune_name in line.split():
-                            results.append(('saved-set', fn[:-5]))
-                            break
 
     # Check events
     for dirname, label in [(kEventsLoc, 'event'), (kEventArchiveLoc, 'archived-event')]:
