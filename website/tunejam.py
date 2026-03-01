@@ -9649,7 +9649,10 @@ def ajax_notes_delete():
   if not email:
     return '{"ok":false,"error":"not logged in"}', 403
   data = request.get_json(force=True)
-  owner_email = data.get('owner_email', '').strip()
+  owner_hash = data.get('owner_hash', '').strip()
+  owner_email = _EmailFromHash(owner_hash) if owner_hash else ''
+  if not owner_email:
+    return '{"ok":false,"error":"invalid owner"}', 400
   note_id = int(data.get('note_id', 0))
   is_admin = HasCapability(kCapManageAnyEvent)
   if owner_email.lower() != email.lower() and not is_admin:
@@ -9664,7 +9667,10 @@ def ajax_notes_toggle_public():
   if not email:
     return '{"ok":false,"error":"not logged in"}', 403
   data = request.get_json(force=True)
-  owner_email = data.get('owner_email', '').strip()
+  owner_hash = data.get('owner_hash', '').strip()
+  owner_email = _EmailFromHash(owner_hash) if owner_hash else ''
+  if not owner_email:
+    return '{"ok":false,"error":"invalid owner"}', 400
   note_id = int(data.get('note_id', 0))
   target_type = data.get('target_type', '').strip()
   target_id = data.get('target_id', '').strip()
@@ -9717,7 +9723,10 @@ def ajax_notes_edit():
   if not email:
     return '{"ok":false,"error":"not logged in"}', 403
   data = request.get_json(force=True)
-  owner_email = data.get('owner_email', '').strip()
+  owner_hash = data.get('owner_hash', '').strip()
+  owner_email = _EmailFromHash(owner_hash) if owner_hash else ''
+  if not owner_email:
+    return '{"ok":false,"error":"invalid owner"}', 400
   note_id = int(data.get('note_id', 0))
   text = data.get('text', '').strip()
   is_admin = HasCapability(kCapManageAnyEvent)
@@ -9985,14 +9994,14 @@ def profile_page(uid):
       time_str = time.strftime('%b %d, %Y', time.localtime(timestamp)) if timestamp else ''
       public_str = ' &middot; <i>public</i>' if is_public else ''
 
-      line = '<div class="profile-note-card" data-owner="%s" data-note-id="%d" style="margin-bottom:8px;padding:6px 0;border-bottom:1px solid #eee">' % (profile_email, note_id)
+      line = '<div class="profile-note-card" data-owner="%s" data-note-id="%d" style="margin-bottom:8px;padding:6px 0;border-bottom:1px solid #eee">' % (_ProfileHash(profile_email), note_id)
       line += '<div>%s</div>' % esc_text
       line += '<div style="font-size:0.85em;color:#888">on <a href="%s" style="color:#888">%s</a> &middot; %s%s' % (
         target_link, esc_label, time_str, public_str)
       if is_own or is_admin:
         line += (' <a href="#" class="profile-note-delete" data-owner="%s" data-note-id="%d" '
                  'style="color:#c00;text-decoration:none;font-weight:bold;margin-left:6px" '
-                 'title="Delete note">&times;</a>' % (profile_email, note_id))
+                 'title="Delete note">&times;</a>' % (_ProfileHash(profile_email), note_id))
       line += '</div></div>'
       parts.append(line)
     parts.append('</div>')
@@ -10250,7 +10259,7 @@ def _ProfileJS(uid, profile_email):
         if (!confirm("Delete this note?")) return;
         var owner = del.getAttribute("data-owner");
         var nid = parseInt(del.getAttribute("data-note-id"));
-        ajax("/ajax/notes/delete", {owner_email: owner, note_id: nid}, function(resp) {
+        ajax("/ajax/notes/delete", {owner_hash: owner, note_id: nid}, function(resp) {
           if (resp.ok) {
             var card = del.closest(".profile-note-card");
             if (card) card.parentNode.removeChild(card);
@@ -11991,10 +12000,7 @@ def _RenderOneNote(note, owner_email, display_name, is_own, can_make_public, is_
   text_html = raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
   escaped_raw = raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace('\n', '&#10;')
 
-  # Display name logic: show email prefix if "Anonymous"
   shown_name = display_name
-  if display_name == 'Anonymous' and owner_email:
-    shown_name = owner_email.split('@')[0]
   esc_name = shown_name.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
   # Attribution line
@@ -12012,13 +12018,13 @@ def _RenderOneNote(note, owner_email, display_name, is_own, can_make_public, is_
     attr_parts.append(
       ' <label style="font-size:0.85em;color:#888;cursor:pointer">'
       '<input type="checkbox" class="note-public-toggle" data-owner="%s" data-note-id="%d"%s> Make Public'
-      '</label>' % (owner_email, note_id, checked)
+      '</label>' % (_ProfileHash(owner_email), note_id, checked)
     )
   if is_own or is_admin:
     attr_parts.append(
       ' <a href="#" class="note-delete" data-owner="%s" data-note-id="%d" '
       'style="color:#c00;font-size:1.1em;font-weight:bold;text-decoration:none" '
-      'title="Delete note">&times;</a>' % (owner_email, note_id)
+      'title="Delete note">&times;</a>' % (_ProfileHash(owner_email), note_id)
     )
 
   can_edit_note = is_own or is_admin
@@ -12035,7 +12041,7 @@ def _RenderOneNote(note, owner_email, display_name, is_own, can_make_public, is_
     '<div class="note-attr">%(attr)s</div>'
     '</div>'
   ) % {
-    'owner': owner_email,
+    'owner': _ProfileHash(owner_email),
     'nid': note_id,
     'raw': escaped_raw,
     'cursor': cursor,
@@ -12110,13 +12116,13 @@ def _NotesJS(target_type, target_id, can_make_public, is_admin):
     if (val !== origRaw) {
       if (!val) {
         // Empty = delete
-        ajax("/ajax/notes/edit", {owner_email: owner, note_id: nid, text: ""}, function(resp) {
+        ajax("/ajax/notes/edit", {owner_hash: owner, note_id: nid, text: ""}, function(resp) {
           if (resp.ok) { card.parentNode.removeChild(card); checkNotesHeader(); }
         });
         activeCard = null;
         return;
       }
-      ajax("/ajax/notes/edit", {owner_email: owner, note_id: nid, text: val}, function(resp) {
+      ajax("/ajax/notes/edit", {owner_hash: owner, note_id: nid, text: val}, function(resp) {
         if (resp.ok) {
           display.setAttribute("data-raw", val);
           display.innerHTML = escHtml(val);
@@ -12188,7 +12194,7 @@ def _NotesJS(target_type, target_id, can_make_public, is_admin):
         if (!confirm("Delete this note?")) return;
         var owner = del.getAttribute("data-owner");
         var nid = parseInt(del.getAttribute("data-note-id"));
-        ajax("/ajax/notes/delete", {owner_email: owner, note_id: nid}, function(resp) {
+        ajax("/ajax/notes/delete", {owner_hash: owner, note_id: nid}, function(resp) {
           if (resp.ok) {
             var card = del.closest(".note-card");
             if (card) { card.parentNode.removeChild(card); checkNotesHeader(); }
@@ -12216,7 +12222,7 @@ def _NotesJS(target_type, target_id, can_make_public, is_admin):
       if (toggle) {
         var owner = toggle.getAttribute("data-owner");
         var nid = parseInt(toggle.getAttribute("data-note-id"));
-        ajax("/ajax/notes/toggle-public", {owner_email: owner, note_id: nid, target_type: tt, target_id: tid}, function(resp, status) {
+        ajax("/ajax/notes/toggle-public", {owner_hash: owner, note_id: nid, target_type: tt, target_id: tid}, function(resp, status) {
           if (!resp.ok) { alert(resp.error || "Error toggling public"); toggle.checked = !toggle.checked; }
         });
       }
@@ -12308,13 +12314,13 @@ def _SetTuneNotesJS():
     saveBtn.style.display = "none";
     if (val !== origRaw) {
       if (!val) {
-        ajax("/ajax/notes/edit", {owner_email: owner, note_id: nid, text: ""}, function(resp) {
+        ajax("/ajax/notes/edit", {owner_hash: owner, note_id: nid, text: ""}, function(resp) {
           if (resp.ok) card.parentNode.removeChild(card);
         });
         activeCard = null;
         return;
       }
-      ajax("/ajax/notes/edit", {owner_email: owner, note_id: nid, text: val}, function(resp) {
+      ajax("/ajax/notes/edit", {owner_hash: owner, note_id: nid, text: val}, function(resp) {
         if (resp.ok) {
           display.setAttribute("data-raw", val);
           display.innerHTML = escHtml(val);
@@ -12396,7 +12402,7 @@ def _SetTuneNotesJS():
       if (!confirm("Delete this note?")) return;
       var owner = del.getAttribute("data-owner");
       var nid = parseInt(del.getAttribute("data-note-id"));
-      ajax("/ajax/notes/delete", {owner_email: owner, note_id: nid}, function(resp) {
+      ajax("/ajax/notes/delete", {owner_hash: owner, note_id: nid}, function(resp) {
         if (resp.ok) {
           var card = del.closest(".stn-card");
           if (card) card.parentNode.removeChild(card);
@@ -12506,7 +12512,7 @@ def _RenderOneSetTuneNote(note, owner_email, is_own, can_delete):
       '<a href="#" class="stn-delete" data-owner="%s" data-note-id="%d" '
       'style="color:#c00;font-size:1.1em;font-weight:bold;text-decoration:none;'
       'margin-right:5px;flex-shrink:0" title="Delete note">&times;</a>'
-      % (owner_email, note_id)
+      % (_ProfileHash(owner_email), note_id)
     )
 
   return (
@@ -12523,7 +12529,7 @@ def _RenderOneSetTuneNote(note, owner_email, is_own, can_delete):
     '</div>'
     '</div>'
   ) % {
-    'owner': owner_email,
+    'owner': _ProfileHash(owner_email),
     'nid': note_id,
     'raw': escaped_raw,
     'cursor': cursor,
