@@ -1574,7 +1574,8 @@ def sets(spec=None, sid=None):
         preload_tunes = tunes
         
       else:
-        parts = CreateTuneSetHTML(tunes, pagetype)
+        parts = CreateTuneSetHTML(tunes, pagetype,
+                                  set_spec='&'.join(tunes), event_sid=sid)
 
         if sid is not None:
           current_set = '&'.join(tunes)
@@ -9237,8 +9238,9 @@ def watch(sid, type=None):
       md5sum.update(tune)
     name = 'C-' + md5sum.hexdigest()
     
-    parts.extend(CreateTuneSetHTML(tunes, type))
-  
+    parts.extend(CreateTuneSetHTML(tunes, type,
+                                   set_spec=event.current_set, event_sid=sid))
+
   if not event.title:
     parts.append(CBreak(2))
     parts.append(CText("Return to event list", href="/events"))
@@ -9474,9 +9476,18 @@ def ajax_notes_add():
   text = data.get('text', '').strip()
   if not target_type or not target_id or not text:
     return json.dumps({'ok': False, 'error': 'missing fields'})
-  if target_type not in ('tune', 'event'):
+  if target_type not in ('tune', 'event', 'set_tune'):
     return json.dumps({'ok': False, 'error': 'invalid target_type'})
   note = _AddNote(email, target_type, target_id, text)
+  # Auto-publish set_tune notes from event owner/co-owner
+  if target_type == 'set_tune':
+    event_sid = data.get('event_sid', '').strip()
+    if event_sid:
+      evt = utils.CEvent(event_sid)
+      evt.ReadEvent()
+      if _OwnsItem(evt) or _IsCoowner(evt):
+        _SetNotePublic(email, note['id'], True)
+        note['public'] = True
   return json.dumps({'ok': True, 'note': note})
 
 @app.route('/ajax/notes/delete', methods=['POST'])
@@ -11726,21 +11737,36 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
   
   return html
   
-def CreateTuneSetHTML(tunes, pagetype='both', metadata=False):
-  
+def CreateTuneSetHTML(tunes, pagetype='both', metadata=False, set_spec=None, event_sid=None):
+
   parts = []
-  
+
   parts.append("""<style>
 #body {
 margin-top:0px;
-}  
+}
 </style>""")
+
+  # Load event object once for set-tune notes permission checks
+  event_obj = None
+  if set_spec and event_sid:
+    event_obj = utils.CEvent(event_sid)
+    event_obj.ReadEvent()
+
   for i, tune in enumerate(tunes):
     if i > 0:
       parts.append(CDiv(hclass='tune-break'))
-    parts.extend(CreateTuneHTML(tune, pagetype, metadata))
+    set_tune_notes = ''
+    if set_spec:
+      set_tune_notes = _RenderSetTuneNotesSection(set_spec, tune, event_sid, event_obj)
+    parts.extend(CreateTuneHTML(tune, pagetype, metadata,
+                                suppress_add_note=bool(set_spec),
+                                set_tune_notes=set_tune_notes))
   parts.append(CDiv(hclass='tune-break'))
-  
+
+  if set_spec:
+    parts.append(_SetTuneNotesJS())
+
   return parts
 
 def CreateTuneSetPDF(name, title, subtitle, tunes):
@@ -12013,6 +12039,214 @@ def _NotesJS(target_type, target_id, can_make_public, is_admin):
 })();
 </script>''' % (json.dumps(target_type), json.dumps(target_id))
 
+def _SetTuneNotesJS():
+  """Return a single <script> block for all set-tune notes sections on the page.
+  Uses event delegation on document, reading target info from data-* attributes
+  on the nearest .set-tune-notes-section ancestor."""
+  return '''<script>
+(function() {
+  var activeCard = null;
+
+  function ajax(url, data, cb) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4) {
+        var resp;
+        try { resp = JSON.parse(xhr.responseText); } catch(e) { resp = {}; }
+        if (cb) cb(resp, xhr.status);
+      }
+    };
+    xhr.send(JSON.stringify(data));
+  }
+
+  function autoGrow(el) {
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\\n/g,"<br>");
+  }
+
+  function getSection(el) {
+    return el.closest ? el.closest(".set-tune-notes-section") : null;
+  }
+
+  function startNoteEdit(card) {
+    if (activeCard && activeCard !== card) finishNoteEdit(activeCard);
+    activeCard = card;
+    var display = card.querySelector(".stn-display");
+    var ta = card.querySelector(".stn-edit-input");
+    var saveBtn = card.querySelector(".stn-edit-save");
+    var raw = display.getAttribute("data-raw");
+    display.style.display = "none";
+    ta.value = raw;
+    ta.style.display = "";
+    autoGrow(ta);
+    ta.focus();
+    saveBtn.style.display = "";
+  }
+
+  function finishNoteEdit(card) {
+    if (!card) return;
+    var display = card.querySelector(".stn-display");
+    var ta = card.querySelector(".stn-edit-input");
+    var saveBtn = card.querySelector(".stn-edit-save");
+    var owner = card.getAttribute("data-owner");
+    var nid = parseInt(card.getAttribute("data-note-id"));
+    var val = ta.value.trim();
+    var origRaw = display.getAttribute("data-raw");
+    ta.style.display = "none";
+    saveBtn.style.display = "none";
+    if (val !== origRaw) {
+      if (!val) {
+        ajax("/ajax/notes/edit", {owner_email: owner, note_id: nid, text: ""}, function(resp) {
+          if (resp.ok) card.parentNode.removeChild(card);
+        });
+        activeCard = null;
+        return;
+      }
+      ajax("/ajax/notes/edit", {owner_email: owner, note_id: nid, text: val}, function(resp) {
+        if (resp.ok) {
+          display.setAttribute("data-raw", val);
+          display.innerHTML = escHtml(val);
+        }
+      });
+    }
+    display.style.display = "";
+    activeCard = null;
+  }
+
+  function startAddNote(section) {
+    if (activeCard) finishNoteEdit(activeCard);
+    var trigger = section.querySelector(".set-tune-add-note-trigger");
+    var form = section.querySelector(".set-tune-add-note-form");
+    var ta = form.querySelector("textarea");
+    var saveBtn = form.querySelector(".set-tune-add-note-save");
+    if (trigger) trigger.style.display = "none";
+    form.style.display = "";
+    ta.value = "";
+    ta.style.height = "auto";
+    autoGrow(ta);
+    ta.focus();
+    if (saveBtn) saveBtn.style.display = "";
+  }
+
+  function finishAddNote(section) {
+    var form = section.querySelector(".set-tune-add-note-form");
+    var trigger = section.querySelector(".set-tune-add-note-trigger");
+    var ta = form.querySelector("textarea");
+    var val = ta.value.trim();
+    form.style.display = "none";
+    if (trigger) trigger.style.display = "";
+    if (!val) return;
+    var tt = section.getAttribute("data-target-type");
+    var tid = section.getAttribute("data-target-id");
+    var esid = section.getAttribute("data-event-sid");
+    var payload = {target_type: tt, target_id: tid, text: val};
+    if (esid) payload.event_sid = esid;
+    ajax("/ajax/notes/add", payload, function(resp) {
+      if (resp.ok) location.reload();
+      else alert(resp.error || "Error adding note");
+    });
+  }
+
+  document.addEventListener("click", function(e) {
+    // Add note trigger
+    var trigger = e.target.closest ? e.target.closest(".set-tune-add-note-trigger") : null;
+    if (trigger) {
+      e.preventDefault();
+      var section = getSection(trigger);
+      if (section) startAddNote(section);
+      return;
+    }
+    // Save add note
+    var addSave = e.target.closest ? e.target.closest(".set-tune-add-note-save") : null;
+    if (addSave) {
+      e.preventDefault();
+      var section = getSection(addSave);
+      if (section) finishAddNote(section);
+      return;
+    }
+    // Click on stn-display to edit (only within set-tune sections)
+    var display = e.target.closest ? e.target.closest(".stn-display") : null;
+    if (display && display.style.cursor === "pointer") {
+      startNoteEdit(display.closest(".stn-card"));
+      return;
+    }
+    // Save button on existing note edit
+    var esave = e.target.closest ? e.target.closest(".stn-edit-save") : null;
+    if (esave) {
+      e.preventDefault();
+      finishNoteEdit(esave.closest(".stn-card"));
+      return;
+    }
+    // Delete
+    var del = e.target.closest ? e.target.closest(".stn-delete") : null;
+    if (del) {
+      e.preventDefault();
+      if (!confirm("Delete this note?")) return;
+      var owner = del.getAttribute("data-owner");
+      var nid = parseInt(del.getAttribute("data-note-id"));
+      ajax("/ajax/notes/delete", {owner_email: owner, note_id: nid}, function(resp) {
+        if (resp.ok) {
+          var card = del.closest(".stn-card");
+          if (card) card.parentNode.removeChild(card);
+        } else { alert(resp.error || "Error deleting note"); }
+      });
+      return;
+    }
+  });
+
+  // Click-away: save on blur
+  document.addEventListener("mousedown", function(e) {
+    if (activeCard && !e.target.closest(".stn-card")) finishNoteEdit(activeCard);
+    var openForms = document.querySelectorAll(".set-tune-add-note-form");
+    for (var i = 0; i < openForms.length; i++) {
+      var form = openForms[i];
+      if (form.style.display !== "none" && !form.contains(e.target) &&
+          !e.target.classList.contains("set-tune-add-note-trigger")) {
+        var section = getSection(form);
+        if (section) finishAddNote(section);
+      }
+    }
+  });
+
+  // Auto-grow for edit textareas in set-tune sections
+  document.addEventListener("input", function(e) {
+    if (e.target.classList.contains("stn-edit-input") || e.target.closest(".set-tune-add-note-form")) {
+      autoGrow(e.target);
+    }
+  });
+
+  // Escape to cancel
+  document.addEventListener("keydown", function(e) {
+    if (e.which === 27) {
+      if (e.target.classList.contains("stn-edit-input")) {
+        e.preventDefault();
+        var card = e.target.closest(".stn-card");
+        e.target.style.display = "none";
+        card.querySelector(".stn-edit-save").style.display = "none";
+        card.querySelector(".stn-display").style.display = "";
+        activeCard = null;
+      }
+      if (e.target.closest && e.target.closest(".set-tune-add-note-form")) {
+        var section = getSection(e.target);
+        if (section) {
+          e.preventDefault();
+          var form = section.querySelector(".set-tune-add-note-form");
+          var trigger = section.querySelector(".set-tune-add-note-trigger");
+          form.style.display = "none";
+          if (trigger) trigger.style.display = "";
+        }
+      }
+    }
+  });
+})();
+</script>'''
+
 def _RenderNotesSection(target_type, target_id, can_make_public):
   """Return HTML string for the notes section on a tune or event page."""
   viewer_email = GetUserEmail()
@@ -12049,7 +12283,112 @@ def _RenderNotesSection(target_type, target_id, can_make_public):
   parts.append('</div>')
   return '\n'.join(parts)
 
-def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_delete=False):
+def _RenderOneSetTuneNote(note, owner_email, is_own, can_delete):
+  """Render a compact set-tune note: red X on left (if deletable), text.
+  No attribution, no public toggle."""
+  note_id = note['id']
+  raw_text = note.get('text', '')
+  text_html = raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
+  escaped_raw = raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace('\n', '&#10;')
+
+  can_edit_note = can_delete
+  cursor = 'cursor:pointer' if can_edit_note else ''
+
+  delete_btn = ''
+  if can_delete:
+    delete_btn = (
+      '<a href="#" class="stn-delete" data-owner="%s" data-note-id="%d" '
+      'style="color:#c00;font-size:1.1em;font-weight:bold;text-decoration:none;'
+      'margin-right:5px;flex-shrink:0" title="Delete note">&times;</a>'
+      % (owner_email, note_id)
+    )
+
+  return (
+    '<div class="stn-card" data-owner="%(owner)s" data-note-id="%(nid)d" '
+    'style="margin-bottom:2px;display:flex;align-items:first baseline">'
+    '%(delete)s'
+    '<div style="flex:1;min-width:0">'
+    '<div class="stn-display" data-raw="%(raw)s" style="%(cursor)s">%(text)s</div>'
+    '<textarea class="stn-edit-input" rows="1" style="display:none;font-size:1em;width:100%%;'
+    'box-sizing:border-box;border:1px dashed #ccc;outline:none;padding:4px;font-family:inherit;'
+    'resize:none;overflow:hidden"></textarea>'
+    '<div><button class="stn-edit-save" style="display:none;font-size:0.85em;cursor:pointer;'
+    'padding:3px 8px;margin-top:4px">Save</button></div>'
+    '</div>'
+    '</div>'
+  ) % {
+    'owner': owner_email,
+    'nid': note_id,
+    'raw': escaped_raw,
+    'cursor': cursor,
+    'text': text_html,
+    'delete': delete_btn,
+  }
+
+def _RenderSetTuneNotesSection(set_spec, tune_name, event_sid, event_obj):
+  """Return HTML for notes on a tune within a set context.
+  Uses classes + data attributes instead of singleton IDs so multiple
+  sections can coexist on one page.  No header, no attribution, no public toggle.
+  Delete X shown only for event owner/co-owner on public notes, or note creator
+  on their own private notes."""
+  target_id = set_spec + ':' + tune_name
+  viewer_email = GetUserEmail()
+  notes = GetNotesForTarget('set_tune', target_id, viewer_email)
+  logged_in = IsLoggedIn()
+
+  # Determine if current user can add/manage notes:
+  # event owner, co-owner, editor, or admin
+  is_event_editor = False
+  can_add_note = False
+  if logged_in:
+    if HasCapability(kCapManageAnyEvent) or HasCapability(kCapEditAnyTune):
+      can_add_note = True
+      is_event_editor = True
+    elif event_obj and viewer_email:
+      if _OwnsItem(event_obj) or _IsCoowner(event_obj):
+        can_add_note = True
+        is_event_editor = True
+
+  if not notes and not can_add_note:
+    return ''
+
+  esc_target_id = target_id.replace('&', '&amp;').replace('"', '&quot;')
+  esc_event_sid = (event_sid or '').replace('&', '&amp;').replace('"', '&quot;')
+
+  parts = []
+  parts.append('<div class="set-tune-notes-section" data-target-type="set_tune" '
+               'data-target-id="%s" data-event-sid="%s">' % (esc_target_id, esc_event_sid))
+
+  for note, owner_email, display_name, is_own in notes:
+    # Delete: own private notes always; public notes only if event owner/co-owner
+    is_public = note.get('public', False)
+    if is_own:
+      can_delete = True
+    elif is_public and is_event_editor:
+      can_delete = True
+    else:
+      can_delete = False
+    parts.append(_RenderOneSetTuneNote(note, owner_email, is_own, can_delete))
+
+  if can_add_note:
+    parts.append(
+      '<div class="set-tune-add-note-form" style="display:none;margin-top:4px;width:100%%">'
+      '<textarea rows="1" style="font-size:1em;width:100%%;box-sizing:border-box;'
+      'border:1px dashed #ccc;outline:none;padding:4px;font-family:inherit;resize:none;'
+      'overflow:hidden" placeholder="Add a note..."></textarea>'
+      '<div><button class="set-tune-add-note-save" style="display:none;font-size:0.85em;'
+      'cursor:pointer;padding:3px 8px;margin-top:4px">Save</button></div>'
+      '</div>'
+    )
+    parts.append(
+      '<a href="#" class="set-tune-add-note-trigger" '
+      'style="color:#999;font-style:italic;font-size:0.95em">Add Note</a>'
+    )
+
+  parts.append('</div>')
+  return '\n'.join(parts)
+
+def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_delete=False, suppress_add_note=False, set_tune_notes=''):
 
   obj = utils.CTune(name)
   try:
@@ -12156,7 +12495,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
   can_make_public = can_edit
   logged_in = IsLoggedIn()
   left_items = []
-  if logged_in:
+  if logged_in and not suppress_add_note:
     left_items.append('<a href="#" id="add-note-link-trigger" style="color:#999;font-style:italic">Add Note</a>')
   right_items = []
   if can_edit:
@@ -12177,6 +12516,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
       title + ' - ' + key_str,
       klass,
     ] + obj.GetActionIcons(), 1, hclass=tclass),
+    set_tune_notes,
     structure,
     author,
     origin,
