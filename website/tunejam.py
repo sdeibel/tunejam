@@ -2241,7 +2241,7 @@ def tune(tune):
   try:
     obj.ReadDatabase()
   except SystemExit:
-    pass
+    return redirect('/index', code=303)
   can_edit = CanEditTune(obj)
   can_delete = CanDeleteTune(obj)[0]
   parts.extend(CreateTuneHTML(tune, metadata=True, can_edit=can_edit, can_delete=can_delete))
