@@ -10,6 +10,47 @@ if (!Element.prototype.closest) {
   };
 }
 
+/* Email status polling — shared across login, profile, and admin JS */
+function pollEmailStatus(jobId, el, successMsg, opts) {
+  if (!jobId) {
+    el.textContent = successMsg;
+    el.className = opts && opts.successClass || 'success';
+    if (opts && opts.onDone) opts.onDone(true);
+    return;
+  }
+  var attempts = 0;
+  var timer = setInterval(function() {
+    attempts++;
+    if (attempts > 30) {
+      clearInterval(timer);
+      el.textContent = successMsg;
+      el.className = opts && opts.successClass || 'success';
+      if (opts && opts.onDone) opts.onDone(true);
+      return;
+    }
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/ajax/email-status/' + jobId, true);
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState !== 4) return;
+      try {
+        var data = JSON.parse(xhr.responseText);
+        if (data.status === 'sent') {
+          clearInterval(timer);
+          el.textContent = successMsg;
+          el.className = opts && opts.successClass || 'success';
+          if (opts && opts.onDone) opts.onDone(true);
+        } else if (data.status === 'error') {
+          clearInterval(timer);
+          el.textContent = data.error || 'Email send failed.';
+          el.className = opts && opts.errorClass || 'error';
+          if (opts && opts.onDone) opts.onDone(false);
+        }
+      } catch(e) {}
+    };
+    xhr.send();
+  }, 1000);
+}
+
 /* Magic-link login popup */
 (function() {
   var overlay = null;
@@ -99,9 +140,17 @@ if (!Element.prototype.closest) {
       if (xhr.readyState !== 4) return;
       try {
         var resp = JSON.parse(xhr.responseText);
-        messageEl.textContent = resp.message;
-        messageEl.className = resp.ok ? 'success' : 'error';
-        if (!resp.ok) submitBtn.disabled = false;
+        if (!resp.ok) {
+          messageEl.textContent = resp.message;
+          messageEl.className = 'error';
+          submitBtn.disabled = false;
+        } else if (resp.job_id) {
+          messageEl.textContent = 'Sending...';
+          pollEmailStatus(resp.job_id, messageEl, resp.message || 'Check your email for a login link.');
+        } else {
+          messageEl.textContent = resp.message;
+          messageEl.className = 'success';
+        }
       } catch(e) {
         messageEl.textContent = 'An error occurred. Please try again.';
         messageEl.className = 'error';

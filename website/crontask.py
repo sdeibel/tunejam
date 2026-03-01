@@ -101,6 +101,17 @@ def regenerate_books(force=False, log=True):
 #########################################################################
 if __name__ == '__main__':
   force = '--force' in sys.argv
+  digest_only = '--digest-only' in sys.argv
+
+  if digest_only:
+    # Only send notification digest (used by Send Now button and before_request hook)
+    try:
+      tunejam._SendNotificationDigest()
+    except Exception as e:
+      import traceback
+      print("Notification digest failed: %s" % e)
+      traceback.print_exc()
+    sys.exit(0)
 
   # Regenerate books (once per day, unless --force)
   last_regen = _get_last_book_regen()

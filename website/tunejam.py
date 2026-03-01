@@ -56,6 +56,10 @@ kNotificationLastSent = os.path.join(kConfigDir, 'notifications-last-sent.txt')
 kNotificationLastRead = os.path.join(kConfigDir, 'notifications-last-read.txt')
 kNotificationLogMaxBytes = 1024 * 1024  # 1MB
 kDigestIntervalSeconds = 12 * 3600  # 12 hours
+kEmailJobsDir = os.path.join(kConfigDir, 'email-jobs')
+if not os.path.exists(kEmailJobsDir):
+  os.makedirs(kEmailJobsDir)
+kDigestLastCheck = os.path.join(kConfigDir, 'digest-last-check.txt')
 
 # Session and token lifetimes
 kSessionLifetimeDays = 30
@@ -89,19 +93,41 @@ def _check_banned():
   if email and IsBanned(email):
     Logout()
 
-_gLastDigestCheck = 0
-
 @app.before_request
 def _check_digest():
-  """Periodically check if notification digest needs sending."""
-  global _gLastDigestCheck
+  """Periodically check if notification digest needs sending.
+  Uses a file-based timestamp so the throttle persists across CGI processes."""
   now = time.time()
-  if now - _gLastDigestCheck > 600:  # Check at most every 10 minutes
-    _gLastDigestCheck = now
+  try:
+    if os.path.exists(kDigestLastCheck):
+      with open(kDigestLastCheck, 'r') as f:
+        last = float(f.read().strip())
+    else:
+      last = 0
+  except:
+    last = 0
+  if now - last > 600:  # Check at most every 10 minutes
     try:
-      _SendNotificationDigest()
+      with open(kDigestLastCheck, 'w') as f:
+        f.write(str(now))
     except:
       pass
+    if sys.platform == 'darwin':
+      try:
+        _SendNotificationDigest()
+      except:
+        pass
+    else:
+      # Fire-and-forget: run crontask --digest-only in a detached subprocess
+      try:
+        import subprocess
+        crontask = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crontask.py')
+        subprocess.Popen(['/home/maint/music/bin/python2.7', crontask, '--digest-only'],
+                         stdout=open(os.devnull, 'w'),
+                         stderr=open(os.devnull, 'w'),
+                         close_fds=True)
+      except:
+        pass
 
 kMenu = [
   ('Home', '/', 'home'), 
@@ -831,6 +857,7 @@ def _AdminPublishRequestsHTML(requests):
     var msgEl = div.querySelector('.pub-msg');
 
     if (e.target.classList.contains('pub-approve')) {
+      msgEl.textContent = 'Approving...';
       fetch(adminRoute + '/publish/approve', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -838,7 +865,11 @@ def _AdminPublishRequestsHTML(requests):
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (data.ok) { div.remove(); hideIfEmpty(); }
+        if (data.ok) {
+          if (data.job_id) {
+            pollEmailStatus(data.job_id, msgEl, '', {onDone: function() { div.remove(); hideIfEmpty(); }});
+          } else { div.remove(); hideIfEmpty(); }
+        }
         else { msgEl.textContent = data.error || 'error'; }
       })
       .catch(function() { msgEl.textContent = 'request failed'; });
@@ -866,6 +897,7 @@ def _AdminPublishRequestsHTML(requests):
           {label: 'Deny & Notify', style: 'background:#c33;color:white;border-color:#a22', action: function() {
             var notes = document.getElementById('pub-deny-notes').value;
             hideDialog();
+            msgEl.textContent = 'Sending...';
             fetch(adminRoute + '/publish/deny', {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
@@ -873,7 +905,11 @@ def _AdminPublishRequestsHTML(requests):
             })
             .then(function(r) { return r.json(); })
             .then(function(data) {
-              if (data.ok) { div.remove(); hideIfEmpty(); }
+              if (data.ok) {
+                if (data.job_id) {
+                  pollEmailStatus(data.job_id, msgEl, '', {onDone: function() { div.remove(); hideIfEmpty(); }});
+                } else { div.remove(); hideIfEmpty(); }
+              }
               else { msgEl.textContent = data.error || 'error'; }
             })
             .catch(function() { msgEl.textContent = 'request failed'; });
@@ -1194,6 +1230,7 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
       else if (e.target.classList.contains('editor-approve-link')) {
         e.preventDefault();
         var msgEl = li.querySelector('.editor-req-msg');
+        if (msgEl) { msgEl.textContent = 'Approving...'; }
         fetch(adminRoute + '/editor/approve', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
@@ -1202,26 +1239,31 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (data.ok) {
-            var label = li.querySelector('.editor-req-label');
-            var approve = li.querySelector('.editor-approve-link');
-            var deny = li.querySelector('.editor-deny-link');
-            if (label) label.remove();
-            if (approve) approve.remove();
-            if (deny) deny.remove();
-            if (msgEl) msgEl.remove();
-            // Add editor role label
-            var span = document.createElement('span');
-            span.style.cssText = 'color:#690;font-size:0.85em';
-            span.textContent = '(editor)';
-            // Remove ban link if present (no longer regular user)
-            var banLink = li.querySelector('.user-ban-link');
-            if (banLink) banLink.remove();
-            // Insert before closing
-            li.appendChild(document.createTextNode(' '));
-            li.appendChild(span);
-            // Update the Editor Users list in the Groups section
-            if (data.emails && data.names) {
-              renderList('editor-user-list', data.emails, data.names);
+            function finishApprove() {
+              var label = li.querySelector('.editor-req-label');
+              var approve = li.querySelector('.editor-approve-link');
+              var deny = li.querySelector('.editor-deny-link');
+              var msg2 = li.querySelector('.editor-req-msg');
+              if (label) label.remove();
+              if (approve) approve.remove();
+              if (deny) deny.remove();
+              if (msg2) msg2.remove();
+              var span = document.createElement('span');
+              span.style.cssText = 'color:#690;font-size:0.85em';
+              span.textContent = '(editor)';
+              var banLink = li.querySelector('.user-ban-link');
+              if (banLink) banLink.remove();
+              li.appendChild(document.createTextNode(' '));
+              li.appendChild(span);
+              if (data.emails && data.names) {
+                renderList('editor-user-list', data.emails, data.names);
+              }
+            }
+            if (data.job_id) {
+              if (msgEl) { msgEl.textContent = 'Sending notification...'; }
+              pollEmailStatus(data.job_id, msgEl || document.createElement('span'), '', {onDone: finishApprove});
+            } else {
+              finishApprove();
             }
           } else {
             if (msgEl) { msgEl.style.color = '#c00'; msgEl.textContent = data.error || 'error'; }
@@ -1255,6 +1297,8 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
       var li = edOverlay._currentLi;
       var notes = document.getElementById('editor-deny-notes').value;
       edOverlay.style.display = 'none';
+      var msgEl = li.querySelector('.editor-req-msg');
+      if (!skipEmail && msgEl) { msgEl.textContent = 'Sending...'; }
       fetch(adminRoute + '/editor/deny', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1263,14 +1307,21 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.ok) {
-          var label = li.querySelector('.editor-req-label');
-          var approve = li.querySelector('.editor-approve-link');
-          var deny = li.querySelector('.editor-deny-link');
-          var msg = li.querySelector('.editor-req-msg');
-          if (label) label.remove();
-          if (approve) approve.remove();
-          if (deny) deny.remove();
-          if (msg) msg.remove();
+          function finishDeny() {
+            var label = li.querySelector('.editor-req-label');
+            var approve = li.querySelector('.editor-approve-link');
+            var deny = li.querySelector('.editor-deny-link');
+            var msg = li.querySelector('.editor-req-msg');
+            if (label) label.remove();
+            if (approve) approve.remove();
+            if (deny) deny.remove();
+            if (msg) msg.remove();
+          }
+          if (data.job_id) {
+            pollEmailStatus(data.job_id, msgEl || document.createElement('span'), '', {onDone: finishDeny});
+          } else {
+            finishDeny();
+          }
         }
       });
     }
@@ -1521,10 +1572,19 @@ def admin_notifications_send_now():
   pending = len(_ReadNotificationsSince(_GetLastNotificationRead()))
   if pending == 0:
     return json.dumps({'ok': True, 'message': 'No new entries to send'})
-  import threading
-  thread = threading.Thread(target=_SendNotificationDigest)
-  thread.daemon = True
-  thread.start()
+  if sys.platform == 'darwin':
+    import threading
+    thread = threading.Thread(target=_SendNotificationDigest)
+    thread.daemon = True
+    thread.start()
+  else:
+    # Detached subprocess that outlives CGI process
+    import subprocess
+    crontask = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crontask.py')
+    subprocess.Popen(['/home/maint/music/bin/python2.7', crontask, '--digest-only'],
+                     stdout=open(os.devnull, 'w'),
+                     stderr=open(os.devnull, 'w'),
+                     close_fds=True)
   return json.dumps({'ok': True, 'message': 'Sending %d entries...' % pending})
 
 @app.route(kAdminRoute + '/publish/approve', methods=['POST'])
@@ -1542,14 +1602,17 @@ def admin_publish_approve():
   event.WriteEvent()
   req = ReadPublishRequest(sid)
   DeletePublishRequest(sid)
+  job_id = None
   if req:
     IncrementPublishApprovals(req['requestor'])
+    import uuid
+    job_id = uuid.uuid4().hex if sys.platform != 'darwin' else None
     try:
-      _SendPublishApproval(req['requestor'], event.title, sid)
+      _SendPublishApproval(req['requestor'], event.title, sid, job_id=job_id)
     except:
       pass
     LogNotification('admin', 'Publish approved: "%s" for %s by %s' % (event.title, req['requestor'], GetUserEmail() or 'anonymous'))
-  return json.dumps({'ok': True})
+  return json.dumps({'ok': True, 'job_id': job_id})
 
 @app.route(kAdminRoute + '/publish/deny', methods=['POST'])
 def admin_publish_deny():
@@ -1561,17 +1624,20 @@ def admin_publish_deny():
     return json.dumps({'ok': False, 'error': 'missing event_sid'})
   req = ReadPublishRequest(sid)
   DeletePublishRequest(sid)
+  job_id = None
   if req and not data.get('skip_email'):
     notes = data.get('notes', '')
     event = utils.CEvent(sid)
     event.ReadEvent()
+    import uuid
+    job_id = uuid.uuid4().hex if sys.platform != 'darwin' else None
     try:
-      _SendPublishDenial(req['requestor'], event.title, sid, notes)
+      _SendPublishDenial(req['requestor'], event.title, sid, notes, job_id=job_id)
     except:
       pass
   if req:
     LogNotification('admin', 'Publish denied for %s by %s' % (req['requestor'], GetUserEmail() or 'anonymous'))
-  return json.dumps({'ok': True})
+  return json.dumps({'ok': True, 'job_id': job_id})
 
 @app.route(kAdminRoute + '/publish/ban', methods=['POST'])
 def admin_publish_ban():
@@ -1607,14 +1673,16 @@ def admin_editor_approve():
     editors.append(email)
     WriteEmailConfig('editor_emails', ','.join(editors))
   DeleteEditorRequest(email)
+  import uuid
+  job_id = uuid.uuid4().hex if sys.platform != 'darwin' else None
   try:
-    _SendEditorApproval(email)
+    _SendEditorApproval(email, job_id=job_id)
   except:
     pass
   LogNotification('admin', 'Editor approved: %s by %s' % (email, GetUserEmail() or 'anonymous'))
   editors = GetEditorEmails()
   names = {e: GetDisplayName(e) for e in editors}
-  return json.dumps({'ok': True, 'emails': editors, 'names': names})
+  return json.dumps({'ok': True, 'emails': editors, 'names': names, 'job_id': job_id})
 
 @app.route(kAdminRoute + '/editor/deny', methods=['POST'])
 def admin_editor_deny():
@@ -1625,14 +1693,17 @@ def admin_editor_deny():
   if not email:
     return json.dumps({'ok': False, 'error': 'missing email'})
   DeleteEditorRequest(email)
+  job_id = None
   if not data.get('skip_email'):
     notes = data.get('notes', '')
+    import uuid
+    job_id = uuid.uuid4().hex if sys.platform != 'darwin' else None
     try:
-      _SendEditorDenial(email, notes)
+      _SendEditorDenial(email, notes, job_id=job_id)
     except:
       pass
   LogNotification('admin', 'Editor denied: %s by %s' % (email, GetUserEmail() or 'anonymous'))
-  return json.dumps({'ok': True})
+  return json.dumps({'ok': True, 'job_id': job_id})
 
 @app.route('/sets', methods=['GET', 'POST'])
 @app.route('/sets/')
@@ -9438,15 +9509,17 @@ def auth_send():
     LogLogin('rate-limited', email, login_type)
     return jsonify(ok=False, message='Rate limit exceeded. Please try again later.')
   else:
+    import uuid
+    job_id = uuid.uuid4().hex if sys.platform != 'darwin' else None
     try:
-      SendMagicLink(email, token, target)
+      SendMagicLink(email, token, target, job_id=job_id)
       LogLogin('link-sent', email, login_type)
     except Exception as e:
       return jsonify(ok=False, message='Failed to send email. Please try again.')
 
   CleanExpiredTokens()
 
-  return jsonify(ok=True, message='Check your email for a login link.')
+  return jsonify(ok=True, message='Check your email for a login link.', job_id=job_id)
 
 @app.route('/auth/<token>')
 def auth_verify(token):
@@ -10077,15 +10150,25 @@ def _ProfileJS(uid, profile_email):
       var em = newEmailInput.value.trim();
       if (!em || em.indexOf("@") < 0) { statusSpan.textContent = "Please enter a valid email."; return; }
       statusSpan.textContent = "Sending...";
+      statusSpan.style.color = "";
       sendBtn.disabled = true;
       ajax("/ajax/profile/change-email", {new_email: em}, function(resp) {
-        sendBtn.disabled = false;
-        if (resp.ok) {
-          statusSpan.style.color = "#090";
-          statusSpan.textContent = "Confirmation sent! Check your new email.";
-        } else {
+        if (!resp.ok) {
+          sendBtn.disabled = false;
           statusSpan.style.color = "#c00";
           statusSpan.textContent = resp.error || "Error sending confirmation.";
+        } else if (resp.job_id) {
+          pollEmailStatus(resp.job_id, statusSpan, "Confirmation sent! Check your new email.", {
+            successClass: "", errorClass: "",
+            onDone: function(ok) {
+              sendBtn.disabled = false;
+              statusSpan.style.color = ok ? "#090" : "#c00";
+            }
+          });
+        } else {
+          sendBtn.disabled = false;
+          statusSpan.style.color = "#090";
+          statusSpan.textContent = "Confirmation sent! Check your new email.";
         }
       });
     });
@@ -10244,10 +10327,19 @@ def _ProfileJS(uid, profile_email):
       }, 400);
       ajax("/ajax/profile/request-editor", {}, function(resp) {
         clearInterval(dotTimer);
-        if (resp.ok) {
-          section.innerHTML = '<span style="font-style:italic;font-size:0.85em;color:#999;margin-left:8px">Global Editing Permissions Request Pending</span>';
-        } else {
+        if (!resp.ok) {
           section.innerHTML = '<span style="font-size:0.85em;color:#c00;margin-left:8px">' + (resp.error || "Error") + '</span>';
+        } else if (resp.job_id) {
+          var statusEl = document.createElement("span");
+          statusEl.style.cssText = "font-style:italic;font-size:0.85em;color:#999;margin-left:8px";
+          statusEl.textContent = "Sending...";
+          section.innerHTML = "";
+          section.appendChild(statusEl);
+          pollEmailStatus(resp.job_id, statusEl, "Global Editing Permissions Request Pending", {
+            successClass: "", errorClass: ""
+          });
+        } else {
+          section.innerHTML = '<span style="font-style:italic;font-size:0.85em;color:#999;margin-left:8px">Global Editing Permissions Request Pending</span>';
         }
       });
     });
@@ -10419,11 +10511,12 @@ def ajax_profile_request_editor():
   if HasPendingEditorRequest(email):
     return json.dumps({'ok': False, 'error': 'Request already pending.'})
   CreateEditorRequest(email)
+  job_id = None
   try:
-    _SendEditorRequestNotification(email)
+    job_id = _SendEditorRequestNotification(email)
   except:
     pass
-  return json.dumps({'ok': True})
+  return json.dumps({'ok': True, 'job_id': job_id})
 
 def _ArchiveTune(tune_name):
   """Move a tune's files to archive directories.
@@ -10575,17 +10668,21 @@ def ajax_profile_change_email():
   token = GenerateToken(new_email, email, 'email-change')
 
   # Send confirmation to NEW email
+  import uuid
+  job_id = uuid.uuid4().hex if sys.platform != 'darwin' else None
   try:
-    _SendEmailChangeConfirmation(new_email, token)
+    _SendEmailChangeConfirmation(new_email, token, job_id=job_id)
   except Exception as e:
     return json.dumps({'ok': False, 'error': 'Failed to send confirmation email.'})
 
-  return json.dumps({'ok': True})
+  return json.dumps({'ok': True, 'job_id': job_id})
 
-def _SendEmail(to_email, subject, body):
+def _SendEmail(to_email, subject, body, job_id=None):
   """Send an email via SMTP.
   On Linux, shells out to system Python 3 for SSL support since the
-  Python 2.7 virtualenv lacks it."""
+  Python 2.7 virtualenv lacks it.
+  If job_id is provided (Linux only): writes status to a job file and
+  does not wait for the subprocess — it outlives the CGI process."""
   config = ReadEmailConfig()
   if not config.get('host'):
     raise Exception('Email not configured')
@@ -10604,7 +10701,7 @@ def _SendEmail(to_email, subject, body):
     server.quit()
   else:
     import subprocess
-    script = """
+    send_script = """
 import smtplib
 from email.mime.text import MIMEText
 msg = MIMEText(%r)
@@ -10620,14 +10717,129 @@ server.quit()
        config['host'], int(config.get('port', 587)),
        config['username'], config['password'],
        from_addr, to_email)
-    proc = subprocess.Popen(['/usr/bin/python3', '-c', script],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate()
-    if proc.returncode != 0:
-      raise Exception('Email send failed: %s' % err)
+    if job_id:
+      status_path = os.path.join(kEmailJobsDir, job_id + '.status')
+      with open(status_path, 'w') as f:
+        f.write('{"status":"sending"}')
+      script = """
+import json
+status_path = %r
+try:
+%s
+    with open(status_path, 'w') as f:
+        json.dump({"status": "sent"}, f)
+except Exception as e:
+    with open(status_path, 'w') as f:
+        json.dump({"status": "error", "error": str(e)}, f)
+""" % (status_path, '\n'.join('    ' + line for line in send_script.strip().split('\n')))
+      proc = subprocess.Popen(['/usr/bin/python3', '-c', script],
+                              stdout=open(os.devnull, 'w'),
+                              stderr=open(os.devnull, 'w'),
+                              close_fds=True)
+    else:
+      proc = subprocess.Popen(['/usr/bin/python3', '-c', send_script],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      out, err = proc.communicate()
+      if proc.returncode != 0:
+        raise Exception('Email send failed: %s' % err)
+
+def _SendEmailsAsync(recipients, subject, body):
+  """Send email to multiple recipients via a single detached subprocess.
+  Returns a job_id for status polling. On macOS, sends synchronously
+  and returns None."""
+  if sys.platform == 'darwin':
+    for email in recipients:
+      _SendEmail(email, subject, body)
+    return None
+
+  config = ReadEmailConfig()
+  if not config.get('host'):
+    raise Exception('Email not configured')
+
+  from_addr = config.get('from_address', config['username'])
+  import uuid
+  job_id = uuid.uuid4().hex
+  status_path = os.path.join(kEmailJobsDir, job_id + '.status')
+  with open(status_path, 'w') as f:
+    f.write('{"status":"sending"}')
+
+  import subprocess
+  script = """
+import smtplib, json
+from email.mime.text import MIMEText
+status_path = %r
+recipients = %r
+try:
+    server = smtplib.SMTP(%r, %d)
+    server.starttls()
+    server.login(%r, %r)
+    for to_email in recipients:
+        msg = MIMEText(%r)
+        msg['Subject'] = %r
+        msg['From'] = %r
+        msg['To'] = to_email
+        server.sendmail(%r, [to_email], msg.as_string())
+        del msg
+    server.quit()
+    with open(status_path, 'w') as f:
+        json.dump({"status": "sent"}, f)
+except Exception as e:
+    with open(status_path, 'w') as f:
+        json.dump({"status": "error", "error": str(e)}, f)
+""" % (status_path, recipients,
+       config['host'], int(config.get('port', 587)),
+       config['username'], config['password'],
+       body, subject, from_addr, from_addr)
+  proc = subprocess.Popen(['/usr/bin/python3', '-c', script],
+                          stdout=open(os.devnull, 'w'),
+                          stderr=open(os.devnull, 'w'),
+                          close_fds=True)
+  return job_id
+
+@app.route('/ajax/email-status/<job_id>')
+def ajax_email_status(job_id):
+  """Poll for email send status. Returns JSON with status field."""
+  # Validate job_id format (hex UUID, 32 chars)
+  if not job_id or len(job_id) != 32:
+    return json.dumps({'status': 'error', 'error': 'invalid job_id'}), 400
+  try:
+    int(job_id, 16)
+  except ValueError:
+    return json.dumps({'status': 'error', 'error': 'invalid job_id'}), 400
+
+  status_path = os.path.join(kEmailJobsDir, job_id + '.status')
+  if not os.path.exists(status_path):
+    return json.dumps({'status': 'sent'})
+
+  try:
+    with open(status_path, 'r') as f:
+      data = json.load(f)
+  except:
+    return json.dumps({'status': 'sending'})
+
+  # Clean up completed jobs
+  if data.get('status') in ('sent', 'error'):
+    try:
+      os.remove(status_path)
+    except:
+      pass
+
+  # Garbage-collect stale status files (older than 1 hour)
+  try:
+    now = time.time()
+    for fn in os.listdir(kEmailJobsDir):
+      if fn.endswith('.status'):
+        fp = os.path.join(kEmailJobsDir, fn)
+        if now - os.path.getmtime(fp) > 3600:
+          os.remove(fp)
+  except:
+    pass
+
+  return json.dumps(data)
 
 def _SendPublishRequestNotification(event_sid, event_title, requestor_email):
-  """Notify all admins that a user has requested to publish an event."""
+  """Notify all admins that a user has requested to publish an event.
+  Fire-and-forget (no polling needed — called from form POST that redirects)."""
   if sys.platform == 'darwin':
     base_url = 'http://localhost:60080'
   else:
@@ -10638,13 +10850,9 @@ def _SendPublishRequestNotification(event_sid, event_title, requestor_email):
   body = ('%s (%s) has requested to publish the event "%s".\n\n'
           'Review the request on the admin page:\n%s\n' % (name, requestor_email, event_title, admin_url))
   subject = 'Publish Request: %s' % event_title
-  for admin_email in GetAdminEmails():
-    try:
-      _SendEmail(admin_email, subject, body)
-    except:
-      pass
+  _SendEmailsAsync(GetAdminEmails(), subject, body)
 
-def _SendPublishApproval(requestor_email, event_title, event_sid):
+def _SendPublishApproval(requestor_email, event_title, event_sid, job_id=None):
   """Notify a user that their event has been published."""
   if sys.platform == 'darwin':
     base_url = 'http://localhost:60080'
@@ -10654,9 +10862,9 @@ def _SendPublishApproval(requestor_email, event_title, event_sid):
   body = ('Your event "%s" has been approved and is now public on '
           'Cambridge NY Traditional Music.\n\n%s\n' % (event_title, event_url))
   subject = 'Event Published: %s' % event_title
-  _SendEmail(requestor_email, subject, body)
+  _SendEmail(requestor_email, subject, body, job_id=job_id)
 
-def _SendPublishDenial(requestor_email, event_title, event_sid, admin_notes):
+def _SendPublishDenial(requestor_email, event_title, event_sid, admin_notes, job_id=None):
   """Notify a user that their publish request was denied."""
   if sys.platform == 'darwin':
     base_url = 'http://localhost:60080'
@@ -10667,10 +10875,11 @@ def _SendPublishDenial(requestor_email, event_title, event_sid, admin_notes):
   if admin_notes:
     body += '\nNotes from admin:\n%s\n' % admin_notes
   subject = 'Publish Request Denied: %s' % event_title
-  _SendEmail(requestor_email, subject, body)
+  _SendEmail(requestor_email, subject, body, job_id=job_id)
 
 def _SendEditorRequestNotification(requestor_email):
-  """Notify all admins that a user has requested editor permissions."""
+  """Notify all admins that a user has requested editor permissions.
+  Returns job_id on Linux (async), None on macOS (sync)."""
   if sys.platform == 'darwin':
     base_url = 'http://localhost:60080'
   else:
@@ -10681,28 +10890,24 @@ def _SendEditorRequestNotification(requestor_email):
   body = ('%s (%s) has requested global editing permissions.\n\n'
           'Review the request on the admin page:\n%s\n' % (name, requestor_email, admin_url))
   subject = 'Editor Request: %s' % name
-  for admin_email in GetAdminEmails():
-    try:
-      _SendEmail(admin_email, subject, body)
-    except:
-      pass
+  return _SendEmailsAsync(GetAdminEmails(), subject, body)
 
-def _SendEditorApproval(requestor_email):
+def _SendEditorApproval(requestor_email, job_id=None):
   """Notify a user that their editor request was approved."""
   body = ('Your request for global editing permissions on Cambridge NY Traditional Music has been approved.\n\n'
           'You can now edit any tune on the site.\n')
   subject = 'Global Editing Permissions Granted'
-  _SendEmail(requestor_email, subject, body)
+  _SendEmail(requestor_email, subject, body, job_id=job_id)
 
-def _SendEditorDenial(requestor_email, admin_notes):
+def _SendEditorDenial(requestor_email, admin_notes, job_id=None):
   """Notify a user that their editor request was denied."""
   body = 'Your request for global editing permissions on Cambridge NY Traditional Music was not approved.\n'
   if admin_notes:
     body += '\nNotes from admin:\n%s\n' % admin_notes
   subject = 'Editor Request Denied'
-  _SendEmail(requestor_email, subject, body)
+  _SendEmail(requestor_email, subject, body, job_id=job_id)
 
-def _SendEmailChangeConfirmation(new_email, token):
+def _SendEmailChangeConfirmation(new_email, token, job_id=None):
   """Send email change confirmation link to the new email address."""
   if sys.platform == 'darwin':
     base_url = 'http://localhost:60080'
@@ -10716,7 +10921,7 @@ def _SendEmailChangeConfirmation(new_email, token):
           '%s\n\n'
           'This link expires in 1 hour. If you did not request this, you can ignore this email.\n' % link)
   subject = 'Confirm Email Change - Cambridge NY Traditional Music'
-  _SendEmail(new_email, subject, body)
+  _SendEmail(new_email, subject, body, job_id=job_id)
 
 @app.route('/profile/confirm-email/<token>')
 def profile_confirm_email(token):
@@ -11334,7 +11539,7 @@ def CleanExpiredTokens():
     except:
       pass
 
-def SendMagicLink(email, token, target):
+def SendMagicLink(email, token, target, job_id=None):
   """Send a magic link email."""
   if sys.platform == 'darwin':
     base_url = 'http://localhost:60080'
@@ -11347,7 +11552,7 @@ def SendMagicLink(email, token, target):
           '%s\n\n'
           'This link expires in 1 hour and can only be used once.\n' % link)
   subject = 'Your Login Link - Cambridge NY Traditional Music'
-  _SendEmail(email, subject, body)
+  _SendEmail(email, subject, body, job_id=job_id)
 
 def LogLogin(action, email, level=None):
   """Append a line to the login log, truncating if over 1MB."""

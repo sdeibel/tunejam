@@ -49,6 +49,7 @@ DATA_DIRS = [
   'config/editor-requests',
   'config/profiles',
   'config/notes',
+  'config/email-jobs',
 ]
 
 def fix(log=True, dry_run=False):
