@@ -49,6 +49,13 @@ if not os.path.exists(kLogDir):
   os.makedirs(kLogDir)
 kLoginLog = os.path.join(kLogDir, 'logins.log')
 
+# Notification digest
+kConfigDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config')
+kNotificationLog = os.path.join(kConfigDir, 'notifications.log')
+kNotificationLastSent = os.path.join(kConfigDir, 'notifications-last-sent.txt')
+kNotificationLogMaxBytes = 1024 * 1024  # 1MB
+kDigestIntervalSeconds = 12 * 3600  # 12 hours
+
 # Session and token lifetimes
 kSessionLifetimeDays = 30
 kTokenExpirySeconds = 3600
@@ -80,6 +87,20 @@ def _check_banned():
   email = session.get('email')
   if email and IsBanned(email):
     Logout()
+
+_gLastDigestCheck = 0
+
+@app.before_request
+def _check_digest():
+  """Periodically check if notification digest needs sending."""
+  global _gLastDigestCheck
+  now = time.time()
+  if now - _gLastDigestCheck > 600:  # Check at most every 10 minutes
+    _gLastDigestCheck = now
+    try:
+      _SendNotificationDigest()
+    except:
+      pass
 
 kMenu = [
   ('Home', '/', 'home'), 
@@ -545,6 +566,7 @@ def index_sheet(stype='title'):
 
 @app.route('/dev')
 def dev():
+  utils.PurgeDeletedTunes()
   parts = []
   parts.append(CH("Listings that Need Work", 1))
   parts.append(CParagraph("This page provides some useful resources for contributing "
@@ -670,6 +692,35 @@ def dev():
         parts.append(part)
         
   
+  if HasCapability(kCapManageAnyEvent):
+    parts.append(CH("&#9834; Recently Deleted Tunes", 2))
+    archived_specs = sorted(fn for fn in os.listdir(utils.kDatabaseArchiveDir) if fn.endswith('.spec'))
+    if archived_specs:
+      for fn in archived_specs:
+        tune_name = fn[:-5]
+        spec_path = os.path.join(utils.kDatabaseArchiveDir, fn)
+        title = tune_name
+        owner = None
+        with open(spec_path) as f:
+          for line in f:
+            if line.startswith('T:'):
+              title = line[2:].strip()
+            elif line.startswith('W:'):
+              owner = line[2:].strip()
+            elif line.strip() == '--':
+              break
+        mod_time = os.stat(spec_path)[stat.ST_MTIME]
+        expires = time.strftime('%x %X', time.localtime(mod_time + utils.kEventExpiration))
+        entry = [CSpan(title)]
+        if owner:
+          entry.append(CSpan(' (%s)' % owner))
+        entry.append(CSpan(' - Expires %s - ' % expires))
+        entry.append(CText("Undelete", href='/dev/undelete-tune/%s' % tune_name))
+        entry.append(CBreak())
+        parts.extend(entry)
+    else:
+      parts.append(CParagraph(CText("No recently deleted tunes.", italic=1)))
+
   parts.append(CH("&#9834; Source Code", 2))
   parts.append(CParagraph("You can set up your own local copy of this website, which runs on "
                           "Flask and Python on Linux or macOS.  The source code and all the tune files are "
@@ -684,6 +735,16 @@ def dev():
 
   parts.append(CBreak(2))
   return PageWrapper(parts, 'dev')
+
+@app.route('/dev/undelete-tune/<tune_name>')
+def dev_undelete_tune(tune_name):
+  if not HasCapability(kCapManageAnyEvent):
+    return redirect('/dev', code=303)
+  _UnarchiveTune(tune_name)
+  utils.InvalidateTuneIndex()
+  gTuneCountCache.clear()
+  LogNotification('tune', 'Tune undeleted: "%s" by %s' % (tune_name, GetUserEmail() or 'anonymous'))
+  return redirect('/dev', code=303)
 
 def _AdminPublishRequestsHTML(requests):
   """Build HTML + JS for the publish requests section. Returns raw HTML string."""
@@ -1344,6 +1405,7 @@ def admin_publish_approve():
       _SendPublishApproval(req['requestor'], event.title, sid)
     except:
       pass
+    LogNotification('admin', 'Publish approved: "%s" for %s by %s' % (event.title, req['requestor'], GetUserEmail() or 'anonymous'))
   return json.dumps({'ok': True})
 
 @app.route(kAdminRoute + '/publish/deny', methods=['POST'])
@@ -1364,6 +1426,8 @@ def admin_publish_deny():
       _SendPublishDenial(req['requestor'], event.title, sid, notes)
     except:
       pass
+  if req:
+    LogNotification('admin', 'Publish denied for %s by %s' % (req['requestor'], GetUserEmail() or 'anonymous'))
   return json.dumps({'ok': True})
 
 @app.route(kAdminRoute + '/publish/ban', methods=['POST'])
@@ -1382,6 +1446,7 @@ def admin_publish_ban():
     WriteEmailConfig('banned_emails', ','.join(banned))
   DeletePublishRequest(sid)
   LogLogin('banned', email)
+  LogNotification('admin', 'User banned: %s by %s' % (email, GetUserEmail() or 'anonymous'))
   profile_url = '/profile/' + _ProfileHash(email)
   return json.dumps({'ok': True, 'profile_url': profile_url})
 
@@ -1403,6 +1468,7 @@ def admin_editor_approve():
     _SendEditorApproval(email)
   except:
     pass
+  LogNotification('admin', 'Editor approved: %s by %s' % (email, GetUserEmail() or 'anonymous'))
   editors = GetEditorEmails()
   names = {e: GetDisplayName(e) for e in editors}
   return json.dumps({'ok': True, 'emails': editors, 'names': names})
@@ -1422,6 +1488,7 @@ def admin_editor_deny():
       _SendEditorDenial(email, notes)
     except:
       pass
+  LogNotification('admin', 'Editor denied: %s by %s' % (email, GetUserEmail() or 'anonymous'))
   return json.dumps({'ok': True})
 
 @app.route('/sets', methods=['GET', 'POST'])
@@ -2164,6 +2231,7 @@ def tune_new_create():
   obj.WriteSpec()
   utils.InvalidateTuneIndex()
   gTuneCountCache.clear()
+  LogNotification('tune', 'Tune created: "%s" by %s' % (title, GetUserEmail() or 'anonymous'))
 
   return redirect('/tune/%s' % filename, code=303)
 
@@ -6599,6 +6667,7 @@ def tune_save(tune):
   obj.InvalidateCaches()
   utils.InvalidateTuneIndex()
   gTuneCountCache.clear()
+  LogNotification('tune', 'Tune edited: "%s" by %s' % (obj.title, GetUserEmail() or 'anonymous'))
 
   return redirect('/tune/%s' % tune, code=303)
 
@@ -6627,21 +6696,12 @@ def tune_delete(tune):
     return PageWrapper(parts, 'index', show_eye_candy=False)
 
   if request.method == 'POST':
-    # Perform the deletion
-    spec_path = os.path.join(utils.kDatabaseDir, tune + '.spec')
-    if os.path.exists(spec_path):
-      os.remove(spec_path)
-    # Remove associated .abc file
-    abc_path = os.path.join(utils.kSheetMusicDir, tune + '.abc')
-    if os.path.exists(abc_path):
-      os.remove(abc_path)
-    # Remove associated .mp3 recording
-    mp3_path = os.path.join(utils.kRecordingsDir, tune + '.mp3')
-    if os.path.exists(mp3_path):
-      os.remove(mp3_path)
+    # Soft-delete: move files to archive directories
+    _ArchiveTune(tune)
     obj.InvalidateCaches()
     utils.InvalidateTuneIndex()
     gTuneCountCache.clear()
+    LogNotification('tune', 'Tune deleted: "%s" by %s' % (obj.title, GetUserEmail() or 'anonymous'))
     return redirect('/index', code=303)
 
   # GET: show confirmation page
@@ -8552,6 +8612,7 @@ def events(delete=None, undelete=None):
     evt.ReadEvent()
     if CanDeleteEvent(evt):
       utils.DeleteEvent(delete)
+      LogNotification('event', 'Event deleted: "%s" by %s' % (evt.title, GetUserEmail() or 'anonymous'))
     return redirect('/events', code=303)
   if undelete:
     evt = utils.CEvent(undelete)
@@ -8634,6 +8695,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
   if request.environ['REQUEST_METHOD'] == 'POST':
     title = request.form['title']
     sid = utils.CreateEvent(title, owner=GetUserEmail())
+    LogNotification('event', 'Event created: "%s" by %s' % (title, GetUserEmail() or 'anonymous'))
 
   event = utils.CEvent(sid)
   event.ReadEvent()
@@ -8645,6 +8707,14 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
   editor = CanEditEvent(event)
 
   if add is not None and editor:
+    session['event_undo_%s' % sid] = {
+      'sets': list(event.sets),
+      'current_set': event.current_set,
+      'action_type': 'replace' if old is not None else 'add',
+      'title': get_set_title(old) if old is not None else get_set_title(add),
+      'time': time.time(),
+    }
+    session.pop('event_redo_%s' % sid, None)
     if old is not None:
       pos = event.sets.index(old)
       event.sets[pos] = add
@@ -8652,8 +8722,16 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
       event.sets.append(add)
     event.WriteEvent()
     return redirect('/event/%s' % sid, code=303)
-  
+
   if delete is not None and editor:
+    session['event_undo_%s' % sid] = {
+      'sets': list(event.sets),
+      'current_set': event.current_set,
+      'action_type': 'delete',
+      'title': get_set_title(delete),
+      'time': time.time(),
+    }
+    session.pop('event_redo_%s' % sid, None)
     event.sets.remove(delete)
     if event.current_set == delete:
       event.current_set = ''
@@ -8673,8 +8751,10 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
   if status is not None and editor:
     if status == 'on-air':
       event.on_air = 1
+      LogNotification('event', 'Event on air: "%s"' % event.title)
     else:
       event.on_air = 0
+      LogNotification('event', 'Event off air: "%s"' % event.title)
     event.WriteEvent()
     return redirect('/event/%s' % sid, code=303)
     
@@ -8904,8 +8984,8 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
     parts.append(CText("No sets have been defined for this event", italic=1))
   else:
     if editor and event.on_air:
-      parts.append(CParagraph("Click on a red dot to change the current set.  View a set with "
-                              "melody reminders, chords, or both."))
+      parts.append('<p id="set-hint">Click on a red dot to change the current set.  View a set with '
+                   'melody reminders, chords, or both.</p>')
       parts.extend([
         CText("Select Set:"),
         CNBSP(),
@@ -8915,7 +8995,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
         CBreak(2),
       ])
     else:
-      parts.append(CParagraph("View a particular set with melody reminders, chords, or both:"))
+      parts.append('<p id="set-hint">View a particular set with melody reminders, chords, or both:</p>')
 
     parts.append('<div id="event-sets">')
     for s in event.sets:
@@ -9237,12 +9317,16 @@ def auth_verify(token):
     ]
     return PageWrapper(parts, 'event', show_eye_candy=False)
 
+  is_new_user = not os.path.exists(_ProfilePath(email))
+
   session.permanent = True
   session['email'] = email
   session['permission_level'] = level
   session['login_time'] = time.time()
 
   LogLogin('login', email, level)
+  if is_new_user:
+    LogNotification('user', 'New user login: %s' % email)
 
   return redirect(target, code=303)
 
@@ -9282,6 +9366,7 @@ def ajax_event_description(sid):
   data = request.get_json(force=True)
   event.description = data.get('description', '').strip()
   event.WriteEvent()
+  LogNotification('event', 'Event description updated: "%s" by %s' % (event.title, GetUserEmail() or 'anonymous'))
   return '{"ok":true}'
 
 @app.route('/ajax/event/<sid>/current')
@@ -9301,6 +9386,7 @@ def event_rename(sid):
   if title:
     event.title = title
     event.WriteEvent()
+    LogNotification('event', 'Event renamed to "%s" by %s' % (title, GetUserEmail() or 'anonymous'))
   return redirect('/event/%s' % sid, code=303)
 
 @app.route('/event/<sid>/duplicate', methods=['POST'])
@@ -9331,6 +9417,50 @@ def ajax_event_reorder(sid):
     return json.dumps({'ok': False, 'error': 'set mismatch'})
   event.sets = new_order
   event.WriteEvent()
+  return json.dumps({'ok': True})
+
+@app.route('/ajax/event/<sid>/undo', methods=['POST'])
+def ajax_event_undo(sid):
+  event = utils.CEvent(sid)
+  event.ReadEvent()
+  if not CanEditEvent(event):
+    return json.dumps({'ok': False, 'error': 'permission denied'})
+  undo = session.get('event_undo_%s' % sid)
+  if not undo:
+    return json.dumps({'ok': False})
+  session['event_redo_%s' % sid] = {
+    'sets': list(event.sets),
+    'current_set': event.current_set,
+    'action_type': undo.get('action_type', ''),
+    'title': undo.get('title', ''),
+    'time': time.time(),
+  }
+  event.sets = undo['sets']
+  event.current_set = undo['current_set']
+  event.WriteEvent()
+  session.pop('event_undo_%s' % sid, None)
+  return json.dumps({'ok': True})
+
+@app.route('/ajax/event/<sid>/redo', methods=['POST'])
+def ajax_event_redo(sid):
+  event = utils.CEvent(sid)
+  event.ReadEvent()
+  if not CanEditEvent(event):
+    return json.dumps({'ok': False, 'error': 'permission denied'})
+  redo = session.get('event_redo_%s' % sid)
+  if not redo:
+    return json.dumps({'ok': False})
+  session['event_undo_%s' % sid] = {
+    'sets': list(event.sets),
+    'current_set': event.current_set,
+    'action_type': redo.get('action_type', ''),
+    'title': redo.get('title', ''),
+    'time': time.time(),
+  }
+  event.sets = redo['sets']
+  event.current_set = redo['current_set']
+  event.WriteEvent()
+  session.pop('event_redo_%s' % sid, None)
   return json.dumps({'ok': True})
 
 @app.route('/ajax/notes/add', methods=['POST'])
@@ -9489,7 +9619,7 @@ def profile_page(uid):
   # Email and Group info
   role = GetPermissionLevel(profile_email)
   role_label = {'admin': 'Admin', 'editor': 'Editor', 'regular': 'User'}.get(role, 'User')
-  kInfoLabelWidth = '54px'
+  kInfoLabelWidth = '90px'
   if is_own:
     esc_email = profile_email.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
     parts.append('<div style="color:#666;margin:0">'
@@ -9521,6 +9651,19 @@ def profile_page(uid):
                        '</span>')
     group_html += '</div>'
     parts.append(group_html)
+
+  # -- Admin: notifications toggle --
+  if role == 'admin' and is_admin:
+    notif_enabled = IsNotificationsEnabled(profile_email)
+    notif_label = 'Enabled' if notif_enabled else 'Disabled'
+    esc_notif_email = profile_email.replace('"', '&quot;')
+    parts.append(
+      '<div style="color:#666;margin:0">'
+      '<span style="display:inline-block;width:%s">Notifications:</span> '
+      '<b id="notif-status">%s</b> '
+      '<a href="#" id="toggle-notif-btn" data-email="%s" '
+      'style="color:#999;font-style:italic;font-size:0.85em;margin-left:8px">Toggle</a>'
+      '</div>' % (kInfoLabelWidth, notif_label, esc_notif_email))
 
   # -- Admin: banned user unban --
   if is_admin and not is_own and IsBanned(profile_email):
@@ -9788,6 +9931,19 @@ def _ProfileJS(uid, profile_email):
     });
   }
 
+  // -- Toggle notifications --
+  var toggleNotifBtn = document.getElementById("toggle-notif-btn");
+  if (toggleNotifBtn) {
+    toggleNotifBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      ajax("/ajax/profile/toggle-notifications", {email: toggleNotifBtn.getAttribute("data-email")}, function(resp) {
+        if (resp.ok) {
+          document.getElementById("notif-status").textContent = resp.enabled ? "Enabled" : "Disabled";
+        }
+      });
+    });
+  }
+
   // -- Delete all user content --
   var deleteAllBtn = document.getElementById("delete-all-btn");
   if (deleteAllBtn) {
@@ -9980,19 +10136,12 @@ def profile_delete_tune(uid, tune_name):
   if in_use and not HasCapability(kCapDeleteInUse):
     return redirect('/profile/%s?error=tune-in-use&tune=%s' % (uid, tune_name), code=303)
 
-  # Perform deletion
-  spec_path = os.path.join(utils.kDatabaseDir, tune_name + '.spec')
-  if os.path.exists(spec_path):
-    os.remove(spec_path)
-  abc_path = os.path.join(utils.kSheetMusicDir, tune_name + '.abc')
-  if os.path.exists(abc_path):
-    os.remove(abc_path)
-  mp3_path = os.path.join(utils.kRecordingsDir, tune_name + '.mp3')
-  if os.path.exists(mp3_path):
-    os.remove(mp3_path)
+  # Soft-delete: move files to archive directories
+  _ArchiveTune(tune_name)
   obj.InvalidateCaches()
   utils.InvalidateTuneIndex()
   gTuneCountCache.clear()
+  LogNotification('tune', 'Tune deleted: "%s" by %s' % (obj.title, GetUserEmail() or 'anonymous'))
 
   return redirect('/profile/%s' % uid, code=303)
 
@@ -10015,6 +10164,7 @@ def profile_delete_event(uid, event_name):
       return redirect('/profile/%s' % uid, code=303)
 
   utils.DeleteEvent(event_name)
+  LogNotification('event', 'Event deleted: "%s" by %s' % (event.title, GetUserEmail() or 'anonymous'))
   return redirect('/profile/%s' % uid, code=303)
 
 @app.route('/ajax/profile/reset-trusted', methods=['POST'])
@@ -10045,6 +10195,7 @@ def ajax_profile_unban():
     banned.remove(email)
     WriteEmailConfig('banned_emails', ','.join(banned))
   LogLogin('unbanned', email)
+  LogNotification('admin', 'User unbanned: %s by %s' % (email, GetUserEmail() or 'anonymous'))
   return json.dumps({'ok': True})
 
 @app.route('/ajax/profile/ban', methods=['POST'])
@@ -10061,7 +10212,24 @@ def ajax_profile_ban():
     banned.append(email)
     WriteEmailConfig('banned_emails', ','.join(banned))
   LogLogin('banned', email)
+  LogNotification('admin', 'User banned: %s by %s' % (email, GetUserEmail() or 'anonymous'))
   return json.dumps({'ok': True})
+
+@app.route('/ajax/profile/toggle-notifications', methods=['POST'])
+def ajax_profile_toggle_notifications():
+  """Toggle notification digest for an admin user."""
+  if not HasCapability(kCapManageAnyEvent):
+    return json.dumps({'ok': False, 'error': 'Not authorized.'}), 403
+  data = request.get_json(force=True)
+  email = data.get('email', '').strip().lower()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'Missing email.'})
+  profile = GetOrCreateProfile(email)
+  current = profile.get('notifications_enabled', '1')
+  new_val = '0' if current == '1' else '1'
+  profile['notifications_enabled'] = new_val
+  _WriteProfile(profile)
+  return json.dumps({'ok': True, 'enabled': new_val == '1'})
 
 @app.route('/ajax/profile/request-editor', methods=['POST'])
 def ajax_profile_request_editor():
@@ -11051,6 +11219,120 @@ def IsRateLimited(email):
   user_count = max(0, user_sent - user_login)
   return user_count >= kMaxEmailsPerHour or global_count >= kMaxGlobalEmailsPerHour
 
+# -- Notification digest system --
+
+def LogNotification(category, message):
+  """Append a notification entry, truncating if over 1MB."""
+  timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+  line = '%s|%s|%s\n' % (timestamp, category, message)
+  try:
+    if os.path.exists(kNotificationLog) and os.path.getsize(kNotificationLog) > kNotificationLogMaxBytes:
+      with open(kNotificationLog, 'r') as f:
+        data = f.read()
+      with open(kNotificationLog, 'w') as f:
+        f.write(data[len(data) // 2:])
+  except:
+    pass
+  with open(kNotificationLog, 'a') as f:
+    f.write(line)
+
+def _ReadNotificationsSince(since_ts):
+  """Return list of (timestamp, category, message) tuples since given time."""
+  if not os.path.exists(kNotificationLog):
+    return []
+  results = []
+  try:
+    with open(kNotificationLog, 'r') as f:
+      for line in f:
+        line = line.rstrip('\n')
+        parts = line.split('|', 2)
+        if len(parts) < 3:
+          continue
+        try:
+          t = time.mktime(time.strptime(parts[0].strip(), '%Y-%m-%d %H:%M:%S'))
+          if t >= since_ts:
+            results.append((parts[0].strip(), parts[1].strip(), parts[2].strip()))
+        except:
+          continue
+  except:
+    pass
+  return results
+
+def _GetLastNotificationSent():
+  """Read last-sent timestamp from file, default 0.0."""
+  if not os.path.exists(kNotificationLastSent):
+    return 0.0
+  try:
+    with open(kNotificationLastSent, 'r') as f:
+      return float(f.read().strip())
+  except:
+    return 0.0
+
+def _SetLastNotificationSent(ts):
+  """Write last-sent timestamp to file."""
+  with open(kNotificationLastSent, 'w') as f:
+    f.write(str(ts))
+
+def IsNotificationsEnabled(email):
+  """Check if notification digest is enabled for an admin user."""
+  profile = GetOrCreateProfile(email)
+  return profile.get('notifications_enabled', '1') == '1'
+
+def _SendNotificationDigest():
+  """Send digest email if 12+ hours since last send and there are entries."""
+  last_sent = _GetLastNotificationSent()
+  now = time.time()
+  if now - last_sent < kDigestIntervalSeconds:
+    return
+
+  # Mark as sent immediately to prevent concurrent sends
+  _SetLastNotificationSent(now)
+
+  entries = _ReadNotificationsSince(last_sent)
+  if not entries:
+    return
+
+  # Group by category
+  category_order = ['tune', 'event', 'user', 'admin']
+  category_labels = {
+    'tune': 'Tunes',
+    'event': 'Events',
+    'user': 'Users',
+    'admin': 'Admin Actions',
+  }
+  grouped = collections.OrderedDict()
+  for cat in category_order:
+    grouped[cat] = []
+  for timestamp, category, message in entries:
+    if category not in grouped:
+      grouped[category] = []
+    grouped[category].append(message)
+
+  # Format period header
+  since_str = time.strftime('%b %d %I:%M %p', time.localtime(last_sent)) if last_sent > 0 else 'beginning'
+  until_str = time.strftime('%b %d %I:%M %p', time.localtime(now))
+
+  body_lines = ['Site Activity Summary', '=' * 22]
+  body_lines.append('Period: %s - %s' % (since_str, until_str))
+  body_lines.append('')
+  for cat, messages in grouped.items():
+    if not messages:
+      continue
+    body_lines.append('%s:' % category_labels.get(cat, cat))
+    for msg in messages:
+      body_lines.append('  %s' % msg)
+    body_lines.append('')
+
+  body = '\n'.join(body_lines)
+  subject = 'Site Activity Summary'
+
+  for admin_email in GetAdminEmails():
+    if IsNotificationsEnabled(admin_email):
+      try:
+        _SendEmail(admin_email, subject, body)
+      except:
+        pass
+
 def EventReloader(sid, editor=False):
 
   e = utils.CEvent(sid)
@@ -11065,6 +11347,53 @@ def EventReloader(sid, editor=False):
 
   extra_js = ''
   ready_calls = ''
+
+  if editor:
+    kBannerTimeout = 10
+    now = time.time()
+    undo_info = session.get('event_undo_%s' % sid)
+    redo_info = session.get('event_redo_%s' % sid)
+    banner_age = None
+    if undo_info and undo_info.get('time'):
+      banner_age = now - undo_info['time']
+    if redo_info and redo_info.get('time'):
+      redo_age = now - redo_info['time']
+      if banner_age is None or redo_age < banner_age:
+        banner_age = redo_age
+    if (undo_info or redo_info) and banner_age is not None and banner_age < kBannerTimeout:
+      is_mac = 'Mac' in request.headers.get('User-Agent', '')
+      ctrl = 'Cmd' if is_mac else 'Ctrl'
+      msgs = []
+      if undo_info:
+        atype = undo_info.get('action_type', '')
+        atitle = undo_info.get('title', '')
+        if atype == 'add':
+          msgs.append('Added set: %s - %s+Z to undo' % (atitle, ctrl))
+        elif atype == 'delete':
+          msgs.append('Deleted set: %s - %s+Z to undo' % (atitle, ctrl))
+        elif atype == 'replace':
+          msgs.append('Replaced set: %s - %s+Z to undo' % (atitle, ctrl))
+      if redo_info:
+        atype = redo_info.get('action_type', '')
+        atitle = redo_info.get('title', '')
+        if atype == 'add':
+          msgs.append('Removed set: %s - %s+Shift+Z to re-add' % (atitle, ctrl))
+        elif atype == 'delete':
+          msgs.append('Restored set: %s - %s+Shift+Z to re-delete' % (atitle, ctrl))
+        elif atype == 'replace':
+          msgs.append('Restored set: %s - %s+Shift+Z to re-replace' % (atitle, ctrl))
+      if msgs:
+        fade_delay = int((kBannerTimeout - banner_age) * 1000)
+        undo_msg_js = json.dumps(' | '.join(msgs))
+        ready_calls += """  var hint = $("#set-hint");
+  if (hint.length) {
+    var origHint = hint.html();
+    hint.css({"color": "#665d00", "background": "#fffbe6"}).html(%s);
+    setTimeout(function() {
+      hint.css({"color": "", "background": ""}).html(origHint);
+    }, %d);
+  }
+""" % (undo_msg_js, fade_delay)
 
   if editor:
     extra_js += """
@@ -11190,6 +11519,25 @@ function saveDesc() {
     if (descEditing && !$(ev.target).closest("#desc-input, #desc-save-btn").length) { saveDesc(); }
   });
 """
+    ready_calls += """  $(document).on("keydown", function(e) {
+    var tag = document.activeElement.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement.isContentEditable) return;
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      $.post("/ajax/event/%s/undo", function(resp) {
+        var data = typeof resp === "string" ? JSON.parse(resp) : resp;
+        if (data.ok) location.reload();
+      });
+    }
+    if ((e.ctrlKey || e.metaKey) && (((e.key === 'z' || e.key === 'Z') && e.shiftKey) || e.key === 'y')) {
+      e.preventDefault();
+      $.post("/ajax/event/%s/redo", function(resp) {
+        var data = typeof resp === "string" ? JSON.parse(resp) : resp;
+        if (data.ok) location.reload();
+      });
+    }
+  });
+""" % (sid, sid)
 
   content_hash = hashlib.md5((e.title + '\n' + e.description + '\n' + '\n'.join(e.sets)).encode('utf-8')).hexdigest()[:8]
   initial_snapshot = e.current_set + '&' + str(len(e.sets)) + '&' + str(e.on_air) + '&' + content_hash
