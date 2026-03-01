@@ -32,7 +32,13 @@ if [ "$TEST_MODE" = true ]; then
   echo "# Would run: git pull"
 else
   echo "Pulling latest changes..."
+  old_hash="$(md5sum deploy.sh 2>/dev/null || md5 -q deploy.sh 2>/dev/null)"
   git pull
+  new_hash="$(md5sum deploy.sh 2>/dev/null || md5 -q deploy.sh 2>/dev/null)"
+  if [ "$old_hash" != "$new_hash" ] && [ "${DEPLOY_RESTARTED:-}" != "1" ]; then
+    echo "deploy.sh was updated — restarting..."
+    DEPLOY_RESTARTED=1 exec "$0" "$@"
+  fi
 fi
 echo ""
 
