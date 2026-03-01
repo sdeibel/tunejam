@@ -1061,14 +1061,12 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
           span.className = 'role-label';
           span.style.cssText = roleStyles[role] || '';
           span.textContent = roleLabels[role] || '(' + role + ')';
+          // Insert after the ")" text node that follows the email <a> tag
           var firstLink = li.querySelector('a');
-          if (firstLink) {
-            firstLink.parentNode.insertBefore(document.createTextNode(' '), firstLink.nextSibling);
-            firstLink.parentNode.insertBefore(span, firstLink.nextSibling.nextSibling);
-          } else {
-            li.appendChild(document.createTextNode(' '));
-            li.appendChild(span);
-          }
+          var parenNode = firstLink ? firstLink.nextSibling : null;
+          var insertBefore = parenNode ? parenNode.nextSibling : null;
+          li.insertBefore(document.createTextNode(' '), insertBefore);
+          li.insertBefore(span, insertBefore);
         }
         // Remove ban link — admins/editors shouldn't show ban
         var banLink = li.querySelector('.user-ban-link');
