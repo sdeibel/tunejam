@@ -62,7 +62,9 @@ DATA_DIRS=(
   # Tune database (create/edit/archive)
   db
   db/archive
+  tunes
   tunes/archive
+  recordings
   recordings/archive
 
   # Logs
