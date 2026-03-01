@@ -1,8 +1,6 @@
 ** Fix note generation on production site
 * Website Phase Three
   ** Coding Tasks Near Term
-    ** Add notes in sets within events (one for each tune in set) - there are links but broken
-    ** Deploy (need permissions audit + script to ensure permissions)
     ** Audit site to make sure we're not showing emails to anyone but the admin users and 
        the users themselves
     ** Make sure that none of the editor-only or admin-only functionality is leaking to the
