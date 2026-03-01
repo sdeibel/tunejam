@@ -6,15 +6,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Python 2.7 web application and PDF generation system for the Hubbard Hall Tune Jam — a traditional music session in Cambridge, NY. The site manages a database of fiddle tunes (Irish, Scottish, Quebecois, New England, locally-written) with recordings, chord charts, and melody reminders. Live at http://music.cambridgeny.net
 
+## Python Environment
+
+This is a Python 2.7 project. Always use the virtualenv Python, never the system Python:
+- **Dev (macOS)**: `../bin/python2.7` (relative to `src/`, i.e. `music/bin/python2.7`)
+- **Production (Linux)**: `/home/maint/music/bin/python2.7`
+
 ## Running the Application
 
 **Development server** (from `src/` directory):
 ```
-python website/tunejam.py
+../bin/python2.7 website/tunejam.py
 ```
 Runs Flask on `0.0.0.0:60080` with debug/reload enabled.
 
-**Production**: Apache CGI via `website/tunejam.cgi` — requires Python 2.7 virtualenv at `/home/maint/music/bin/python2.7`.
+**Production**: Apache CGI via `website/tunejam.cgi` — uses the production virtualenv Python.
 
 **Deploying to production** (run as `maint` on server, from `src/`):
 ```
