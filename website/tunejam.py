@@ -946,9 +946,9 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
     entry = '<li data-email="%s" style="margin:3px 0">%s (<a href="%s">%s</a>)' % (esc_email, esc_name, profile_url, esc_email)
     role = GetPermissionLevel(email)
     if role == 'admin':
-      entry += ' <span style="color:#069;font-size:0.85em">(admin)</span>'
+      entry += ' <span class="role-label" style="color:#069;font-size:0.85em">(admin)</span>'
     elif role == 'editor':
-      entry += ' <span style="color:#690;font-size:0.85em">(editor)</span>'
+      entry += ' <span class="role-label" style="color:#690;font-size:0.85em">(editor)</span>'
     if email in banned:
       entry += ' <span class="ban-status" style="color:#c00;font-size:0.85em;font-style:italic">(banned)</span>'
       entry += ' <a href="#" class="user-unban-link" style="color:#069;font-size:0.85em;font-style:italic">Unban</a>'
@@ -1042,9 +1042,58 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  var roleStyles = {admin: 'color:#069;font-size:0.85em', editor: 'color:#690;font-size:0.85em'};
+  var roleLabels = {admin: '(admin)', editor: '(editor)'};
+
+  function syncRoleLabel(email, role, added) {
+    var allList = document.getElementById('all-user-list');
+    if (!allList) return;
+    var items = allList.querySelectorAll('li[data-email="' + email + '"]');
+    for (var i = 0; i < items.length; i++) {
+      var li = items[i];
+      var existing = li.querySelector('.role-label');
+      if (added) {
+        if (existing) {
+          existing.textContent = roleLabels[role] || '(' + role + ')';
+          existing.style.cssText = roleStyles[role] || '';
+        } else {
+          var span = document.createElement('span');
+          span.className = 'role-label';
+          span.style.cssText = roleStyles[role] || '';
+          span.textContent = roleLabels[role] || '(' + role + ')';
+          var firstLink = li.querySelector('a');
+          if (firstLink) {
+            firstLink.parentNode.insertBefore(document.createTextNode(' '), firstLink.nextSibling);
+            firstLink.parentNode.insertBefore(span, firstLink.nextSibling.nextSibling);
+          } else {
+            li.appendChild(document.createTextNode(' '));
+            li.appendChild(span);
+          }
+        }
+        // Remove ban link — admins/editors shouldn't show ban
+        var banLink = li.querySelector('.user-ban-link');
+        if (banLink) banLink.remove();
+      } else {
+        if (existing) existing.remove();
+        // Add ban link back if no other role and not banned
+        if (!li.querySelector('.ban-status') && !li.querySelector('.user-ban-link') && !li.querySelector('.role-label')) {
+          var link = document.createElement('a');
+          link.href = '#';
+          link.className = 'user-ban-link';
+          link.style.cssText = 'color:#c00;font-size:0.85em;font-style:italic';
+          link.textContent = 'Ban';
+          li.appendChild(document.createTextNode(' '));
+          li.appendChild(link);
+        }
+      }
+    }
+  }
+
   function doFetch(url, body, msgId, role, listId) {
     var msgEl = document.getElementById(msgId);
     msgEl.textContent = '';
+    var isAdd = url.indexOf('/add') >= 0;
+    var email = body.email;
     fetch(url, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -1054,6 +1103,7 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
     .then(function(data) {
       if (data.ok) {
         renderList(listId, data.emails, data.names);
+        syncRoleLabel(email, role, isAdd);
       } else {
         msgEl.textContent = data.error || 'error';
       }
