@@ -11417,7 +11417,7 @@ def _SendNotificationDigest():
   remaining = kDigestIntervalSeconds - (now - last_sent)
   if remaining > 0:
     msg = "Notification digest: skipping (%.1f hours until next send)" % (remaining / 3600)
-    print(msg)
+    sys.stderr.write(msg + '\n')
     return msg
 
   # Mark as sent immediately to prevent concurrent sends
@@ -11428,7 +11428,7 @@ def _SendNotificationDigest():
   entries = _ReadNotificationsSince(last_read)
   if not entries:
     msg = "Notification digest: no new entries since last send"
-    print(msg)
+    sys.stderr.write(msg + '\n')
     return msg
 
   # Group by category
@@ -11482,9 +11482,9 @@ def _SendNotificationDigest():
   msg = "Notification digest: %d entries, sent to %d admin(s)%s" % (
     len(entries), len(sent_to),
     ' (%s)' % ', '.join(sent_to) if sent_to else '')
-  print(msg)
+  sys.stderr.write(msg + '\n')
   for err in errors:
-    print("Notification digest error: %s" % err)
+    sys.stderr.write("Notification digest error: %s\n" % err)
   return msg
 
 def EventReloader(sid, editor=False):
