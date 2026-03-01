@@ -7208,7 +7208,9 @@ def recording(tune):
   recording, mimetype, filename = obj.GetRecording()
   if recording is None:
     return Response()
-  return send_file(filename, mimetype=mimetype)
+  resp = make_response(send_file(filename, mimetype=mimetype))
+  resp.headers['Cache-Control'] = 'public, max-age=604800'
+  return resp
 
 @app.route('/image/<path:image>')
 def image(image):
@@ -7217,19 +7219,22 @@ def image(image):
     mimetype = 'image/jpeg'
   else:
     mimetype = 'image/png'
-  return send_file(img_file, mimetype=mimetype)
+  resp = make_response(send_file(img_file, mimetype=mimetype))
+  resp.headers['Cache-Control'] = 'public, max-age=604800'
+  return resp
   
 @app.route('/js/<path:filename>')
 def js(filename):
   js_file = os.path.join(utils.kJSDir, filename)
   if filename.endswith('.js'):
-    return send_file(js_file, mimetype='text/javascript')
+    mimetype = 'text/javascript'
   else:
-    return send_file(js_file, mimetype='text/css')
+    mimetype = 'text/css'
+  resp = make_response(send_file(js_file, mimetype=mimetype))
+  resp.headers['Cache-Control'] = 'public, max-age=604800'
+  return resp
   
-@app.route('/css/<media>')
-def css(media):
-  css = """
+_kBaseCSS = """
 /* Overall defaults */
 * {
 margin:0;
@@ -8677,8 +8682,7 @@ min-height:40px;
 
 """
 
-  if media == 'print':
-    css += """
+_kPrintCSS = """
 /*Preferable but does not work in Firefox 36.0.1 (the latest)*/
 /*@page {
 margin:0.5in;
@@ -8698,8 +8702,36 @@ display:none !important;
 .footer-auth {
 display:none !important;
 }
-    """
-  return Response(css, mimetype='text/css')
+"""
+
+_kCSSDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'css')
+
+def _WriteCSSFiles():
+  """Write static CSS files to website/css/ for direct serving by Apache."""
+  if not os.path.isdir(_kCSSDir):
+    os.makedirs(_kCSSDir)
+  for name, content in [('screen.css', _kBaseCSS),
+                         ('print.css', _kBaseCSS + _kPrintCSS)]:
+    path = os.path.join(_kCSSDir, name)
+    with open(path, 'w') as f:
+      f.write(content)
+
+_WriteCSSFiles()
+
+@app.route('/css/<media>')
+def css(media):
+  # Support both /css/screen and /css/screen.css
+  if media.endswith('.css'):
+    media = media[:-4]
+  css_file = os.path.join(_kCSSDir, media + '.css')
+  if os.path.isfile(css_file):
+    resp = make_response(send_file(css_file, mimetype='text/css'))
+  elif media == 'print':
+    resp = Response(_kBaseCSS + _kPrintCSS, mimetype='text/css')
+  else:
+    resp = Response(_kBaseCSS, mimetype='text/css')
+  resp.headers['Cache-Control'] = 'public, max-age=86400'
+  return resp
 
 def _AddEventWidget():
   """Return HTML for an 'Add an Event' toggle link with inline creation form."""
@@ -11970,8 +12002,8 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
     CMeta("text/html; charset=utf-8", http_equiv="Content-Type"),
     CMeta("Copyright (c) 1999-%s Stephan Deibel" % year, name="Copyright"),
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
-    '<link rel="stylesheet" type="text/css" href="/css/screen" media="screen" />',
-    '<link rel="stylesheet" type="text/css" href="/css/print" media="print" />',
+    '<link rel="stylesheet" type="text/css" href="/css/screen.css" media="screen" />',
+    '<link rel="stylesheet" type="text/css" href="/css/print.css" media="print" />',
     '<script src="/js/player.js"></script>',
     '<script src="/js/login.js"></script>',
     '<script src="https://cdn.jsdelivr.net/npm/abcjs@6.6.2/dist/abcjs-basic-min.js"></script>',

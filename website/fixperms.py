@@ -26,6 +26,9 @@ DATA_DIRS = [
   'website/cache/tuneset',
   'website/cache/book',
 
+  # Generated CSS
+  'website/css',
+
   # User/event data
   'website/events',
   'website/events/archive',
