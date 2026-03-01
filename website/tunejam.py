@@ -33,7 +33,7 @@ app.secret_key = 'TunejamIsAtHubbardHallEachTuesday'
 app.config['SESSION_TYPE'] = 'filesystem'
 app.permanent_session_lifetime = timedelta(days=30)
 
-kSiteVersion = '3.0'
+kSiteVersion = '4.0'
 
 # Email config file path (src/config/email.conf)
 kEmailConf = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'email.conf')
@@ -8861,7 +8861,10 @@ def events(delete=None, undelete=None):
 
   events = utils.ReadEvents()
   events = [e for e in events if not e.private or CanViewEvent(e)]
-  events.sort(key=lambda s: s.title.lower())
+  import re
+  def _natural_sort_key(s):
+    return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', s.title.lower())]
+  events.sort(key=_natural_sort_key)
 
   parts.append(CParagraph(CText("The following events have been created:", bold=1)))
 
