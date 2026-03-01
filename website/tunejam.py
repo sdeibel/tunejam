@@ -53,6 +53,7 @@ kLoginLog = os.path.join(kLogDir, 'logins.log')
 kConfigDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config')
 kNotificationLog = os.path.join(kConfigDir, 'notifications.log')
 kNotificationLastSent = os.path.join(kConfigDir, 'notifications-last-sent.txt')
+kNotificationLastRead = os.path.join(kConfigDir, 'notifications-last-read.txt')
 kNotificationLogMaxBytes = 1024 * 1024  # 1MB
 kDigestIntervalSeconds = 12 * 3600  # 12 hours
 
@@ -1232,6 +1233,77 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
 </script>
 """ % (admin_items, editor_items, _json.dumps(kAdminRoute))
 
+def _AdminNotificationsHTML(admin_emails):
+  """Build HTML + JS for the admin notifications management section."""
+  import json as _json
+
+  checkboxes = []
+  for email in admin_emails:
+    enabled = IsNotificationsEnabled(email)
+    name = GetDisplayName(email) or email
+    esc_email = email.replace('"', '&quot;')
+    checked = ' checked' if enabled else ''
+    checkboxes.append(
+      '<label style="display:block;margin:2px 0">'
+      '<input type="checkbox" class="notif-toggle" data-email="%s"%s> %s</label>'
+      % (esc_email, checked, name))
+
+  admin_route_js = _json.dumps(kAdminRoute)
+
+  return """<h2>&#9834; Notifications</h2>
+<p>Admin digest email recipients:</p>
+%s
+<div style="margin-top:12px">
+<button id="notif-send-now" type="button">Send Now</button>
+<span id="notif-send-status" style="margin-left:10px;color:#666"></span>
+</div>
+<script>
+(function() {
+  var adminRoute = %s;
+  var checkboxes = document.querySelectorAll('.notif-toggle');
+  for (var i = 0; i < checkboxes.length; i++) {
+    checkboxes[i].addEventListener('change', (function(cb) {
+      return function() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/ajax/profile/toggle-notifications');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function() {
+          try {
+            var resp = JSON.parse(xhr.responseText);
+            if (resp.ok) cb.checked = resp.enabled;
+          } catch(e) {}
+        };
+        xhr.send(JSON.stringify({email: cb.getAttribute('data-email')}));
+      };
+    })(checkboxes[i]));
+  }
+  var btn = document.getElementById('notif-send-now');
+  var status = document.getElementById('notif-send-status');
+  btn.addEventListener('click', function() {
+    btn.disabled = true;
+    status.textContent = 'Sending...';
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', adminRoute + '/notifications/send-now');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onload = function() {
+      btn.disabled = false;
+      try {
+        var resp = JSON.parse(xhr.responseText);
+        status.textContent = resp.ok ? resp.message : (resp.error || 'Error');
+      } catch(e) {
+        status.textContent = 'Error: ' + xhr.status;
+      }
+    };
+    xhr.onerror = function() {
+      btn.disabled = false;
+      status.textContent = 'Network error';
+    };
+    xhr.send('{}');
+  });
+})();
+</script>
+""" % ('\n'.join(checkboxes), admin_route_js)
+
 @app.route(kAdminRoute)
 def admin_page():
   parts = [CH("Admin", 1)]
@@ -1249,6 +1321,8 @@ def admin_page():
     editor_names = {e: GetDisplayName(e) for e in editor_emails}
     users_html = _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names)
     parts.append(users_html)
+
+    parts.append(_AdminNotificationsHTML(admin_emails))
 
     parts.append(CH("&#9834; Cache Management", 2))
     parts.append(CParagraph("Clear cached generated files to force regeneration:"))
@@ -1381,6 +1455,14 @@ def admin_users_remove():
   WriteEmailConfig(key, ','.join(current))
   names = {e: GetDisplayName(e) for e in current}
   return json.dumps({'ok': True, 'emails': current, 'names': names})
+
+@app.route(kAdminRoute + '/notifications/send-now', methods=['POST'])
+def admin_notifications_send_now():
+  if not HasCapability(kCapManageCache):
+    return '{"ok":false,"error":"not authorized"}', 403
+  _SetLastNotificationSent(0)
+  msg = _SendNotificationDigest()
+  return json.dumps({'ok': True, 'message': msg or 'Done'})
 
 @app.route(kAdminRoute + '/publish/approve', methods=['POST'])
 def admin_publish_approve():
@@ -11248,15 +11330,24 @@ def IsRateLimited(email):
 # -- Notification digest system --
 
 def LogNotification(category, message):
-  """Append a notification entry, truncating if over 1MB."""
+  """Append a notification entry, truncating entries older than 2 weeks."""
   timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
   line = '%s|%s|%s\n' % (timestamp, category, message)
   try:
+    cutoff = time.time() - 14 * 86400  # 2 weeks
     if os.path.exists(kNotificationLog) and os.path.getsize(kNotificationLog) > kNotificationLogMaxBytes:
+      kept = []
       with open(kNotificationLog, 'r') as f:
-        data = f.read()
+        for existing in f:
+          parts = existing.split('|', 1)
+          try:
+            t = time.mktime(time.strptime(parts[0].strip(), '%Y-%m-%d %H:%M:%S'))
+            if t >= cutoff:
+              kept.append(existing)
+          except:
+            kept.append(existing)
       with open(kNotificationLog, 'w') as f:
-        f.write(data[len(data) // 2:])
+        f.writelines(kept)
   except:
     pass
   with open(kNotificationLog, 'a') as f:
@@ -11299,27 +11390,46 @@ def _SetLastNotificationSent(ts):
   with open(kNotificationLastSent, 'w') as f:
     f.write(str(ts))
 
+def _GetLastNotificationRead():
+  """Read last-read cursor timestamp from file, default 0.0."""
+  if not os.path.exists(kNotificationLastRead):
+    return 0.0
+  try:
+    with open(kNotificationLastRead, 'r') as f:
+      return float(f.read().strip())
+  except:
+    return 0.0
+
+def _SetLastNotificationRead(ts):
+  """Write last-read cursor timestamp to file."""
+  with open(kNotificationLastRead, 'w') as f:
+    f.write(str(ts))
+
 def IsNotificationsEnabled(email):
   """Check if notification digest is enabled for an admin user."""
   profile = GetOrCreateProfile(email)
   return profile.get('notifications_enabled', '1') == '1'
 
 def _SendNotificationDigest():
-  """Send digest email if 12+ hours since last send and there are entries."""
+  """Send digest email if 12+ hours since last send and there are new entries."""
   last_sent = _GetLastNotificationSent()
   now = time.time()
   remaining = kDigestIntervalSeconds - (now - last_sent)
   if remaining > 0:
-    print("Notification digest: skipping (%.1f hours until next send)" % (remaining / 3600))
-    return
+    msg = "Notification digest: skipping (%.1f hours until next send)" % (remaining / 3600)
+    print(msg)
+    return msg
 
   # Mark as sent immediately to prevent concurrent sends
   _SetLastNotificationSent(now)
 
-  entries = _ReadNotificationsSince(last_sent)
+  # Read entries since the last-read cursor (not last-sent)
+  last_read = _GetLastNotificationRead()
+  entries = _ReadNotificationsSince(last_read)
   if not entries:
-    print("Notification digest: no entries since last send")
-    return
+    msg = "Notification digest: no new entries since last send"
+    print(msg)
+    return msg
 
   # Group by category
   category_order = ['tune', 'event', 'user', 'admin']
@@ -11338,7 +11448,7 @@ def _SendNotificationDigest():
     grouped[category].append(message)
 
   # Format period header
-  since_str = time.strftime('%b %d %I:%M %p', time.localtime(last_sent)) if last_sent > 0 else 'beginning'
+  since_str = time.strftime('%b %d %I:%M %p', time.localtime(last_read)) if last_read > 0 else 'beginning'
   until_str = time.strftime('%b %d %I:%M %p', time.localtime(now))
 
   body_lines = ['Site Activity Summary', '=' * 22]
@@ -11366,11 +11476,16 @@ def _SendNotificationDigest():
       except Exception as e:
         errors.append('%s: %s' % (admin_email, e))
 
-  print("Notification digest: %d entries, sent to %d admin(s)%s" % (
+  # Advance the read cursor
+  _SetLastNotificationRead(now)
+
+  msg = "Notification digest: %d entries, sent to %d admin(s)%s" % (
     len(entries), len(sent_to),
-    ' (%s)' % ', '.join(sent_to) if sent_to else ''))
+    ' (%s)' % ', '.join(sent_to) if sent_to else '')
+  print(msg)
   for err in errors:
     print("Notification digest error: %s" % err)
+  return msg
 
 def EventReloader(sid, editor=False):
 
