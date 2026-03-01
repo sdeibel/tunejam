@@ -1289,22 +1289,21 @@ def _AdminNotificationsHTML(admin_emails):
   var status = document.getElementById('notif-send-status');
   btn.addEventListener('click', function() {
     btn.disabled = true;
-    status.textContent = 'Sending...';
+    status.textContent = 'Sending emails...';
     var xhr = new XMLHttpRequest();
     xhr.open('POST', adminRoute + '/notifications/send-now');
     xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 5000;
     xhr.onload = function() {
-      btn.disabled = false;
       try {
         var resp = JSON.parse(xhr.responseText);
         status.textContent = resp.ok ? resp.message : (resp.error || 'Error');
       } catch(e) {
-        status.textContent = 'Error: ' + xhr.status;
+        status.textContent = 'Emails are being sent in the background';
       }
     };
-    xhr.onerror = function() {
-      btn.disabled = false;
-      status.textContent = 'Network error';
+    xhr.ontimeout = xhr.onerror = function() {
+      status.textContent = 'Emails are being sent in the background';
     };
     xhr.send('{}');
   });
@@ -1469,8 +1468,14 @@ def admin_notifications_send_now():
   if not HasCapability(kCapManageCache):
     return '{"ok":false,"error":"not authorized"}', 403
   _SetLastNotificationSent(0)
-  msg = _SendNotificationDigest()
-  return json.dumps({'ok': True, 'message': msg or 'Done'})
+  pending = len(_ReadNotificationsSince(_GetLastNotificationRead()))
+  if pending == 0:
+    return json.dumps({'ok': True, 'message': 'No new entries to send'})
+  import threading
+  thread = threading.Thread(target=_SendNotificationDigest)
+  thread.daemon = True
+  thread.start()
+  return json.dumps({'ok': True, 'message': 'Sending %d entries...' % pending})
 
 @app.route(kAdminRoute + '/publish/approve', methods=['POST'])
 def admin_publish_approve():
