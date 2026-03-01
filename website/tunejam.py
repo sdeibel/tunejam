@@ -11308,7 +11308,9 @@ def _SendNotificationDigest():
   """Send digest email if 12+ hours since last send and there are entries."""
   last_sent = _GetLastNotificationSent()
   now = time.time()
-  if now - last_sent < kDigestIntervalSeconds:
+  remaining = kDigestIntervalSeconds - (now - last_sent)
+  if remaining > 0:
+    print("Notification digest: skipping (%.1f hours until next send)" % (remaining / 3600))
     return
 
   # Mark as sent immediately to prevent concurrent sends
@@ -11316,6 +11318,7 @@ def _SendNotificationDigest():
 
   entries = _ReadNotificationsSince(last_sent)
   if not entries:
+    print("Notification digest: no entries since last send")
     return
 
   # Group by category
@@ -11352,12 +11355,22 @@ def _SendNotificationDigest():
   body = '\n'.join(body_lines)
   subject = 'Site Activity Summary'
 
-  for admin_email in GetAdminEmails():
+  admin_emails = GetAdminEmails()
+  sent_to = []
+  errors = []
+  for admin_email in admin_emails:
     if IsNotificationsEnabled(admin_email):
       try:
         _SendEmail(admin_email, subject, body)
-      except:
-        pass
+        sent_to.append(admin_email)
+      except Exception as e:
+        errors.append('%s: %s' % (admin_email, e))
+
+  print("Notification digest: %d entries, sent to %d admin(s)%s" % (
+    len(entries), len(sent_to),
+    ' (%s)' % ', '.join(sent_to) if sent_to else ''))
+  for err in errors:
+    print("Notification digest error: %s" % err)
 
 def EventReloader(sid, editor=False):
 
