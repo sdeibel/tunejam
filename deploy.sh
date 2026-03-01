@@ -108,26 +108,44 @@ if [ "$needs_fix" = true ] || [ "$TEST_MODE" = true ]; then
     run sudo chgrp apache "$dir"
     run sudo chmod 2775 "$dir"
   done
-  # Fix group and permissions on existing files within data dirs
-  if [ "$TEST_MODE" = true ]; then
-    echo ""
-    echo "# File permissions commands (for files with wrong group/perms):"
+  if [ "$TEST_MODE" != true ]; then
+    echo "Directory permissions fixed."
   fi
-  for dir in "${DATA_DIRS[@]}"; do
-    if [ -d "$dir" ] || [ "$TEST_MODE" = true ]; then
-      if [ "$TEST_MODE" = true ]; then
-        echo "  find $dir -maxdepth 1 -type f \\( ! -group apache -o ! -perm -g+rw \\) -exec sudo chgrp apache {} + -exec sudo chmod 664 {} +"
-      else
+else
+  echo "Data directory permissions OK."
+fi
+
+# Fix file permissions — always check since git pull can introduce files
+# with wrong group/perms even when directories are already correct.
+# xargs -r avoids invoking sudo when find matches nothing.
+if [ "$TEST_MODE" = true ]; then
+  echo ""
+  echo "# File permissions commands (for files with wrong group/perms):"
+fi
+files_fixed=false
+for dir in "${DATA_DIRS[@]}"; do
+  if [ -d "$dir" ] || [ "$TEST_MODE" = true ]; then
+    if [ "$TEST_MODE" = true ]; then
+      echo "  find $dir -maxdepth 1 -type f \\( ! -group apache -o ! -perm -g+rw \\) -exec sudo chgrp apache {} + -exec sudo chmod 664 {} +"
+    else
+      bad_files="$(find "$dir" -maxdepth 1 -type f \( ! -group apache -o ! -perm -g+rw \) -print -quit 2>/dev/null)"
+      if [ -n "$bad_files" ]; then
+        if [ "$files_fixed" = false ]; then
+          echo "Fixing file permissions..."
+          files_fixed=true
+        fi
         find "$dir" -maxdepth 1 -type f \( ! -group apache -o ! -perm -g+rw \) -print0 2>/dev/null | \
           xargs -0 -r sudo sh -c 'chgrp apache "$@" && chmod 664 "$@"' _
       fi
     fi
-  done
-  if [ "$TEST_MODE" != true ]; then
-    echo "Permissions fixed."
   fi
-else
-  echo "Data directory permissions OK."
+done
+if [ "$TEST_MODE" != true ]; then
+  if [ "$files_fixed" = true ]; then
+    echo "File permissions fixed."
+  else
+    echo "File permissions OK."
+  fi
 fi
 
 echo ""

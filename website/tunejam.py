@@ -10270,7 +10270,10 @@ def _ArchiveTune(tune_name):
     if os.path.exists(src):
       dest = os.path.join(arch_dir, tune_name + ext)
       shutil.move(src, dest)
-      os.utime(dest, None)  # set mtime to now
+      try:
+        os.utime(dest, None)  # set mtime to now
+      except OSError:
+        pass  # file permissions may prevent touch; purge uses original mtime
 
 def _UnarchiveTune(tune_name):
   """Restore a tune's files from archive directories."""
