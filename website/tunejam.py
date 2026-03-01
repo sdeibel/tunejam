@@ -1692,7 +1692,7 @@ def sets(spec=None, sid=None):
         md5sum.update(tune)
       name = 'C-' + md5sum.hexdigest()
       
-      if save and title:
+      if save and title and IsLoggedIn():
         date = time.strftime("%d %B %Y", time.localtime())
         book = '%s\n%s\n%s\nhttp://cambridgeny.net/index\n--\n' % (
           title, subtitle, date
@@ -7216,6 +7216,8 @@ def saved(action=None, book=None):
     tunes = '&'.join(tunes)
     return sets(tunes+'&edit=1')
   elif action == 'delete':
+    if not IsLoggedIn():
+      return redirect('/sets', code=303)
     fn = os.path.join(utils.kSaveLoc, book.name+'.book')
     os.unlink(fn)
     return sets()
@@ -8847,6 +8849,8 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
     return titles
 
   if request.environ['REQUEST_METHOD'] == 'POST':
+    if not IsLoggedIn():
+      return redirect('/events', code=303)
     title = request.form['title']
     sid = utils.CreateEvent(title, owner=GetUserEmail())
     LogNotification('event', 'Event created: "%s" by %s' % (title, GetUserEmail() or 'anonymous'))
@@ -12495,12 +12499,14 @@ def _RenderNotesSection(target_type, target_id, can_make_public):
   parts.append('</div>')
   return '\n'.join(parts)
 
-def _RenderOneSetTuneNote(note, owner_email, is_own, can_delete):
+def _RenderOneSetTuneNote(note, owner_email, is_own, can_delete, show_public=False):
   """Render a compact set-tune note: red X on left (if deletable), text.
-  No attribution, no public toggle."""
+  No attribution, no public toggle.  show_public adds a 'Public:' prefix
+  so event owners/co-owners know their note is visible to others."""
   note_id = note['id']
   raw_text = note.get('text', '')
-  text_html = raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
+  public_prefix = '<span style="color:#888;font-size:0.85em;font-style:italic">Public:</span> ' if show_public else ''
+  text_html = public_prefix + raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
   escaped_raw = raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace('\n', '&#10;')
 
   can_edit_note = can_delete
@@ -12548,17 +12554,15 @@ def _RenderSetTuneNotesSection(set_spec, tune_name, event_sid, event_obj):
   notes = GetNotesForTarget('set_tune', target_id, viewer_email)
   logged_in = IsLoggedIn()
 
-  # Determine if current user can add/manage notes:
-  # event owner, co-owner, editor, or admin
+  # Any logged-in user can add notes on set tunes.
+  # is_event_editor controls delete access on others' public notes.
   is_event_editor = False
-  can_add_note = False
+  can_add_note = logged_in
   if logged_in:
     if HasCapability(kCapManageAnyEvent) or HasCapability(kCapEditAnyTune):
-      can_add_note = True
       is_event_editor = True
     elif event_obj and viewer_email:
       if _OwnsItem(event_obj) or _IsCoowner(event_obj):
-        can_add_note = True
         is_event_editor = True
 
   if not notes and not can_add_note:
@@ -12580,7 +12584,8 @@ def _RenderSetTuneNotesSection(set_spec, tune_name, event_sid, event_obj):
       can_delete = True
     else:
       can_delete = False
-    parts.append(_RenderOneSetTuneNote(note, owner_email, is_own, can_delete))
+    show_public = is_own and is_public
+    parts.append(_RenderOneSetTuneNote(note, owner_email, is_own, can_delete, show_public))
 
   if can_add_note:
     parts.append(
