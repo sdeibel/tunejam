@@ -37,17 +37,21 @@ _kSrcDir = os.path.abspath(os.path.dirname(__file__))
 kBaseDir = os.path.dirname(_kSrcDir)
 kExecutable = os.path.join(kBaseDir, 'bin/abcm2ps')
 kDatabaseDir = os.path.join(_kSrcDir, 'db')
+kDatabaseArchiveDir = os.path.join(_kSrcDir, 'db', 'archive')
 kSheetMusicDir = os.path.join(_kSrcDir, 'tunes')
+kSheetMusicArchiveDir = os.path.join(_kSrcDir, 'tunes', 'archive')
 kImageDir = os.path.join(_kSrcDir, 'images')
 kRecordingsDir = os.path.join(_kSrcDir, 'recordings')
+kRecordingsArchiveDir = os.path.join(_kSrcDir, 'recordings', 'archive')
 kCacheLoc = os.path.join(_kSrcDir, 'website', 'cache')
 kSaveLoc = os.path.join(_kSrcDir, 'website', 'saved-sets')
 kEventsLoc = os.path.join(_kSrcDir, 'website', 'events')
 kEventArchiveLoc = os.path.join(kEventsLoc, 'archive')
 kJSDir = os.path.join(_kSrcDir, 'website', 'js')
 
-if not os.path.exists(kEventArchiveLoc):
-    os.mkdir(kEventArchiveLoc)
+for _d in (kEventArchiveLoc, kDatabaseArchiveDir, kSheetMusicArchiveDir, kRecordingsArchiveDir):
+    if not os.path.exists(_d):
+        os.mkdir(_d)
         
 from reportlab import rl_config
 rl_config.warnOnMissingFontGlyphs = 0
@@ -1743,6 +1747,7 @@ class CEvent:
         self.on_air = 0
         self.owner = None
         self.private = 0
+        self.approved = 0
         self.share_id = ''
         self.coowners = []
         self.description = ''
@@ -1774,6 +1779,8 @@ class CEvent:
                 self.owner = l[len('owner:'):].strip()
             elif l.startswith('private:'):
                 self.private = int(l[len('private:'):].strip())
+            elif l.startswith('approved:'):
+                self.approved = int(l[len('approved:'):].strip())
             elif l.startswith('share:'):
                 self.share_id = l[len('share:'):].strip()
             elif l.startswith('coowner:'):
@@ -1798,6 +1805,8 @@ class CEvent:
             lines.append('owner:%s' % self.owner)
         if self.private:
             lines.append('private:%d' % self.private)
+        if self.approved:
+            lines.append('approved:%d' % self.approved)
         if self.share_id:
             lines.append('share:%s' % self.share_id)
         for coowner in self.coowners:
@@ -1920,6 +1929,8 @@ def CreateEvent(title, owner=None):
     event = CEvent(name)
     event.title = title
     event.owner = owner
+    event.private = 1
+    event.share_id = GenerateShareId()
     event.WriteEvent()
 
     return name

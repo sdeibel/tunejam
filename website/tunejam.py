@@ -53,7 +53,7 @@ kLoginLog = os.path.join(kLogDir, 'logins.log')
 kSessionLifetimeDays = 30
 kTokenExpirySeconds = 3600
 kLoginLogMaxBytes = 1024 * 1024  # 1MB
-kMaxEmailsPerHour = 3
+kMaxEmailsPerHour = 10
 kMaxGlobalEmailsPerHour = 60
 
 # Capability constants
@@ -73,6 +73,13 @@ kPermissions = {
 }
 
 kAdminRoute = '/mx7q9p'
+
+@app.before_request
+def _check_banned():
+  """Log out banned users on every request."""
+  email = session.get('email')
+  if email and IsBanned(email):
+    Logout()
 
 kMenu = [
   ('Home', '/', 'home'), 
@@ -678,9 +685,216 @@ def dev():
   parts.append(CBreak(2))
   return PageWrapper(parts, 'dev')
 
+def _AdminPublishRequestsHTML(requests):
+  """Build HTML + JS for the publish requests section. Returns raw HTML string."""
+  import json as _json
+
+  items = []
+  for req in requests:
+    sid = req.get('event_sid', '')
+    requestor = req.get('requestor', '')
+    event = utils.CEvent(sid)
+    event.ReadEvent()
+    title = event.title or sid
+    name = GetDisplayName(requestor)
+    esc_title = title.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    esc_name = name.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    esc_email = requestor.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    profile_url = '/profile/' + _ProfileHash(requestor)
+    items.append(
+      '<div class="pub-req" data-sid="%s" data-email="%s" style="margin:8px 0;padding:8px;border:1px solid #ddd;border-radius:4px">'
+      '<a href="/event/%s">%s</a> &mdash; %s (<a href="%s">%s</a>) '
+      '<button type="button" class="pub-approve" style="background:#4a4;color:white;border:1px solid #393;border-radius:2px;padding:2px 8px;cursor:pointer;margin-left:8px">Approve</button> '
+      '<button type="button" class="pub-deny" style="background:#da4;color:white;border:1px solid #c93;border-radius:2px;padding:2px 8px;cursor:pointer">Deny</button> '
+      '<button type="button" class="pub-ban" style="background:#c33;color:white;border:1px solid #a22;border-radius:2px;padding:2px 8px;cursor:pointer">Ban User</button>'
+      '<span class="pub-msg" style="color:#c00;font-size:0.85em;margin-left:8px"></span>'
+      '</div>' % (sid, esc_email, sid, esc_title, esc_name, profile_url, esc_email))
+
+  return """
+<div id="pub-req-wrap">
+<h2>&#9834; Publish Requests</h2>
+<div id="pub-req-section">
+%s
+</div>
+</div>
+
+<div id="pub-dialog-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:1000">
+<div style="position:fixed;top:50%%;left:50%%;transform:translate(-50%%,-50%%);background:white;border-radius:6px;padding:24px;min-width:360px;max-width:480px;box-shadow:0 4px 20px rgba(0,0,0,0.3)">
+  <div id="pub-dialog-title" style="font-weight:bold;font-size:1.1em;margin-bottom:12px"></div>
+  <div id="pub-dialog-body"></div>
+  <div id="pub-dialog-buttons" style="margin-top:16px;text-align:right"></div>
+</div>
+</div>
+
+<script>
+(function() {
+  var adminRoute = %s;
+  var overlay = document.getElementById('pub-dialog-overlay');
+  var dlgTitle = document.getElementById('pub-dialog-title');
+  var dlgBody = document.getElementById('pub-dialog-body');
+  var dlgButtons = document.getElementById('pub-dialog-buttons');
+
+  function hideIfEmpty() {
+    if (!document.querySelector('.pub-req')) {
+      var wrap = document.getElementById('pub-req-wrap');
+      if (wrap) wrap.style.display = 'none';
+    }
+  }
+
+  function showDialog(title, bodyHTML, buttons) {
+    dlgTitle.textContent = title;
+    dlgBody.innerHTML = bodyHTML;
+    dlgButtons.innerHTML = '';
+    for (var i = 0; i < buttons.length; i++) {
+      var btn = document.createElement('button');
+      btn.textContent = buttons[i].label;
+      btn.style.cssText = 'margin-left:8px;padding:4px 14px;border-radius:3px;border:1px solid #999;cursor:pointer;' + (buttons[i].style || '');
+      btn.onclick = buttons[i].action;
+      dlgButtons.appendChild(btn);
+    }
+    overlay.style.display = 'block';
+  }
+
+  function hideDialog() {
+    overlay.style.display = 'none';
+  }
+
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) hideDialog();
+  });
+
+  document.getElementById('pub-req-section').addEventListener('click', function(e) {
+    var div = e.target.closest('.pub-req');
+    if (!div) return;
+    var sid = div.getAttribute('data-sid');
+    var email = div.getAttribute('data-email');
+    var msgEl = div.querySelector('.pub-msg');
+
+    if (e.target.classList.contains('pub-approve')) {
+      fetch(adminRoute + '/publish/approve', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({event_sid: sid})
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) { div.remove(); hideIfEmpty(); }
+        else { msgEl.textContent = data.error || 'error'; }
+      })
+      .catch(function() { msgEl.textContent = 'request failed'; });
+    }
+    else if (e.target.classList.contains('pub-deny')) {
+      showDialog('Deny Publish Request',
+        '<label style="display:block;margin-bottom:4px">Notes to include in denial email (optional):</label>' +
+        '<textarea id="pub-deny-notes" rows="3" style="width:100%%;box-sizing:border-box;font-family:inherit"></textarea>',
+        [
+          {label: 'Cancel', action: hideDialog},
+          {label: 'Deny Only', style: 'background:#da4;color:white;border-color:#c93', action: function() {
+            hideDialog();
+            fetch(adminRoute + '/publish/deny', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({event_sid: sid, notes: '', skip_email: true})
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (data.ok) { div.remove(); hideIfEmpty(); }
+              else { msgEl.textContent = data.error || 'error'; }
+            })
+            .catch(function() { msgEl.textContent = 'request failed'; });
+          }},
+          {label: 'Deny & Notify', style: 'background:#c33;color:white;border-color:#a22', action: function() {
+            var notes = document.getElementById('pub-deny-notes').value;
+            hideDialog();
+            fetch(adminRoute + '/publish/deny', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({event_sid: sid, notes: notes, skip_email: false})
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (data.ok) { div.remove(); hideIfEmpty(); }
+              else { msgEl.textContent = data.error || 'error'; }
+            })
+            .catch(function() { msgEl.textContent = 'request failed'; });
+          }}
+        ]
+      );
+    }
+    else if (e.target.classList.contains('pub-ban')) {
+      showDialog('Ban User',
+        '<p style="margin:0">Ban this user? They will be logged out and unable to log in again.</p>',
+        [
+          {label: 'Cancel', action: hideDialog},
+          {label: 'Ban User', style: 'background:#c33;color:white;border-color:#a22', action: function() {
+            hideDialog();
+            fetch(adminRoute + '/publish/ban', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({event_sid: sid, email: email})
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (data.ok && data.profile_url) { window.location.href = data.profile_url; }
+              else if (data.ok) { div.remove(); hideIfEmpty(); }
+              else { msgEl.textContent = data.error || 'error'; }
+            })
+            .catch(function() { msgEl.textContent = 'request failed'; });
+          }}
+        ]
+      );
+    }
+  });
+})();
+</script>
+""" % ('\n'.join(items), _json.dumps(kAdminRoute))
+
+def _ReadAllProfiles():
+  """Read all profile files and return list of dicts sorted by display name."""
+  profiles = []
+  for fn in os.listdir(kProfileDir):
+    if not fn.endswith('.profile'):
+      continue
+    path = os.path.join(kProfileDir, fn)
+    profile = {}
+    with open(path) as f:
+      for line in f:
+        line = line.strip()
+        if '=' in line:
+          key, val = line.split('=', 1)
+          profile[key.strip()] = val.strip()
+    if profile.get('email'):
+      profiles.append(profile)
+  profiles.sort(key=lambda p: p.get('display_name', 'Anonymous').lower())
+  return profiles
+
 def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
   """Build HTML + JS for the admin users management section."""
   import json as _json
+
+  # All site users
+  all_profiles = _ReadAllProfiles()
+  banned = GetBannedEmails()
+  all_users_items = []
+  for p in all_profiles:
+    email = p['email']
+    name = p.get('display_name', 'Anonymous')
+    esc_name = name.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    esc_email = email.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    profile_url = '/profile/' + _ProfileHash(email)
+    entry = '<li data-email="%s" style="margin:3px 0">%s (<a href="%s">%s</a>)' % (esc_email, esc_name, profile_url, esc_email)
+    role = GetPermissionLevel(email)
+    if role == 'admin':
+      entry += ' <span style="color:#069;font-size:0.85em">(admin)</span>'
+    elif role == 'editor':
+      entry += ' <span style="color:#690;font-size:0.85em">(editor)</span>'
+    if email in banned:
+      entry += ' <span class="ban-status" style="color:#c00;font-size:0.85em;font-style:italic">(banned)</span>'
+      entry += ' <a href="#" class="user-unban-link" style="color:#069;font-size:0.85em;font-style:italic">Unban</a>'
+    elif role == 'regular':
+      entry += ' <a href="#" class="user-ban-link" style="color:#c00;font-size:0.85em;font-style:italic">Ban</a>'
+    entry += '</li>'
+    all_users_items.append(entry)
 
   def _render_list_items(emails, names):
     items = []
@@ -697,9 +911,15 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
   editor_items = _render_list_items(editor_emails, editor_names)
 
   return """
-<h2>&#9834; Users</h2>
+<h2>&#9834; Users (%d)</h2>
 
-<h3>Admin Users</h3>
+<div id="all-user-list">
+<ul>%s</ul>
+</div>
+
+<h2>&#9834; Groups</h2>
+
+<h3>Admin Users</h3>""" % (len(all_users_items), '\n'.join(all_users_items)) + """
 <div id="admin-user-list">
 <ul>%s</ul>
 </div>
@@ -786,6 +1006,65 @@ def _AdminUsersHTML(admin_emails, admin_names, editor_emails, editor_names):
     var msgId = role + '-msg';
     doFetch(adminRoute + '/users/remove', {role:role, email:email}, msgId, role, container.id);
   });
+
+  // Ban/Unban in all-users list
+  var allUserList = document.getElementById('all-user-list');
+  if (allUserList) {
+    allUserList.addEventListener('click', function(e) {
+      var li = e.target.closest('li');
+      if (!li) return;
+      var email = li.getAttribute('data-email');
+      if (e.target.classList.contains('user-ban-link')) {
+        e.preventDefault();
+        fetch('/ajax/profile/ban', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email: email})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            e.target.remove();
+            var span = document.createElement('span');
+            span.className = 'ban-status';
+            span.style.cssText = 'color:#c00;font-size:0.85em;font-style:italic';
+            span.textContent = '(banned)';
+            li.insertBefore(span, li.lastChild);
+            li.insertBefore(document.createTextNode(' '), li.lastChild);
+            var link = document.createElement('a');
+            link.href = '#';
+            link.className = 'user-unban-link';
+            link.style.cssText = 'color:#069;font-size:0.85em;font-style:italic';
+            link.textContent = 'Unban';
+            li.insertBefore(link, li.lastChild);
+          }
+        });
+      }
+      else if (e.target.classList.contains('user-unban-link')) {
+        e.preventDefault();
+        fetch('/ajax/profile/unban', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email: email})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            var banStatus = li.querySelector('.ban-status');
+            if (banStatus) banStatus.remove();
+            e.target.remove();
+            var link = document.createElement('a');
+            link.href = '#';
+            link.className = 'user-ban-link';
+            link.style.cssText = 'color:#c00;font-size:0.85em;font-style:italic';
+            link.textContent = 'Ban';
+            li.appendChild(document.createTextNode(' '));
+            li.appendChild(link);
+          }
+        });
+      }
+    });
+  }
 })();
 </script>
 """ % (admin_items, editor_items, _json.dumps(kAdminRoute))
@@ -795,6 +1074,11 @@ def admin_page():
   parts = [CH("Admin", 1)]
 
   if HasCapability(kCapManageCache):
+    # Publish requests section (only if there are pending requests)
+    pub_requests = ReadAllPublishRequests()
+    if pub_requests:
+      parts.append(_AdminPublishRequestsHTML(pub_requests))
+
     # Users section
     admin_emails = GetAdminEmails()
     editor_emails = GetEditorEmails()
@@ -934,6 +1218,68 @@ def admin_users_remove():
   WriteEmailConfig(key, ','.join(current))
   names = {e: GetDisplayName(e) for e in current}
   return json.dumps({'ok': True, 'emails': current, 'names': names})
+
+@app.route(kAdminRoute + '/publish/approve', methods=['POST'])
+def admin_publish_approve():
+  if not HasCapability(kCapManageCache):
+    return '{"ok":false,"error":"not authorized"}', 403
+  data = request.get_json(force=True)
+  sid = data.get('event_sid', '')
+  if not sid:
+    return json.dumps({'ok': False, 'error': 'missing event_sid'})
+  event = utils.CEvent(sid)
+  event.ReadEvent()
+  event.private = 0
+  event.approved = 1
+  event.WriteEvent()
+  req = ReadPublishRequest(sid)
+  DeletePublishRequest(sid)
+  if req:
+    IncrementPublishApprovals(req['requestor'])
+    try:
+      _SendPublishApproval(req['requestor'], event.title, sid)
+    except:
+      pass
+  return json.dumps({'ok': True})
+
+@app.route(kAdminRoute + '/publish/deny', methods=['POST'])
+def admin_publish_deny():
+  if not HasCapability(kCapManageCache):
+    return '{"ok":false,"error":"not authorized"}', 403
+  data = request.get_json(force=True)
+  sid = data.get('event_sid', '')
+  if not sid:
+    return json.dumps({'ok': False, 'error': 'missing event_sid'})
+  req = ReadPublishRequest(sid)
+  DeletePublishRequest(sid)
+  if req and not data.get('skip_email'):
+    notes = data.get('notes', '')
+    event = utils.CEvent(sid)
+    event.ReadEvent()
+    try:
+      _SendPublishDenial(req['requestor'], event.title, sid, notes)
+    except:
+      pass
+  return json.dumps({'ok': True})
+
+@app.route(kAdminRoute + '/publish/ban', methods=['POST'])
+def admin_publish_ban():
+  if not HasCapability(kCapManageCache):
+    return '{"ok":false,"error":"not authorized"}', 403
+  data = request.get_json(force=True)
+  sid = data.get('event_sid', '')
+  email = data.get('email', '').strip().lower()
+  if not sid or not email:
+    return json.dumps({'ok': False, 'error': 'missing event_sid or email'})
+  # Add to banned list
+  banned = GetBannedEmails()
+  if email not in banned:
+    banned.append(email)
+    WriteEmailConfig('banned_emails', ','.join(banned))
+  DeletePublishRequest(sid)
+  LogLogin('banned', email)
+  profile_url = '/profile/' + _ProfileHash(email)
+  return json.dumps({'ok': True, 'profile_url': profile_url})
 
 @app.route('/sets', methods=['GET', 'POST'])
 @app.route('/sets/')
@@ -8238,13 +8584,77 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
     parts.append(CH("Event: %s" % event.title, 1))
   if editor:
     settings_url = '/event/%s/settings' % sid
-    checked_attr = ' checked' if event.private else ''
+    is_admin_editor = HasCapability(kCapManageAnyEvent) or HasCapability(kCapEditAnyTune)
+    can_publish = is_admin_editor or event.approved or IsTrustedPublisher(GetUserEmail())
     parts.append(CBreak())
-    parts.append(
-      '<form method="POST" action="%s" style="display:inline">'
-      '<input type="hidden" name="action" value="toggle_private">'
-      '<label><input type="checkbox" name="private" onchange="this.form.submit()"%s> Private</label>'
-      '</form>' % (settings_url, checked_attr))
+
+    if can_publish:
+      # Admin/editor, previously-approved event, or trusted user: instant toggle
+      checked_attr = ' checked' if event.private else ''
+      # Check if admin should be prompted about forgetting approval
+      owner_is_regular = False
+      if is_admin_editor and event.owner and not event.private and event.approved:
+        owner_level = GetPermissionLevel(event.owner)
+        if owner_level == 'regular':
+          owner_is_regular = True
+      if owner_is_regular:
+        form_id = 'private-form-%s' % sid
+        parts.append(
+          '<form id="%s" method="POST" action="%s" style="display:inline">'
+          '<input type="hidden" name="action" value="toggle_private">'
+          '<input type="hidden" name="forget_approval" id="forget-approval-%s" value="0">'
+          '<label><input type="checkbox" name="private" id="private-cb-%s"%s> Private</label>'
+          '</form>' % (form_id, settings_url, sid, sid, checked_attr))
+        parts.append(
+          '<div id="forget-overlay-%s" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;'
+          'background:rgba(0,0,0,0.4);z-index:1000">'
+          '<div style="position:fixed;top:50%%;left:50%%;transform:translate(-50%%,-50%%);background:white;'
+          'border-radius:6px;padding:24px;min-width:320px;max-width:420px;box-shadow:0 4px 20px rgba(0,0,0,0.3)">'
+          '<div style="font-weight:bold;font-size:1.1em;margin-bottom:12px">Forget Previous Approval?</div>'
+          '<p style="margin:0 0 16px 0">This event was previously approved for public access. '
+          'Should the user need to request approval again to make it public?</p>'
+          '<div style="text-align:right">'
+          '<button type="button" onclick="document.getElementById(\'forget-overlay-%s\').style.display=\'none\'"'
+          ' style="margin-left:8px;padding:4px 14px;border-radius:3px;border:1px solid #999;cursor:pointer">'
+          'Cancel</button> '
+          '<button type="button" onclick="'
+          'document.getElementById(\'forget-overlay-%s\').style.display=\'none\';'
+          'document.getElementById(\'forget-approval-%s\').value=\'0\';'
+          'document.getElementById(\'%s\').submit()"'
+          ' style="margin-left:8px;padding:4px 14px;border-radius:3px;border:1px solid #999;cursor:pointer">'
+          'Keep Approval</button> '
+          '<button type="button" onclick="'
+          'document.getElementById(\'forget-overlay-%s\').style.display=\'none\';'
+          'document.getElementById(\'forget-approval-%s\').value=\'1\';'
+          'document.getElementById(\'%s\').submit()"'
+          ' style="margin-left:8px;padding:4px 14px;border-radius:3px;border:1px solid #999;'
+          'background:#c33;color:white;border-color:#a22;cursor:pointer">'
+          'Forget Approval</button>'
+          '</div></div></div>'
+          '<script>document.getElementById("private-cb-%s").onchange=function(){'
+          'if(this.checked){document.getElementById("forget-overlay-%s").style.display="block";}'
+          'else{this.form.submit();}};</script>'
+          % (sid, sid, sid, sid, form_id, sid, sid, form_id, sid, sid))
+      else:
+        parts.append(
+          '<form method="POST" action="%s" style="display:inline">'
+          '<input type="hidden" name="action" value="toggle_private">'
+          '<label><input type="checkbox" name="private" onchange="this.form.submit()"%s> Private</label>'
+          '</form>' % (settings_url, checked_attr))
+    elif HasPendingPublishRequest(sid):
+      # Regular owner with pending request: disabled checkbox + status
+      parts.append(
+        '<label><input type="checkbox" disabled> Private</label>'
+        ' <span style="color:#999;font-style:italic;margin-left:4px">Pending approval</span>')
+    else:
+      # Regular owner: checkbox that triggers approval workflow
+      checked_attr = ' checked' if event.private else ''
+      parts.append(
+        '<form method="POST" action="%s" style="display:inline">'
+        '<input type="hidden" name="action" value="toggle_private">'
+        '<label><input type="checkbox" name="private" onchange="this.form.submit()"%s> Private</label>'
+        '</form>' % (settings_url, checked_attr))
+
     if event.private:
       share_url = request.host_url.rstrip('/') + '/ev/' + event.share_id
       parts.extend([
@@ -8509,10 +8919,36 @@ def event_settings(sid):
   action = request.form.get('action', '')
 
   if action == 'toggle_private':
-    event.private = 1 if request.form.get('private') else 0
-    if event.private and not event.share_id:
-      event.share_id = utils.GenerateShareId()
-    event.WriteEvent()
+    is_admin_editor = HasCapability(kCapManageAnyEvent) or HasCapability(kCapEditAnyTune)
+    can_publish = is_admin_editor or event.approved or IsTrustedPublisher(GetUserEmail())
+    wants_private = 1 if request.form.get('private') else 0
+
+    if can_publish:
+      # Admin/editor, previously-approved event, or trusted user: apply immediately
+      event.private = wants_private
+      if not wants_private:
+        event.approved = 1
+      if wants_private and request.form.get('forget_approval') == '1':
+        event.approved = 0
+      if event.private and not event.share_id:
+        event.share_id = utils.GenerateShareId()
+      event.WriteEvent()
+      DeletePublishRequest(sid)
+    elif not wants_private:
+      # Regular user unchecking private: request approval
+      CreatePublishRequest(sid, GetUserEmail())
+      try:
+        _SendPublishRequestNotification(sid, event.title, GetUserEmail())
+      except:
+        pass
+      # Event stays private
+    else:
+      # Regular user checking private back on: set private, cancel request
+      event.private = 1
+      if not event.share_id:
+        event.share_id = utils.GenerateShareId()
+      event.WriteEvent()
+      DeletePublishRequest(sid)
 
   elif action == 'add_coowner':
     email = request.form.get('email', '').strip().lower()
@@ -8601,12 +9037,16 @@ def auth_send():
 
   LogLogin('link-request', email, login_type)
 
+  # Banned users: show ban message
+  if IsBanned(email):
+    LogLogin('banned-request', email)
+    return jsonify(ok=False, message='You have been banned from this site.')
+
   token = GenerateToken(email, target, login_type)
 
   if IsRateLimited(email):
-    # Pretend we sent the email, with a delay to mask the difference
     LogLogin('rate-limited', email, login_type)
-    time.sleep(random.uniform(1.0, 2.5))
+    return jsonify(ok=False, message='Rate limit exceeded. Please try again later.')
   else:
     try:
       SendMagicLink(email, token, target)
@@ -8633,6 +9073,19 @@ def auth_verify(token):
     return PageWrapper(parts, 'event', show_eye_candy=False)
 
   email, target, level = result
+
+  # Banned users: show suspended page instead of creating session
+  if IsBanned(email):
+    LogLogin('banned-login', email)
+    parts = [
+      CH("Account Suspended", 2),
+      CParagraph("This account has been suspended. If you believe this is an error, "
+                 "please contact the site administrator."),
+      CBreak(),
+      CText("Return Home", href='/'),
+    ]
+    return PageWrapper(parts, 'event', show_eye_candy=False)
+
   session.permanent = True
   session['email'] = email
   session['permission_level'] = level
@@ -8896,6 +9349,44 @@ def profile_page(uid):
                  ' <span id="email-change-status" style="font-size:0.85em;color:#666"></span>'
                  '</div>')
 
+  # -- Admin: banned user unban --
+  if is_admin and not is_own and IsBanned(profile_email):
+    esc_prof_email = profile_email.replace('"', '&quot;')
+    has_deleted = HasDeletedContent(profile_email)
+    banned_html = ('<div id="banned-section" style="margin:8px 0">'
+      '<span style="color:#c00;font-weight:bold">Banned</span> '
+      '<a href="#" id="unban-btn" data-email="%s" '
+      'style="color:#069;font-style:italic;margin-left:6px">Unban</a>' % esc_prof_email)
+    if has_deleted:
+      banned_html += (' <a href="#" id="undelete-all-btn" data-email="%s" '
+        'style="color:#069;font-style:italic;margin-left:6px">Undelete All User Content</a>' % esc_prof_email)
+    else:
+      banned_html += (' <a href="#" id="delete-all-btn" data-email="%s" '
+        'style="color:#c00;font-style:italic;margin-left:6px">Delete All User Content</a>' % esc_prof_email)
+    banned_html += '<span id="banned-msg" style="font-size:0.85em;margin-left:8px"></span></div>'
+    parts.append(banned_html)
+
+  # -- Admin: ban regular user --
+  if is_admin and not is_own and not IsBanned(profile_email) and GetPermissionLevel(profile_email) == 'regular':
+    esc_prof_email = profile_email.replace('"', '&quot;')
+    parts.append(
+      '<div id="ban-section" style="margin:8px 0">'
+      '<a href="#" id="ban-user-btn" data-email="%s" '
+      'style="color:#c00;font-style:italic">Ban User</a>'
+      '<span id="ban-msg" style="font-size:0.85em;margin-left:8px"></span>'
+      '</div>' % esc_prof_email)
+
+  # -- Admin: reset trusted publisher --
+  if is_admin and not is_own and IsTrustedPublisher(profile_email):
+    parts.append(
+      '<div id="trusted-pub-section" style="margin:8px 0">'
+      '<span style="color:#666">Trusted publisher</span> '
+      '<button type="button" id="reset-trusted-btn" data-email="%s" '
+      'style="font-size:0.85em;cursor:pointer;padding:2px 8px;margin-left:6px">'
+      'Require Approval</button>' % profile_email.replace('"', '&quot;') +
+      '<span id="reset-trusted-msg" style="color:#090;font-size:0.85em;margin-left:8px"></span>'
+      '</div>')
+
   # -- Tunes section --
   user_tunes = []
   for fn in os.listdir(utils.kDatabaseDir):
@@ -8935,11 +9426,14 @@ def profile_page(uid):
     all_events = utils.ReadEvents()
   except:
     all_events = []
-  for event in all_events:
-    is_owner = event.owner and event.owner.lower() == profile_email.lower()
-    is_coowner = profile_email.lower() in [c.lower() for c in event.coowners]
+  for evt in all_events:
+    is_owner = evt.owner and evt.owner.lower() == profile_email.lower()
+    is_coowner = profile_email.lower() in [c.lower() for c in evt.coowners]
     if is_owner or is_coowner:
-      user_events.append((event.title, event.name, is_coowner and not is_owner))
+      # Hide private events from other non-admin users
+      if evt.private and not is_own and not is_admin:
+        continue
+      user_events.append((evt.title, evt.name, is_coowner and not is_owner, evt.private))
   user_events.sort(key=lambda x: x[0].lower())
 
   if user_events or is_own:
@@ -8947,11 +9441,16 @@ def profile_page(uid):
       parts.append(CH("Events", 2))
     if is_own:
       parts.append('<div style="margin:2px 0">%s</div>' % _AddEventWidget())
-    for title, event_name, coowner_only in user_events:
+    for title, event_name, coowner_only, is_private in user_events:
       esc_title = title.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
       line = '<div style="margin:2px 0"><a href="/event/%s">%s</a>' % (event_name, esc_title)
       if coowner_only:
         line += ' <span style="color:#888;font-size:0.85em">(co-owner)</span>'
+      if is_private:
+        if is_admin and HasPendingPublishRequest(event_name):
+          line += ' <span style="color:#999;font-style:italic;font-size:0.85em">(Pending approval)</span>'
+        else:
+          line += ' <span style="color:#999;font-style:italic;font-size:0.85em">(Private)</span>'
       if is_own and not coowner_only:
         line += (' <a href="/profile/%s/delete-event/%s" '
                  'style="color:#c00;text-decoration:none;font-weight:bold;margin-left:6px" '
@@ -9096,6 +9595,129 @@ def _ProfileJS(uid, profile_email):
     });
   }
 
+  // -- Unban user --
+  var unbanBtn = document.getElementById("unban-btn");
+  if (unbanBtn) {
+    unbanBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      ajax("/ajax/profile/unban", {email: unbanBtn.getAttribute("data-email")}, function(resp) {
+        if (resp.ok) {
+          window.location.reload();
+        } else {
+          var msg = document.getElementById("banned-msg");
+          msg.style.color = "#c00";
+          msg.textContent = resp.error || "Error";
+        }
+      });
+    });
+  }
+
+  // -- Delete all user content --
+  var deleteAllBtn = document.getElementById("delete-all-btn");
+  if (deleteAllBtn) {
+    deleteAllBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      var msg = document.getElementById("banned-msg");
+      // Build a custom confirmation using an overlay
+      var ov = document.createElement("div");
+      ov.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:1000";
+      var box = document.createElement("div");
+      box.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:6px;padding:24px;min-width:320px;max-width:420px;box-shadow:0 4px 20px rgba(0,0,0,0.3)";
+      box.innerHTML = '<div style="font-weight:bold;font-size:1.1em;margin-bottom:12px">Delete All User Content</div>' +
+        '<p style="margin:0 0 16px 0">This will archive all tunes and events owned by this user. Content can be restored later.</p>' +
+        '<div style="text-align:right">' +
+        '<button id="del-all-cancel" style="margin-left:8px;padding:4px 14px;border-radius:3px;border:1px solid #999;cursor:pointer">Cancel</button> ' +
+        '<button id="del-all-confirm" style="margin-left:8px;padding:4px 14px;border-radius:3px;border:1px solid #a22;cursor:pointer;background:#c33;color:white">Delete All</button>' +
+        '</div>';
+      ov.appendChild(box);
+      document.body.appendChild(ov);
+      ov.addEventListener("click", function(ev) { if (ev.target === ov) document.body.removeChild(ov); });
+      document.getElementById("del-all-cancel").addEventListener("click", function() { document.body.removeChild(ov); });
+      document.getElementById("del-all-confirm").addEventListener("click", function() {
+        document.body.removeChild(ov);
+        ajax("/ajax/profile/delete-all-content", {email: deleteAllBtn.getAttribute("data-email")}, function(resp) {
+          if (resp.ok) {
+            msg.style.color = "#090";
+            msg.textContent = "Deleted " + (resp.tunes_deleted || 0) + " tune(s) and " + (resp.events_deleted || 0) + " event(s)";
+            window.location.reload();
+          } else {
+            msg.style.color = "#c00";
+            msg.textContent = resp.error || "Error";
+          }
+        });
+      });
+    });
+  }
+
+  // -- Undelete all user content --
+  var undeleteAllBtn = document.getElementById("undelete-all-btn");
+  if (undeleteAllBtn) {
+    undeleteAllBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      var msg = document.getElementById("banned-msg");
+      ajax("/ajax/profile/undelete-all-content", {email: undeleteAllBtn.getAttribute("data-email")}, function(resp) {
+        if (resp.ok) {
+          msg.style.color = "#090";
+          msg.textContent = "Restored " + (resp.tunes_restored || 0) + " tune(s) and " + (resp.events_restored || 0) + " event(s)";
+          window.location.reload();
+        } else {
+          msg.style.color = "#c00";
+          msg.textContent = resp.error || "Error";
+        }
+      });
+    });
+  }
+
+  // -- Ban user from profile --
+  var banUserBtn = document.getElementById("ban-user-btn");
+  if (banUserBtn) {
+    banUserBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      var msg = document.getElementById("ban-msg");
+      var ov = document.createElement("div");
+      ov.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:1000";
+      var box = document.createElement("div");
+      box.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:6px;padding:24px;min-width:320px;max-width:420px;box-shadow:0 4px 20px rgba(0,0,0,0.3)";
+      box.innerHTML = '<div style="font-weight:bold;font-size:1.1em;margin-bottom:12px">Ban User</div>' +
+        '<p style="margin:0 0 16px 0">Ban this user? They will be logged out and unable to log in again.</p>' +
+        '<div style="text-align:right">' +
+        '<button id="ban-cancel" style="margin-left:8px;padding:4px 14px;border-radius:3px;border:1px solid #999;cursor:pointer">Cancel</button> ' +
+        '<button id="ban-confirm" style="margin-left:8px;padding:4px 14px;border-radius:3px;border:1px solid #a22;cursor:pointer;background:#c33;color:white">Ban User</button>' +
+        '</div>';
+      ov.appendChild(box);
+      document.body.appendChild(ov);
+      ov.addEventListener("click", function(ev) { if (ev.target === ov) document.body.removeChild(ov); });
+      document.getElementById("ban-cancel").addEventListener("click", function() { document.body.removeChild(ov); });
+      document.getElementById("ban-confirm").addEventListener("click", function() {
+        document.body.removeChild(ov);
+        ajax("/ajax/profile/ban", {email: banUserBtn.getAttribute("data-email")}, function(resp) {
+          if (resp.ok) {
+            window.location.reload();
+          } else {
+            msg.style.color = "#c00";
+            msg.textContent = resp.error || "Error";
+          }
+        });
+      });
+    });
+  }
+
+  // -- Reset trusted publisher --
+  var resetBtn = document.getElementById("reset-trusted-btn");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", function() {
+      ajax("/ajax/profile/reset-trusted", {email: resetBtn.getAttribute("data-email")}, function(resp) {
+        if (resp.ok) {
+          document.getElementById("trusted-pub-section").style.display = "none";
+        } else {
+          var msg = document.getElementById("reset-trusted-msg");
+          msg.style.color = "#c00";
+          msg.textContent = resp.error || "Error";
+        }
+      });
+    });
+  }
+
   // -- Note deletion --
   var notesSection = document.getElementById("profile-notes-section");
   if (notesSection) {
@@ -9193,6 +9815,174 @@ def profile_delete_event(uid, event_name):
   utils.DeleteEvent(event_name)
   return redirect('/profile/%s' % uid, code=303)
 
+@app.route('/ajax/profile/reset-trusted', methods=['POST'])
+def ajax_profile_reset_trusted():
+  """Reset a user's trusted publisher status (admin only)."""
+  if not HasCapability(kCapManageAnyEvent):
+    return json.dumps({'ok': False, 'error': 'Not authorized.'}), 403
+  data = request.get_json(force=True)
+  email = data.get('email', '').strip().lower()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'Missing email.'})
+  profile = GetOrCreateProfile(email)
+  profile['publish_approvals'] = '0'
+  _WriteProfile(profile)
+  return json.dumps({'ok': True})
+
+@app.route('/ajax/profile/unban', methods=['POST'])
+def ajax_profile_unban():
+  """Remove a user from the banned list (admin only)."""
+  if not HasCapability(kCapManageAnyEvent):
+    return json.dumps({'ok': False, 'error': 'Not authorized.'}), 403
+  data = request.get_json(force=True)
+  email = data.get('email', '').strip().lower()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'Missing email.'})
+  banned = GetBannedEmails()
+  if email in banned:
+    banned.remove(email)
+    WriteEmailConfig('banned_emails', ','.join(banned))
+  LogLogin('unbanned', email)
+  return json.dumps({'ok': True})
+
+@app.route('/ajax/profile/ban', methods=['POST'])
+def ajax_profile_ban():
+  """Add a user to the banned list (admin only)."""
+  if not HasCapability(kCapManageAnyEvent):
+    return json.dumps({'ok': False, 'error': 'Not authorized.'}), 403
+  data = request.get_json(force=True)
+  email = data.get('email', '').strip().lower()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'Missing email.'})
+  banned = GetBannedEmails()
+  if email not in banned:
+    banned.append(email)
+    WriteEmailConfig('banned_emails', ','.join(banned))
+  LogLogin('banned', email)
+  return json.dumps({'ok': True})
+
+def _ArchiveTune(tune_name):
+  """Move a tune's files to archive directories."""
+  import shutil
+  for src_dir, arch_dir, ext in (
+      (utils.kDatabaseDir, utils.kDatabaseArchiveDir, '.spec'),
+      (utils.kSheetMusicDir, utils.kSheetMusicArchiveDir, '.abc'),
+      (utils.kRecordingsDir, utils.kRecordingsArchiveDir, '.mp3')):
+    src = os.path.join(src_dir, tune_name + ext)
+    if os.path.exists(src):
+      shutil.move(src, os.path.join(arch_dir, tune_name + ext))
+
+def _UnarchiveTune(tune_name):
+  """Restore a tune's files from archive directories."""
+  import shutil
+  for src_dir, arch_dir, ext in (
+      (utils.kDatabaseDir, utils.kDatabaseArchiveDir, '.spec'),
+      (utils.kSheetMusicDir, utils.kSheetMusicArchiveDir, '.abc'),
+      (utils.kRecordingsDir, utils.kRecordingsArchiveDir, '.mp3')):
+    arch = os.path.join(arch_dir, tune_name + ext)
+    if os.path.exists(arch):
+      shutil.move(arch, os.path.join(src_dir, tune_name + ext))
+
+def _SpecFileOwner(path):
+  """Read the owner (W: field) from a .spec file."""
+  with open(path) as f:
+    for line in f:
+      if line.startswith('W:'):
+        return line[2:].strip()
+      if line.strip() == '--':
+        break
+  return None
+
+def HasDeletedContent(email):
+  """Check if a user has any archived tunes or events."""
+  for fn in os.listdir(utils.kEventArchiveLoc):
+    if not fn.endswith('.evt'):
+      continue
+    evt = utils.CEvent(fn[:-4])
+    evt.ReadEvent(deleted=True)
+    if evt.owner and evt.owner.lower() == email.lower():
+      return True
+  for fn in os.listdir(utils.kDatabaseArchiveDir):
+    if not fn.endswith('.spec'):
+      continue
+    owner = _SpecFileOwner(os.path.join(utils.kDatabaseArchiveDir, fn))
+    if owner and owner.lower() == email.lower():
+      return True
+  return False
+
+@app.route('/ajax/profile/delete-all-content', methods=['POST'])
+def ajax_profile_delete_all_content():
+  """Archive all tunes and events owned by a user (admin only)."""
+  if not HasCapability(kCapManageAnyEvent):
+    return json.dumps({'ok': False, 'error': 'Not authorized.'}), 403
+  data = request.get_json(force=True)
+  email = data.get('email', '').strip().lower()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'Missing email.'})
+
+  tunes_deleted = 0
+  for fn in os.listdir(utils.kDatabaseDir):
+    if not fn.endswith('.spec'):
+      continue
+    tune_name = fn[:-5]
+    obj = utils.CTune(tune_name)
+    try:
+      obj.ReadDatabase()
+    except SystemExit:
+      continue
+    if obj.owner and obj.owner.lower() == email:
+      _ArchiveTune(tune_name)
+      obj.InvalidateCaches()
+      tunes_deleted += 1
+
+  events_deleted = 0
+  try:
+    all_events = utils.ReadEvents()
+  except:
+    all_events = []
+  for evt in all_events:
+    if evt.owner and evt.owner.lower() == email:
+      utils.DeleteEvent(evt.name)
+      DeletePublishRequest(evt.name)
+      events_deleted += 1
+
+  LogLogin('content-archived', email)
+  return json.dumps({'ok': True, 'tunes_deleted': tunes_deleted, 'events_deleted': events_deleted})
+
+@app.route('/ajax/profile/undelete-all-content', methods=['POST'])
+def ajax_profile_undelete_all_content():
+  """Restore all archived tunes and events owned by a user (admin only)."""
+  if not HasCapability(kCapManageAnyEvent):
+    return json.dumps({'ok': False, 'error': 'Not authorized.'}), 403
+  data = request.get_json(force=True)
+  email = data.get('email', '').strip().lower()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'Missing email.'})
+
+  tunes_restored = 0
+  for fn in os.listdir(utils.kDatabaseArchiveDir):
+    if not fn.endswith('.spec'):
+      continue
+    tune_name = fn[:-5]
+    owner = _SpecFileOwner(os.path.join(utils.kDatabaseArchiveDir, fn))
+    if owner and owner.lower() == email:
+      _UnarchiveTune(tune_name)
+      tunes_restored += 1
+
+  events_restored = 0
+  for fn in os.listdir(utils.kEventArchiveLoc):
+    if not fn.endswith('.evt'):
+      continue
+    sid = fn[:-4]
+    evt = utils.CEvent(sid)
+    evt.ReadEvent(deleted=True)
+    if evt.owner and evt.owner.lower() == email:
+      utils.DeleteEvent(sid, undelete=True)
+      events_restored += 1
+
+  LogLogin('content-restored', email)
+  return json.dumps({'ok': True, 'tunes_restored': tunes_restored, 'events_restored': events_restored})
+
 @app.route('/ajax/profile/change-email', methods=['POST'])
 def ajax_profile_change_email():
   """Send a confirmation email to change the user's email address."""
@@ -9221,35 +10011,25 @@ def ajax_profile_change_email():
 
   return json.dumps({'ok': True})
 
-def _SendEmailChangeConfirmation(new_email, token):
-  """Send email change confirmation link to the new email address."""
+def _SendEmail(to_email, subject, body):
+  """Send an email via SMTP.
+  On Linux, shells out to system Python 3 for SSL support since the
+  Python 2.7 virtualenv lacks it."""
   config = ReadEmailConfig()
   if not config.get('host'):
     raise Exception('Email not configured')
 
-  if sys.platform == 'darwin':
-    base_url = 'http://localhost:60080'
-  else:
-    base_url = 'http://music.cambridgeny.net'
-
-  link = '%s/profile/confirm-email/%s' % (base_url, token)
-
-  body = ('Someone requested to change their Cambridge NY Traditional Music account email to this address.\n\n'
-          'Click the link below to confirm:\n\n'
-          '%s\n\n'
-          'This link expires in 1 hour. If you did not request this, you can ignore this email.\n' % link)
-  subject = 'Confirm Email Change - Cambridge NY Traditional Music'
   from_addr = config.get('from_address', config['username'])
 
   if sys.platform == 'darwin':
     msg = MIMEText(body)
     msg['Subject'] = subject
     msg['From'] = from_addr
-    msg['To'] = new_email
+    msg['To'] = to_email
     server = smtplib.SMTP(config['host'], int(config.get('port', 587)))
     server.starttls()
     server.login(config['username'], config['password'])
-    server.sendmail(from_addr, [new_email], msg.as_string())
+    server.sendmail(from_addr, [to_email], msg.as_string())
     server.quit()
   else:
     import subprocess
@@ -9265,15 +10045,74 @@ server.starttls()
 server.login(%r, %r)
 server.sendmail(%r, [%r], msg.as_string())
 server.quit()
-""" % (body, subject, from_addr, new_email,
+""" % (body, subject, from_addr, to_email,
        config['host'], int(config.get('port', 587)),
        config['username'], config['password'],
-       from_addr, new_email)
+       from_addr, to_email)
     proc = subprocess.Popen(['/usr/bin/python3', '-c', script],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
     if proc.returncode != 0:
       raise Exception('Email send failed: %s' % err)
+
+def _SendPublishRequestNotification(event_sid, event_title, requestor_email):
+  """Notify all admins that a user has requested to publish an event."""
+  if sys.platform == 'darwin':
+    base_url = 'http://localhost:60080'
+  else:
+    base_url = 'http://music.cambridgeny.net'
+
+  admin_url = '%s%s' % (base_url, kAdminRoute)
+  name = GetDisplayName(requestor_email)
+  body = ('%s (%s) has requested to publish the event "%s".\n\n'
+          'Review the request on the admin page:\n%s\n' % (name, requestor_email, event_title, admin_url))
+  subject = 'Publish Request: %s' % event_title
+  for admin_email in GetAdminEmails():
+    try:
+      _SendEmail(admin_email, subject, body)
+    except:
+      pass
+
+def _SendPublishApproval(requestor_email, event_title, event_sid):
+  """Notify a user that their event has been published."""
+  if sys.platform == 'darwin':
+    base_url = 'http://localhost:60080'
+  else:
+    base_url = 'http://music.cambridgeny.net'
+  event_url = '%s/event/%s' % (base_url, event_sid)
+  body = ('Your event "%s" has been approved and is now public on '
+          'Cambridge NY Traditional Music.\n\n%s\n' % (event_title, event_url))
+  subject = 'Event Published: %s' % event_title
+  _SendEmail(requestor_email, subject, body)
+
+def _SendPublishDenial(requestor_email, event_title, event_sid, admin_notes):
+  """Notify a user that their publish request was denied."""
+  if sys.platform == 'darwin':
+    base_url = 'http://localhost:60080'
+  else:
+    base_url = 'http://music.cambridgeny.net'
+  event_url = '%s/event/%s' % (base_url, event_sid)
+  body = 'Your request to publish the event "%s" was not approved.\n\n%s\n' % (event_title, event_url)
+  if admin_notes:
+    body += '\nNotes from admin:\n%s\n' % admin_notes
+  subject = 'Publish Request Denied: %s' % event_title
+  _SendEmail(requestor_email, subject, body)
+
+def _SendEmailChangeConfirmation(new_email, token):
+  """Send email change confirmation link to the new email address."""
+  if sys.platform == 'darwin':
+    base_url = 'http://localhost:60080'
+  else:
+    base_url = 'http://music.cambridgeny.net'
+
+  link = '%s/profile/confirm-email/%s' % (base_url, token)
+
+  body = ('Someone requested to change their Cambridge NY Traditional Music account email to this address.\n\n'
+          'Click the link below to confirm:\n\n'
+          '%s\n\n'
+          'This link expires in 1 hour. If you did not request this, you can ignore this email.\n' % link)
+  subject = 'Confirm Email Change - Cambridge NY Traditional Music'
+  _SendEmail(new_email, subject, body)
 
 @app.route('/profile/confirm-email/<token>')
 def profile_confirm_email(token):
@@ -9450,6 +10289,72 @@ def WriteEmailConfig(key, value):
   with open(kEmailConf, 'w') as f:
     f.write('\n'.join(new_lines))
 
+# Publish request storage
+kPublishRequestDir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'publish-requests')
+if not os.path.exists(kPublishRequestDir):
+  os.makedirs(kPublishRequestDir)
+
+def CreatePublishRequest(event_sid, requestor_email):
+  """Create a publish request file for an event."""
+  path = os.path.join(kPublishRequestDir, event_sid + '.req')
+  with open(path, 'w') as f:
+    f.write('event_sid:%s\n' % event_sid)
+    f.write('requestor:%s\n' % requestor_email.lower())
+    f.write('timestamp:%s\n' % time.time())
+
+def ReadPublishRequest(event_sid):
+  """Read a publish request. Returns dict or None."""
+  path = os.path.join(kPublishRequestDir, event_sid + '.req')
+  if not os.path.exists(path):
+    return None
+  data = {}
+  with open(path) as f:
+    for line in f:
+      line = line.strip()
+      if ':' in line:
+        key, val = line.split(':', 1)
+        data[key.strip()] = val.strip()
+  return data
+
+def ReadAllPublishRequests():
+  """Read all pending publish requests. Returns list of dicts."""
+  results = []
+  for fn in os.listdir(kPublishRequestDir):
+    if not fn.endswith('.req'):
+      continue
+    sid = fn[:-4]
+    data = ReadPublishRequest(sid)
+    if data:
+      results.append(data)
+  return results
+
+def DeletePublishRequest(event_sid):
+  """Delete a publish request file."""
+  path = os.path.join(kPublishRequestDir, event_sid + '.req')
+  if os.path.exists(path):
+    os.remove(path)
+
+kTrustedPublishThreshold = 3
+
+def IsTrustedPublisher(email):
+  """Check if a user has enough approved publishes to skip approval."""
+  if not email:
+    return False
+  profile = GetOrCreateProfile(email)
+  return int(profile.get('publish_approvals', 0)) >= kTrustedPublishThreshold
+
+def IncrementPublishApprovals(email):
+  """Increment a user's publish approval count."""
+  profile = GetOrCreateProfile(email)
+  count = int(profile.get('publish_approvals', 0)) + 1
+  profile['publish_approvals'] = str(count)
+  _WriteProfile(profile)
+
+def HasPendingPublishRequest(event_sid):
+  """Check if an event has a pending publish request."""
+  path = os.path.join(kPublishRequestDir, event_sid + '.req')
+  return os.path.exists(path)
+
 def GetAdminEmails():
   """Return list of admin email addresses from config."""
   config = ReadEmailConfig()
@@ -9461,6 +10366,16 @@ def GetEditorEmails():
   config = ReadEmailConfig()
   raw = config.get('editor_emails', '')
   return [e.strip().lower() for e in raw.split(',') if e.strip()]
+
+def GetBannedEmails():
+  """Return list of banned email addresses from config."""
+  config = ReadEmailConfig()
+  raw = config.get('banned_emails', '')
+  return [e.strip().lower() for e in raw.split(',') if e.strip()]
+
+def IsBanned(email):
+  """Check if an email address is banned."""
+  return email.lower() in GetBannedEmails()
 
 def GetPermissionLevel(email):
   """Return 'admin', 'editor', or 'regular' based on email."""
@@ -9756,13 +10671,7 @@ def CleanExpiredTokens():
       pass
 
 def SendMagicLink(email, token, target):
-  """Send a magic link email via SMTP.
-  On Linux, shells out to system Python 3 for SSL support since the
-  Python 2.7 virtualenv lacks it."""
-  config = ReadEmailConfig()
-  if not config.get('host'):
-    raise Exception('Email not configured')
-
+  """Send a magic link email."""
   if sys.platform == 'darwin':
     base_url = 'http://localhost:60080'
   else:
@@ -9774,43 +10683,7 @@ def SendMagicLink(email, token, target):
           '%s\n\n'
           'This link expires in 1 hour and can only be used once.\n' % link)
   subject = 'Your Login Link - Cambridge NY Traditional Music'
-  from_addr = config.get('from_address', config['username'])
-
-  if sys.platform == 'darwin':
-    # macOS dev: send directly
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = from_addr
-    msg['To'] = email
-    server = smtplib.SMTP(config['host'], int(config.get('port', 587)))
-    server.starttls()
-    server.login(config['username'], config['password'])
-    server.sendmail(from_addr, [email], msg.as_string())
-    server.quit()
-  else:
-    # Linux production: use system Python 3 for SSL support
-    import subprocess
-    script = """
-import smtplib
-from email.mime.text import MIMEText
-msg = MIMEText(%r)
-msg['Subject'] = %r
-msg['From'] = %r
-msg['To'] = %r
-server = smtplib.SMTP(%r, %d)
-server.starttls()
-server.login(%r, %r)
-server.sendmail(%r, [%r], msg.as_string())
-server.quit()
-""" % (body, subject, from_addr, email,
-       config['host'], int(config.get('port', 587)),
-       config['username'], config['password'],
-       from_addr, email)
-    proc = subprocess.Popen(['/usr/bin/python3', '-c', script],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate()
-    if proc.returncode != 0:
-      raise Exception('Email send failed: %s' % err)
+  _SendEmail(email, subject, body)
 
 def LogLogin(action, email, level=None):
   """Append a line to the login log, truncating if over 1MB."""
@@ -9835,30 +10708,35 @@ def LogLogin(action, email, level=None):
     f.write(line)
 
 def IsRateLimited(email):
-  """Return True if per-user or global rate limit exceeded in the last hour."""
+  """Return True if per-user or global rate limit exceeded in the last hour.
+  Successful logins offset the per-user count since those links were consumed."""
   if not os.path.exists(kLoginLog):
     return False
   cutoff = time.time() - 3600
-  user_count = 0
+  user_sent = 0
+  user_login = 0
   global_count = 0
   try:
     with open(kLoginLog, 'r') as f:
       for line in f:
-        if 'link-sent' not in line:
-          continue
         parts = line.split('  ', 1)
         if len(parts) < 2:
           continue
         try:
           t = time.mktime(time.strptime(parts[0].strip(), '%Y-%m-%d %H:%M:%S'))
-          if t >= cutoff:
-            global_count += 1
-            if email in line:
-              user_count += 1
+          if t < cutoff:
+            continue
         except:
-          pass
+          continue
+        if 'link-sent' in line:
+          global_count += 1
+          if email in line:
+            user_sent += 1
+        elif 'login' in line and email in line:
+          user_login += 1
   except:
     pass
+  user_count = max(0, user_sent - user_login)
   return user_count >= kMaxEmailsPerHour or global_count >= kMaxGlobalEmailsPerHour
 
 def EventReloader(sid, editor=False):
