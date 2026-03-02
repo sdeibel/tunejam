@@ -4,4 +4,6 @@ __pycache__/
 *.wpu
 *.mid
 *.midi
+*~
+wingdbstub.py
 website/cache/
