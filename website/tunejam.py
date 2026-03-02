@@ -9808,7 +9808,7 @@ def profile_page(uid):
   # Email and Group info
   role = GetPermissionLevel(profile_email)
   role_label = {'admin': 'Admin', 'editor': 'Editor', 'regular': 'User'}.get(role, 'User')
-  kInfoLabelWidth = '90px'
+  kInfoLabelWidth = '120px'
   if is_own:
     esc_email = profile_email.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
     parts.append('<div style="color:#666;margin:0">'
