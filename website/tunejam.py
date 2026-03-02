@@ -642,15 +642,22 @@ def dev():
   no_origin = set()
   no_history = set()
 
+  # Editor permission note for logged-in non-editors
+  can_edit = HasCapability(kCapEditTunes)
+  if IsLoggedIn() and not can_edit:
+    user_email = GetUserEmail()
+    profile_link = '/profile/' + _ProfileHash(user_email) if user_email else '/profile'
+    parts.append(CParagraph("To contribute directly, you need editing permissions. "
+                            "You can request them from your <a href='%s'>profile page</a>." % profile_link))
+
   if 'incomplete'in sections:
     sections.remove('incomplete')
     sections.append('incomplete')
   for section in sections:
     if section == 'incomplete':
       parts.append(CH("&#9834; " + utils.kSectionTitles[section], 2))
-      parts.append(CParagraph("Please help complete these listings by emailing the missing notes (first "
-                              "2-3 measures of each part) or chords to "
-                              "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
+      parts.append(CParagraph("Please help complete these listings by editing the tune and adding the missing notes (first "
+                              "2-3 measures of each part) or chords."))
       parts.append(CBreak())
     for title, tune in sorted(tunes[section]):
       obj = utils.CTune(tune)
@@ -684,8 +691,7 @@ def dev():
   if no_recording:
     parts.append(CH("&#9834; Tunes with No Recording", 2))
     parts.append(CParagraph("Please help complete these listings by creating a slow and "
-                            "clear recording of the melody, played once or twice, and emailing it to "
-                            "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
+                            "clear recording of the melody, played once or twice, and adding it to the tune."))
     parts.append(CBreak())
     for title, item in sorted_by_title(no_recording):
       for part in item:
@@ -693,8 +699,7 @@ def dev():
         
   if no_origin:
     parts.append(CH("&#9834; Tunes with Unknown Origin", 2))
-    parts.append(CParagraph("If you have a documented original provenance for any of these tunes, please email "
-                            "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
+    parts.append(CParagraph("If you have a documented original provenance for any of these tunes, please edit the tune to add it."))
     parts.append(CBreak())
     for title, item in sorted_by_title(no_origin):
       for part in item:
@@ -702,8 +707,7 @@ def dev():
         
   if no_history:
     parts.append(CH("&#9834; Tunes with No Known History", 2))
-    parts.append(CParagraph("If you have documented history for any of these tunes, please email "
-                            "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
+    parts.append(CParagraph("If you have documented history for any of these tunes, please edit the tune to add it."))
     parts.append(CBreak())
     for title, item in sorted_by_title(no_history):
       for part in item:
@@ -711,8 +715,7 @@ def dev():
         
   if no_local:
     parts.append(CH("&#9834; Local Tunes Missing Sheet Music", 2))
-    parts.append(CParagraph("If you have sheet music for any of these tunes, please email "
-                            "<a href='mailto:submit@music.cambridgeny.net'>submit@music.cambridgeny.net</a>"))
+    parts.append(CParagraph("If you have sheet music for any of these tunes, please edit the tune to add it."))
     parts.append(CBreak())
     for title, item in sorted_by_title(no_local):
       for part in item:
@@ -748,15 +751,16 @@ def dev():
 
   parts.append(CH("&#9834; Source Code", 2))
   parts.append(CParagraph("You can set up your own local copy of this website, which runs on "
-                          "Flask and Python on Linux or macOS.  The source code and all the tune files are "
+                          "Flask and Python on Linux or macOS.  The source code is "
                           "<a href='https://github.com/sdeibel/tunejam'>available on github</a>.  You'll "
                           "need to clone the repository and run the platform setup script "
                           "src/platform/setup.py or its equivalent to set up the dependencies. "
                           "Then use src/website/tunejam.py as the main entry point to start "
                           "the site running in Flask."))
-  parts.append(CParagraph("Please <a href='mailto:submit@music.cambridgeny.net'>"
-                          "contact me</a> for help. I am currently the only developer, and would "
-                          "improve packaging and docs if anyone else wants to join in the effort."))
+  parts.append(CParagraph("I am currently the only developer, and would "
+                          "improve packaging and docs if anyone else wants to join in the effort. "
+                          "I can also arrange to get you a copy of the tunes and other data on the site. "
+                          "Email me at <a href='mailto:stephan@deibel.net'>stephan@deibel.net</a>."))
 
   parts.append(CBreak(2))
   return PageWrapper(parts, 'dev')
