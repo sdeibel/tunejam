@@ -9984,26 +9984,53 @@ def profile_page(uid):
       timestamp = note.get('timestamp', 0)
       is_public = note.get('public', False)
 
-      # Resolve target name and link
+      # Resolve target name, link, and orphan status
       target_label = target_id
-      target_link = '#'
+      target_link = None
+      orphaned = False
       if target_type == 'tune':
         tobj = utils.CTune(target_id)
         try:
           tobj.ReadDatabase()
           target_label = tobj.title
+          target_link = '/tune/%s' % target_id
         except SystemExit:
           target_label = target_id
-        target_link = '/tune/%s' % target_id
+          orphaned = True
       elif target_type == 'event':
         try:
           evt = utils.CEvent(target_id)
           evt.ReadEvent()
           if evt.title:
             target_label = evt.title
+            target_link = '/event/%s' % target_id
+          else:
+            orphaned = True
         except:
-          target_label = target_id
-        target_link = '/event/%s' % target_id
+          orphaned = True
+      elif target_type == 'set_tune':
+        # target_id is "set_spec:tune_name"
+        if ':' in target_id:
+          set_spec, tune_name = target_id.rsplit(':', 1)
+        else:
+          set_spec, tune_name = '', target_id
+        tobj = utils.CTune(tune_name)
+        try:
+          tobj.ReadDatabase()
+          tune_title = tobj.title
+        except SystemExit:
+          tune_title = tune_name
+        # Find the event containing this set
+        if set_spec:
+          for evt_info in utils.ReadEvents():
+            if set_spec in evt_info.sets:
+              target_link = '/sets/%s?event=%s' % (set_spec, evt_info.name)
+              break
+        if target_link is None:
+          orphaned = True
+          target_label = tune_title + ' (in removed set)'
+        else:
+          target_label = tune_title + ' (in set)'
 
       esc_text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
       esc_label = target_label.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
@@ -10012,8 +10039,15 @@ def profile_page(uid):
 
       line = '<div class="profile-note-card" data-owner="%s" data-note-id="%d" style="margin-bottom:8px;padding:6px 0;border-bottom:1px solid #eee">' % (_ProfileHash(profile_email), note_id)
       line += '<div>%s</div>' % esc_text
-      line += '<div style="font-size:0.85em;color:#888">on <a href="%s" style="color:#888">%s</a> &middot; %s%s' % (
-        target_link, esc_label, time_str, public_str)
+      if orphaned and target_type == 'set_tune':
+        line += '<div style="font-size:0.85em;color:#888">on <span style="color:#c00;font-style:italic">%s</span> &middot; %s%s' % (
+          esc_label, time_str, public_str)
+      elif orphaned:
+        line += '<div style="font-size:0.85em;color:#888">on %s <span style="color:#c00;font-style:italic">(removed)</span> &middot; %s%s' % (
+          esc_label, time_str, public_str)
+      else:
+        line += '<div style="font-size:0.85em;color:#888">on <a href="%s" style="color:#888">%s</a> &middot; %s%s' % (
+          target_link, esc_label, time_str, public_str)
       if is_own or is_admin:
         line += (' <a href="#" class="profile-note-delete" data-owner="%s" data-note-id="%d" '
                  'style="color:#c00;text-decoration:none;font-weight:bold;margin-left:6px" '
