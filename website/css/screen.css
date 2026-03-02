@@ -32,6 +32,9 @@ padding-bottom:0.5em;
 span, a, li, b, i {
 font-size:110%;
 }
+p span, p a, p b, p i {
+font-size:inherit;
+}
 #header {
 overflow:hidden;
 margin:-12px -12px 0 -12px;
