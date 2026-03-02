@@ -643,8 +643,8 @@ def dev():
   no_history = set()
 
   # Editor permission note for logged-in non-editors
-  can_edit = HasCapability(kCapEditTunes)
-  if IsLoggedIn() and not can_edit:
+  is_editor = HasCapability(kCapEditAnyTune)
+  if IsLoggedIn() and not is_editor:
     user_email = GetUserEmail()
     profile_link = '/profile/' + _ProfileHash(user_email) if user_email else '/profile'
     parts.append(CParagraph("To contribute directly, you need editing permissions. "
