@@ -1751,6 +1751,7 @@ class CEvent:
         self.share_id = ''
         self.coowners = []
         self.description = ''
+        self.last_active = 0.0
         self.stats = collections.defaultdict(list)
         
     def ReadEvent(self, deleted=False):
@@ -1787,6 +1788,11 @@ class CEvent:
                 self.coowners.append(l[len('coowner:'):].strip())
             elif l.startswith('description:'):
                 self.description = l[len('description:'):].strip().replace('\\n', '\n')
+            elif l.startswith('last_active:'):
+                try:
+                    self.last_active = float(l[len('last_active:'):].strip())
+                except ValueError:
+                    pass
             elif l == l.lstrip() and l.strip():
                 self.sets.append(l)
                 curr_set = l
@@ -1813,6 +1819,8 @@ class CEvent:
             lines.append('coowner:%s' % coowner)
         if self.description:
             lines.append('description:%s' % self.description.replace('\n', '\\n'))
+        if self.last_active:
+            lines.append('last_active:%s' % self.last_active)
         for sid in self.sets:
             lines.append(sid)
             for ptime in self.stats[sid]:
@@ -1822,6 +1830,10 @@ class CEvent:
         f.write('\n'.join(lines))
         f.close()
         
+    def TouchLastActive(self):
+        self.last_active = time.time()
+        self.WriteEvent()
+
     def GetExpiration(self):
         
         fn = os.path.join(kEventArchiveLoc, self.name+'.evt')
@@ -1848,6 +1860,86 @@ def ReadEvents(deleted=False):
             events.append(event)
             
     return events
+
+import re as _re
+
+def _EventOrderPath():
+    return os.path.join(kEventsLoc, '_order.json')
+
+def ReadEventOrder():
+    """Read the event ordering file. Creates it if missing."""
+    path = _EventOrderPath()
+    if os.path.exists(path):
+        f = open(path, 'r')
+        try:
+            import json
+            order = json.loads(f.read())
+        except (ValueError, KeyError):
+            order = {'active': [], 'older': []}
+        f.close()
+    else:
+        order = BuildInitialEventOrder()
+    return order
+
+def WriteEventOrder(order):
+    """Write the event ordering file."""
+    import json
+    path = _EventOrderPath()
+    f = open(path, 'w')
+    f.write(json.dumps(order, indent=2))
+    f.close()
+
+def BuildInitialEventOrder():
+    """Scan all events and build the initial ordering based on years in titles.
+    Events with a year < 2025 in their title go to 'older', rest to 'active'."""
+    events = ReadEvents()
+    year_re = _re.compile(r'\b(19|20)\d{2}\b')
+
+    def _natural_sort_key(evt):
+        return [int(c) if c.isdigit() else c for c in _re.split(r'(\d+)', evt.title.lower())]
+
+    active = []
+    older = []
+    for evt in events:
+        years = [int(y) for y in year_re.findall(evt.title)]
+        # findall returns the group (first 2 digits), so re-extract full years
+        full_years = [int(m) for m in _re.findall(r'\b((?:19|20)\d{2})\b', evt.title)]
+        if full_years and max(full_years) < 2025:
+            older.append(evt)
+        else:
+            active.append(evt)
+
+    active.sort(key=_natural_sort_key)
+    older.sort(key=_natural_sort_key)
+
+    order = {
+        'active': [e.name for e in active],
+        'older': [e.name for e in older],
+    }
+    WriteEventOrder(order)
+    return order
+
+def EnsureEventOrder(events, order):
+    """Ensure all existing events appear in the order, remove deleted ones.
+    Returns True if order was modified."""
+    existing = set(e.name for e in events)
+    ordered = set(order.get('active', []) + order.get('older', []))
+
+    modified = False
+
+    # Add missing events to active
+    for name in existing - ordered:
+        order.setdefault('active', []).append(name)
+        modified = True
+
+    # Remove deleted events
+    for section in ('active', 'older'):
+        before = len(order.get(section, []))
+        order[section] = [n for n in order.get(section, []) if n in existing]
+        if len(order[section]) != before:
+            modified = True
+
+    return modified
 
 def GenerateShareId():
     """Generate a unique 8-char alphanumeric share ID for an event."""
@@ -1921,7 +2013,13 @@ def CreateEvent(title, owner=None):
     event.owner = owner
     event.private = 1
     event.share_id = GenerateShareId()
+    event.last_active = time.time()
     event.WriteEvent()
+
+    # Add to active events in ordering
+    order = ReadEventOrder()
+    order.setdefault('active', []).append(name)
+    WriteEventOrder(order)
 
     return name
         
@@ -1949,7 +2047,20 @@ def DeleteEvent(sid, undelete=False):
     f.close()
     
     os.unlink(fn1)
-    
+
+    # Update ordering
+    order = ReadEventOrder()
+    if not undelete:
+        # Deleting: remove from ordering
+        for section in ('active', 'older'):
+            if sid in order.get(section, []):
+                order[section].remove(sid)
+    else:
+        # Undeleting: add back to active
+        if sid not in order.get('active', []) and sid not in order.get('older', []):
+            order.setdefault('active', []).append(sid)
+    WriteEventOrder(order)
+
 kEventExpiration = 7 * 24 * 60 * 60
 def PurgeDeletedEvents():
 

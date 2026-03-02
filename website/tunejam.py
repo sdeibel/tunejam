@@ -7949,6 +7949,23 @@ cursor:grabbing;
 #event-sets .ui-sortable-helper {
 background-color:#ffffdd;
 }
+.event-list-row {
+padding:2px 0;
+display:flex;
+align-items:baseline;
+}
+.event-list-row .drag-handle {
+cursor:grab;
+font-size:1.2em;
+margin-right:4px;
+color:#666;
+}
+.event-list-row .drag-handle:active {
+cursor:grabbing;
+}
+.event-list .ui-sortable-helper {
+background-color:#ffffdd;
+}
 
 /* Tune editor styles */
 .edit-form label {
@@ -8743,7 +8760,9 @@ def _WriteCSSFiles():
     with open(path, 'w') as f:
       f.write(content)
 
-_WriteCSSFiles()
+# Only regenerate CSS on dev; production serves the committed files directly
+if sys.platform == 'darwin':
+  _WriteCSSFiles()
 
 @app.route('/css/<media>')
 def css(media):
@@ -8822,35 +8841,71 @@ def events(delete=None, undelete=None):
                "and all the participating devices (ipads, phones, laptops, etc) will update "
                "as the event changes.")
 
-  events = utils.ReadEvents()
-  events = [e for e in events if not e.private or CanViewEvent(e)]
-  import re
-  def _natural_sort_key(s):
-    return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', s.title.lower())]
-  events.sort(key=_natural_sort_key)
+  all_events = utils.ReadEvents()
+  all_events = [e for e in all_events if not e.private or CanViewEvent(e)]
+  events_by_name = {e.name: e for e in all_events}
 
-  parts.append(CParagraph(CText("The following events have been created:", bold=1)))
+  order = utils.ReadEventOrder()
+  if utils.EnsureEventOrder(all_events, order):
+    utils.WriteEventOrder(order)
 
-  if events:
-    for event in events:
-      parts.extend([
-        CText('&#9834; '),
-        CText(event.title, href='/event/%s' % event.name),
-        CBreak(),
-      ])
+  # Auto-demote stale active events (last active > 2 years ago)
+  is_admin = HasCapability(kCapManageAnyEvent)
+  stale_cutoff = time.time() - 2 * 365 * 86400
+  stale_moved = False
+  for name in list(order.get('active', [])):
+    evt = events_by_name.get(name)
+    if evt and evt.last_active > 0 and evt.last_active < stale_cutoff:
+      order['active'].remove(name)
+      order.setdefault('older', []).append(name)
+      stale_moved = True
+  if stale_moved:
+    utils.WriteEventOrder(order)
+
+  def _event_rows(names, div_id):
+    """Build event list rows for a section."""
+    rows = []
+    rows.append('<div id="%s" class="event-list">' % div_id)
+    for name in names:
+      evt = events_by_name.get(name)
+      if evt is None:
+        continue
+      rows.append('<div class="event-list-row" data-event="%s">' % evt.name)
+      if is_admin:
+        rows.append('<span class="drag-handle">&#x2630;</span>')
+      rows.append('<a href="/event/%s">&#9834; %s</a>' % (evt.name, evt.title))
+      rows.append('</div>')
+    rows.append('</div>')
+    return ''.join(rows)
+
+  # Active Events section
+  parts.append(CH("Active Events", 2))
+  active_names = [n for n in order.get('active', []) if n in events_by_name]
+  if active_names:
+    parts.append(_event_rows(active_names, 'active-events'))
   else:
     parts.append(CParagraph(CText("There are no active events right now.", italic=1)))
 
   if IsLoggedIn():
     parts.append(CBreak())
     parts.append(_AddEventWidget())
-    parts.append(CBreak())
 
+  # Older Events section
+  older_names = [n for n in order.get('older', []) if n in events_by_name]
+  if older_names or is_admin:
+    parts.append(CH("Older Events", 2))
+    if older_names:
+      parts.append(_event_rows(older_names, 'older-events'))
+    else:
+      parts.append('<div id="older-events" class="event-list"></div>')
+
+  if IsLoggedIn():
     inactive = utils.ReadEvents(deleted=True)
     # Filter deleted events: admin/editor sees all, regular users see only their own
     if not HasCapability(kCapManageAnyEvent) and not HasCapability(kCapEditAnyTune):
       inactive = [e for e in inactive if _OwnsItem(e)]
     if inactive:
+      parts.append(CBreak())
       parts.append(CParagraph(CText("Recently deleted events:", bold=1)))
       for event in inactive:
         expires = time.strftime('%x %X', time.localtime(event.GetExpiration()))
@@ -8861,6 +8916,43 @@ def events(delete=None, undelete=None):
         ])
   else:
     parts.append(LoginButton('/events'))
+
+  # Admin drag-and-drop JavaScript
+  if is_admin:
+    parts.append(
+      '<script src="/js/jquery-3.7.0.min.js"></script>'
+      '<script src="/js/ui/jquery-ui.min.js"></script>'
+      '<script src="/js/jquery.ui.touch-punch.min.js"></script>'
+      '<script>'
+      '$(function() {'
+      '  $("#active-events, #older-events").sortable({'
+      '    handle: ".drag-handle",'
+      '    items: ".event-list-row",'
+      '    connectWith: ".event-list",'
+      '    placeholder: "ui-state-highlight",'
+      '    stop: function() { saveEventOrder(); },'
+      '    receive: function() { saveEventOrder(); }'
+      '  });'
+      '  function saveEventOrder() {'
+      '    var active = [];'
+      '    $("#active-events .event-list-row").each(function() {'
+      '      active.push($(this).data("event"));'
+      '    });'
+      '    var older = [];'
+      '    $("#older-events .event-list-row").each(function() {'
+      '      older.push($(this).data("event"));'
+      '    });'
+      '    $.ajax({'
+      '      url: "/ajax/events/reorder",'
+      '      type: "POST",'
+      '      contentType: "application/json",'
+      '      data: JSON.stringify({active: active, older: older}),'
+      '      error: function() { location.reload(); }'
+      '    });'
+      '  }'
+      '});'
+      '</script>'
+    )
 
   parts.append(CDiv(style='clear:both'))
 
@@ -8915,6 +9007,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
       event.sets[pos] = add
     else:
       event.sets.append(add)
+    event.last_active = time.time()
     event.WriteEvent()
     return redirect('/event/%s' % sid, code=303)
 
@@ -8930,6 +9023,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
     event.sets.remove(delete)
     if event.current_set == delete:
       event.current_set = ''
+    event.last_active = time.time()
     event.WriteEvent()
     return redirect('/event/%s' % sid, code=303)
     
@@ -8946,6 +9040,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
   if status is not None and editor:
     if status == 'on-air':
       event.on_air = 1
+      event.last_active = time.time()
       LogNotification('event', 'Event on air: "%s"' % event.title)
     else:
       event.on_air = 0
@@ -9563,6 +9658,7 @@ def ajax_event_description(sid):
     return '{"ok":false}', 403
   data = request.get_json(force=True)
   event.description = data.get('description', '').strip()
+  event.last_active = time.time()
   event.WriteEvent()
   LogNotification('event', 'Event description updated: "%s" by %s' % (event.title, GetUserEmail() or 'anonymous'))
   return '{"ok":true}'
@@ -9583,6 +9679,7 @@ def event_rename(sid):
   title = request.form.get('title', '').strip()
   if title:
     event.title = title
+    event.last_active = time.time()
     event.WriteEvent()
     LogNotification('event', 'Event renamed to "%s" by %s' % (title, GetUserEmail() or 'anonymous'))
   return redirect('/event/%s' % sid, code=303)
@@ -9614,7 +9711,34 @@ def ajax_event_reorder(sid):
   if sorted(new_order) != sorted(event.sets):
     return json.dumps({'ok': False, 'error': 'set mismatch'})
   event.sets = new_order
+  event.last_active = time.time()
   event.WriteEvent()
+  return json.dumps({'ok': True})
+
+@app.route('/ajax/events/reorder', methods=['POST'])
+def ajax_events_reorder():
+  if not HasCapability(kCapManageAnyEvent):
+    return json.dumps({'ok': False, 'error': 'permission denied'}), 403
+  data = request.get_json(force=True)
+  new_active = data.get('active', [])
+  new_older = data.get('older', [])
+  # Validate: combined set must match existing events
+  all_events = utils.ReadEvents()
+  visible = [e for e in all_events if not e.private or CanViewEvent(e)]
+  existing = set(e.name for e in visible)
+  submitted = set(new_active + new_older)
+  if submitted != existing:
+    return json.dumps({'ok': False, 'error': 'event mismatch'})
+  # Preserve any events the admin can't see in their current sections
+  order = utils.ReadEventOrder()
+  hidden = set()
+  for section in ('active', 'older'):
+    for name in order.get(section, []):
+      if name not in existing:
+        hidden.add(name)
+  order['active'] = new_active
+  order['older'] = new_older
+  utils.WriteEventOrder(order)
   return json.dumps({'ok': True})
 
 @app.route('/ajax/event/<sid>/undo', methods=['POST'])

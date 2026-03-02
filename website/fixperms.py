@@ -26,7 +26,6 @@ SRC_DATA_DIRS = [
   'website/cache/tune',
   'website/cache/tuneset',
   'website/cache/book',
-  'website/css',
 ]
 
 # Directories under data/ that apache needs to write to

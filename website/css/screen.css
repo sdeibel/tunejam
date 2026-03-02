@@ -32,9 +32,6 @@ padding-bottom:0.5em;
 span, a, li, b, i {
 font-size:110%;
 }
-p span, p a, p b, p i {
-font-size:inherit;
-}
 #header {
 overflow:hidden;
 margin:-12px -12px 0 -12px;
@@ -687,6 +684,23 @@ color:#666;
 cursor:grabbing;
 }
 #event-sets .ui-sortable-helper {
+background-color:#ffffdd;
+}
+.event-list-row {
+padding:2px 0;
+display:flex;
+align-items:baseline;
+}
+.event-list-row .drag-handle {
+cursor:grab;
+font-size:1.2em;
+margin-right:4px;
+color:#666;
+}
+.event-list-row .drag-handle:active {
+cursor:grabbing;
+}
+.event-list .ui-sortable-helper {
 background-color:#ffffdd;
 }
 
