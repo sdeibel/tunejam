@@ -9927,6 +9927,8 @@ margin-bottom:10px;
 .edit-form .chord-editor-pane {
 flex:1;
 min-width:375px;
+position:relative;
+z-index:1;
 }
 .edit-form .chord-preview-pane {
 flex:1;
@@ -10007,6 +10009,9 @@ margin-left:auto;
 }
 .edit-form .part-remove-btn:hover {
 background:#aa1111;
+}
+#chord-parts-container {
+margin-top:20px;
 }
 .edit-form table.edit-chords {
 border-collapse:collapse;
