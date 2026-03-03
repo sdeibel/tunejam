@@ -1864,6 +1864,7 @@ def sets(spec=None, sid=None):
 
           parts.extend([CBreak(2), CDiv(bottom_items, style="overflow:auto"), CBreak(2)])
           
+        LogNotification('view', 'Set viewed: "%s" by %s' % (', '.join(tunes), GetUserEmail() or 'anonymous'))
         return PageWrapper(parts, 'event', show_eye_candy=False)
 
   filter = request.form.get('filter')
@@ -2441,6 +2442,7 @@ def tune(tune):
   parts.extend(CreateTuneHTML(tune, metadata=True, can_edit=can_edit, can_delete=can_delete, show_play=True))
   if obj.raw_notes or obj.chords:
     parts.append(_build_view_playback_js(obj.key, obj.meter, obj.unit, obj.raw_notes, obj.chords))
+  LogNotification('view', 'Tune viewed: "%s" by %s' % (obj.title, GetUserEmail() or 'anonymous'))
   return PageWrapper(parts, 'index', show_eye_candy=False)
 
 def _build_view_playback_js(key, meter, unit, raw_notes, chords_text):
@@ -7523,9 +7525,10 @@ def _ai_analyze_overlay():
 </div>
 
 <div id="ai-results" style="display:none">
-<div id="ai-confidence" style="margin-bottom:12px; font-size:13px; color:#666"></div>
+<div id="ai-notes-text" style="margin-bottom:12px; font-size:13px; color:#666; font-style:italic"></div>
+<div id="ai-confidence" style="margin-bottom:12px; font-size:13px; color:#2266aa; font-weight:bold"></div>
 <div id="ai-fields"></div>
-<div id="ai-notes-text" style="margin-top:10px; font-size:13px; color:#666; font-style:italic"></div>
+<div style="margin-top:12px; margin-bottom:4px; font-size:13px; color:#888; font-style:italic">This is an experimental feature. You may not get correct results, depending on quality of your recording and other factors.</div>
 <div style="margin-top:16px">
 <button type="button" class="rec-btn rec-btn-primary" onclick="aiAccept()">Fill Selected Fields</button>
 <button type="button" class="rec-btn" onclick="aiClose()">Cancel</button>
@@ -7625,7 +7628,8 @@ function aiShowResults(result) {
   // Confidence
   var confEl = document.getElementById('ai-confidence');
   if (result.confidence) {
-    confEl.textContent = 'Confidence: ' + result.confidence;
+    var confVal = result.confidence.charAt(0).toUpperCase() + result.confidence.slice(1).toLowerCase();
+    confEl.textContent = 'Confidence: ' + confVal;
   }
 
   // Build field rows with checkboxes
@@ -7724,6 +7728,30 @@ function aiAccept() {
   var fields = {};
   for (var i = 0; i < checks.length; i++) {
     fields[checks[i].getAttribute('data-field')] = true;
+  }
+
+  // Check if notes or chords have existing content that would be overwritten
+  var warnings = [];
+  if (fields.notes && aiResult.parts) {
+    var textarea = document.getElementById('raw-notes-textarea');
+    if (textarea && textarea.value.trim()) {
+      warnings.push('notes');
+    }
+  }
+  if (fields.chords && aiResult.parts) {
+    var hasChords = false;
+    var inputs = document.querySelectorAll('#chord-parts-container input[type="text"]');
+    for (var ci = 0; ci < inputs.length; ci++) {
+      if (inputs[ci].value.trim()) { hasChords = true; break; }
+    }
+    if (hasChords) {
+      warnings.push('chords');
+    }
+  }
+  if (warnings.length > 0) {
+    var msg = 'This will overwrite existing ' + warnings.join(' and ') + '. '
+      + 'The old content won\\u0027t be permanently lost until you save your edits. Continue?';
+    if (!confirm(msg)) return;
   }
 
   // Key
@@ -7844,10 +7872,14 @@ function aiFillNotes(parts) {
   var textarea = document.getElementById('raw-notes-textarea');
   if (textarea) {
     textarea.value = lines.join('\\n');
-    // Switch to ABC text mode so the textarea value is shown directly
-    // without going through parseAbcToModel/modelToAbc round-trip
-    if (typeof toggleEditorMode === 'function') {
-      toggleEditorMode('abc');
+    // If in visual mode, re-parse model from updated textarea and re-render
+    if (typeof veMode !== 'undefined' && veMode === 'visual') {
+      if (typeof parseAbcToModel === 'function') {
+        notationModel = parseAbcToModel(textarea.value);
+      }
+      if (typeof doRenderAbc === 'function') {
+        doRenderAbc();
+      }
     }
   }
 }
@@ -7997,11 +8029,12 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
 
   ai_link = ''
   if has_recording and HasCapability(kCapEditTunes):
-    ai_link = '<span class="rec-upload-link" onclick="aiShowOverlay()" style="margin-left:12px">AI Analyze</span>'
+    ai_link = '<span class="rec-upload-link" onclick="aiShowOverlay()">AI Analyze (beta)</span>'
   parts.append('<div class="rec-heading-flex">'
                '<h2>%s</h2>'
-               '<span class="rec-upload-link" onclick="recShowOverlay()">Upload Recording</span>'
-               '%s%s'
+               '%s'
+               '<span class="rec-upload-link" onclick="recShowOverlay()" style="margin-left:12px">Upload Recording</span>'
+               '%s'
                '</div>' % (heading, ai_link, speaker_html))
   parts.append('<script>var recTuneName=%s;var recIsNewTune=%s;var recHasRecording=%s;</script>'
                % (json.dumps(tune if not is_new_tune else ''),
@@ -11433,6 +11466,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
 
   parts.append(_RenderNotesSection('event', sid, can_make_public))
 
+  LogNotification('view', 'Event viewed: "%s" by %s' % (event.title, GetUserEmail() or 'anonymous'))
   return PageWrapper(parts, 'event', show_eye_candy=False)
 
 @app.route('/ev/<share_id>')
