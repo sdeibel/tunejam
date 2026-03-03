@@ -33,6 +33,17 @@ app.secret_key = 'TunejamIsAtHubbardHallEachTuesday'
 app.config['SESSION_TYPE'] = 'filesystem'
 app.permanent_session_lifetime = timedelta(days=30)
 
+# Recording upload limits
+kMaxRecordingSize = 20 * 1024 * 1024  # 20 MB
+kFfmpegPath = '/usr/local/bin/ffmpeg'
+app.config['MAX_CONTENT_LENGTH'] = kMaxRecordingSize
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+  if request.path.startswith('/ajax/'):
+    return json.dumps({'ok': False, 'error': 'File too large (max 20 MB)'}), 413, {'Content-Type': 'application/json'}
+  return 'File too large', 413
+
 kSiteVersion = '4.0'
 
 # Email config file path
@@ -2656,27 +2667,27 @@ function testUrl(btn) {
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/check-url?url=' + encodeURIComponent(url), true);
   xhr.onload = function() {
-    btn.textContent = 'Test';
     btn.disabled = false;
     if (xhr.status === 200) {
       try {
         var data = JSON.parse(xhr.responseText);
         if (data.ok) {
-          alert('Link is OK.');
+          btn.textContent = 'OK';
         } else {
-          alert('Link appears broken: ' + data.error);
+          btn.textContent = 'Broken';
         }
       } catch(e) {
-        alert('Error checking URL.');
+        btn.textContent = 'Error';
       }
     } else {
-      alert('Error checking URL.');
+      btn.textContent = 'Error';
     }
+    setTimeout(function() { btn.textContent = 'Test'; }, 3000);
   };
   xhr.onerror = function() {
-    btn.textContent = 'Test';
     btn.disabled = false;
-    alert('Error checking URL.');
+    btn.textContent = 'Error';
+    setTimeout(function() { btn.textContent = 'Test'; }, 3000);
   };
   xhr.send();
 }
@@ -6262,6 +6273,517 @@ def tune_edit(tune):
 
   return _build_tune_form(obj, tune, 'Edit Tune', '/tune/%s/save' % tune, '/tune/%s' % tune)
 
+def _recording_upload_overlay():
+  """Return the recording upload modal overlay HTML."""
+  return """<div id="rec-overlay" style="display:none">
+<div id="rec-popup">
+<button id="rec-close" onclick="recClose()">&times;</button>
+<h2>Upload Recording</h2>
+
+<div id="rec-warning" style="display:none">
+This tune already has a recording. Uploading a new one will replace it.<br>
+<a href="#" id="rec-existing-btn" onclick="recToggleExisting();return false" style="color:#3a6a3a">&#9654; Play Existing Recording</a>
+<span id="rec-existing-time" style="font-size:13px;color:#666"></span>
+</div>
+
+<div id="rec-drop-section">
+<div id="rec-drop-zone" onclick="document.getElementById('rec-file-input').click()">
+<div style="font-size:32px;margin-bottom:8px">&#127925;</div>
+<div>Drag &amp; drop an audio file here</div>
+<div style="margin:8px 0;color:#aaa">or</div>
+<button type="button" class="rec-btn" onclick="event.stopPropagation();document.getElementById('rec-file-input').click()">Choose File</button>
+<input type="file" id="rec-file-input" accept="audio/*" style="display:none" onchange="recHandleFile(this.files[0])">
+</div>
+<div style="text-align:center;margin-top:12px">
+<button type="button" class="rec-btn" onclick="recStartRecording()">&#9679; Record</button>
+</div>
+</div>
+
+<div id="rec-recording-area" style="display:none">
+<div><span class="rec-dot"></span> <span id="rec-timer">0:00</span></div>
+<div style="margin-top:15px">
+<button type="button" class="rec-btn rec-btn-danger" onclick="recStopRecording()">&#9632; Stop</button>
+</div>
+</div>
+
+<div id="rec-player-area" style="display:none">
+<div>
+<button type="button" class="rec-btn" id="rec-play-btn" onclick="recTogglePlay()">&#9654; Play</button>
+<span id="rec-play-time" style="margin-left:8px;font-size:13px;color:#666">0:00</span>
+</div>
+<div class="rec-filename" id="rec-filename"></div>
+<div style="margin-top:12px">
+<button type="button" class="rec-btn rec-btn-primary" onclick="recOnAccept()">Accept</button>
+<button type="button" class="rec-btn" onclick="recTryAgain()">Try Again</button>
+<button type="button" class="rec-btn" onclick="recClose()">Cancel</button>
+</div>
+</div>
+
+<div id="rec-progress" style="display:none">
+<div style="text-align:center;font-size:13px"><span id="rec-progress-pct">0</span>%</div>
+<div id="rec-progress-bar"><div id="rec-progress-fill"></div></div>
+</div>
+
+<div id="rec-confirm" style="display:none">
+<div style="margin-bottom:12px;font-weight:bold;color:#856404">Are you sure you want to replace the existing recording?</div>
+<button type="button" class="rec-btn rec-btn-primary" onclick="recDoUpload()">Yes, Replace</button>
+<button type="button" class="rec-btn" onclick="recCancelConfirm()">Cancel</button>
+</div>
+
+<div id="rec-message" style="display:none"></div>
+</div>
+</div>
+
+<div id="rec-cancel-overlay" style="display:none">
+<div id="rec-cancel-popup">
+<h2>Recording Changed</h2>
+<p style="margin:0 0 15px 0;color:#555">You uploaded a new recording during this editing session.</p>
+<div style="text-align:center;padding:10px 0">
+<button type="button" class="rec-btn" id="rec-cancel-play-btn" onclick="recCancelTogglePlay()">&#9654; Play New Recording</button>
+<span id="rec-cancel-play-time" style="margin-left:8px;font-size:13px;color:#666"></span>
+</div>
+<div style="margin-top:15px;text-align:center">
+<button type="button" class="rec-btn" onclick="recCancelGoBack()">Go Back to Editing</button>
+<button type="button" class="rec-btn rec-btn-primary" onclick="recCancelKeep()">Exit and Use New Recording</button>
+<button type="button" class="rec-btn" onclick="recCancelDiscard()">Exit and Restore Old Recording</button>
+</div>
+</div>
+</div>"""
+
+def _build_recording_upload_js():
+  """Return the recording upload JavaScript."""
+  return """<script>
+var recAudioBlob = null;
+var recAudioUrl = null;
+var recAudioElem = null;
+var recMediaRecorder = null;
+var recChunks = [];
+var recTimerInterval = null;
+var recStartTime = 0;
+var recFileName = '';
+var recExistingAudio = null;
+var recUploadedThisSession = false;
+
+function recGetTuneName() {
+  if (!window.recIsNewTune) return window.recTuneName;
+  var title = document.querySelector('input[name="title"]');
+  if (!title || !title.value.trim()) return '';
+  var fn = title.value.trim().toLowerCase();
+  fn = fn.replace(/[^a-z0-9\\s]/g, '');
+  fn = fn.replace(/\\s+/g, '_');
+  fn = fn.replace(/_+/g, '_');
+  fn = fn.replace(/^_|_$/g, '');
+  return fn;
+}
+
+function recShowOverlay() {
+  if (window.recIsNewTune) {
+    var title = document.querySelector('input[name="title"]');
+    if (!title || !title.value.trim()) {
+      alert('Please enter a title first');
+      return;
+    }
+  }
+  recReset();
+  document.getElementById('rec-warning').style.display = window.recHasRecording ? '' : 'none';
+  if (window.recHasRecording) {
+    recExistingAudio = new Audio('/recording/' + recGetTuneName());
+    recExistingAudio.addEventListener('timeupdate', function() {
+      document.getElementById('rec-existing-time').textContent = recFormatTime(recExistingAudio.currentTime);
+    });
+    recExistingAudio.addEventListener('ended', function() {
+      document.getElementById('rec-existing-btn').innerHTML = '&#9654; Play Existing Recording';
+      document.getElementById('rec-existing-time').textContent = '';
+    });
+  }
+  document.getElementById('rec-overlay').style.display = 'flex';
+}
+
+function recClose() {
+  recStopPlayback();
+  recDestroyExisting();
+  recStopRecordingCleanup();
+  document.getElementById('rec-overlay').style.display = 'none';
+}
+
+function recReset() {
+  recStopPlayback();
+  recStopExisting();
+  recStopRecordingCleanup();
+  recAudioBlob = null;
+  recAudioUrl = null;
+  recFileName = '';
+  document.getElementById('rec-drop-section').style.display = '';
+  document.getElementById('rec-recording-area').style.display = 'none';
+  document.getElementById('rec-player-area').style.display = 'none';
+  document.getElementById('rec-progress').style.display = 'none';
+  document.getElementById('rec-confirm').style.display = 'none';
+  document.getElementById('rec-message').style.display = 'none';
+  document.getElementById('rec-file-input').value = '';
+}
+
+function recHandleFile(file) {
+  if (!file) return;
+  if (!file.type.match(/^audio\\//)) {
+    recShowMessage('Please select an audio file', 'error');
+    return;
+  }
+  if (file.size > %d) {
+    recShowMessage('File too large (max 20 MB)', 'error');
+    return;
+  }
+  recAudioBlob = file;
+  recFileName = file.name;
+  recShowPlayer();
+}
+
+function recStartRecording() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    recShowMessage('Microphone recording is not supported in this browser', 'error');
+    return;
+  }
+  recStopExisting();
+  navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream) {
+    recChunks = [];
+    var options = {};
+    if (typeof MediaRecorder.isTypeSupported === 'function') {
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        options.mimeType = 'audio/webm;codecs=opus';
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        options.mimeType = 'audio/webm';
+      }
+    }
+    recMediaRecorder = new MediaRecorder(stream, options);
+    recMediaRecorder.ondataavailable = function(e) {
+      if (e.data.size > 0) recChunks.push(e.data);
+    };
+    recMediaRecorder.onstop = function() {
+      stream.getTracks().forEach(function(t) { t.stop(); });
+      var mime = recMediaRecorder.mimeType || 'audio/webm';
+      recAudioBlob = new Blob(recChunks, {type: mime});
+      var ext = mime.indexOf('webm') >= 0 ? '.webm' : '.ogg';
+      recFileName = 'recording' + ext;
+      recShowPlayer();
+    };
+    recMediaRecorder.start(100);
+    recStartTime = Date.now();
+    recTimerInterval = setInterval(recUpdateTimer, 200);
+    document.getElementById('rec-drop-section').style.display = 'none';
+    document.getElementById('rec-recording-area').style.display = '';
+  }).catch(function(err) {
+    recShowMessage('Microphone access denied: ' + err.message, 'error');
+  });
+}
+
+function recUpdateTimer() {
+  var elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+  var mins = Math.floor(elapsed / 60);
+  var secs = elapsed %% 60;
+  document.getElementById('rec-timer').textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
+}
+
+function recStopRecording() {
+  if (recMediaRecorder && recMediaRecorder.state !== 'inactive') {
+    recMediaRecorder.stop();
+  }
+  clearInterval(recTimerInterval);
+  document.getElementById('rec-recording-area').style.display = 'none';
+}
+
+function recStopRecordingCleanup() {
+  if (recMediaRecorder && recMediaRecorder.state !== 'inactive') {
+    try { recMediaRecorder.stop(); } catch(e) {}
+  }
+  clearInterval(recTimerInterval);
+}
+
+function recShowPlayer() {
+  recStopPlayback();
+  recStopExisting();
+  if (recAudioUrl) URL.revokeObjectURL(recAudioUrl);
+  recAudioUrl = URL.createObjectURL(recAudioBlob);
+  recAudioElem = new Audio(recAudioUrl);
+  recAudioElem.addEventListener('timeupdate', function() {
+    document.getElementById('rec-play-time').textContent = recFormatTime(recAudioElem.currentTime);
+  });
+  recAudioElem.addEventListener('ended', function() {
+    document.getElementById('rec-play-btn').innerHTML = '&#9654; Play';
+  });
+  document.getElementById('rec-filename').textContent = recFileName;
+  document.getElementById('rec-drop-section').style.display = 'none';
+  document.getElementById('rec-recording-area').style.display = 'none';
+  document.getElementById('rec-player-area').style.display = '';
+  document.getElementById('rec-play-btn').innerHTML = '&#9654; Play';
+}
+
+function recSafePlay(audio) {
+  var p = audio.play();
+  if (p && p.catch) p.catch(function(){});
+}
+
+function recTogglePlay() {
+  if (!recAudioElem) return;
+  if (recAudioElem.paused) {
+    recStopExisting();
+    recSafePlay(recAudioElem);
+    document.getElementById('rec-play-btn').innerHTML = '&#9646;&#9646; Pause';
+  } else {
+    recAudioElem.pause();
+    document.getElementById('rec-play-btn').innerHTML = '&#9654; Play';
+  }
+}
+
+function recStopPlayback() {
+  if (recAudioElem) {
+    recAudioElem.pause();
+    recAudioElem.src = '';
+    recAudioElem = null;
+  }
+  if (recAudioUrl) {
+    URL.revokeObjectURL(recAudioUrl);
+    recAudioUrl = null;
+  }
+}
+
+function recToggleExisting() {
+  if (!recExistingAudio) return;
+  if (recExistingAudio.paused) {
+    if (recAudioElem && !recAudioElem.paused) {
+      recAudioElem.pause();
+      document.getElementById('rec-play-btn').innerHTML = '&#9654; Play';
+    }
+    recSafePlay(recExistingAudio);
+    document.getElementById('rec-existing-btn').innerHTML = '&#9209; Stop Existing Recording';
+  } else {
+    recExistingAudio.pause();
+    recExistingAudio.currentTime = 0;
+    document.getElementById('rec-existing-btn').innerHTML = '&#9654; Play Existing Recording';
+  }
+}
+
+function recStopExisting() {
+  if (recExistingAudio) {
+    recExistingAudio.pause();
+    recExistingAudio.currentTime = 0;
+  }
+  document.getElementById('rec-existing-btn').innerHTML = '&#9654; Play Existing Recording';
+  document.getElementById('rec-existing-time').textContent = '';
+}
+
+function recDestroyExisting() {
+  if (recExistingAudio) {
+    recExistingAudio.pause();
+    recExistingAudio.src = '';
+    recExistingAudio = null;
+  }
+  document.getElementById('rec-existing-btn').innerHTML = '&#9654; Play Existing Recording';
+  document.getElementById('rec-existing-time').textContent = '';
+}
+
+function recFormatTime(secs) {
+  var m = Math.floor(secs / 60);
+  var s = Math.floor(secs %% 60);
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function recTryAgain() {
+  recStopPlayback();
+  recAudioBlob = null;
+  recFileName = '';
+  document.getElementById('rec-player-area').style.display = 'none';
+  document.getElementById('rec-confirm').style.display = 'none';
+  document.getElementById('rec-drop-section').style.display = '';
+  document.getElementById('rec-message').style.display = 'none';
+}
+
+function recOnAccept() {
+  if (window.recHasRecording) {
+    document.getElementById('rec-player-area').style.display = 'none';
+    document.getElementById('rec-confirm').style.display = '';
+  } else {
+    recDoUpload();
+  }
+}
+
+function recCancelConfirm() {
+  document.getElementById('rec-confirm').style.display = 'none';
+  document.getElementById('rec-player-area').style.display = '';
+}
+
+function recDoUpload() {
+  var tuneName = recGetTuneName();
+  if (!tuneName) {
+    recShowMessage('Could not determine tune name', 'error');
+    return;
+  }
+  document.getElementById('rec-player-area').style.display = 'none';
+  document.getElementById('rec-confirm').style.display = 'none';
+  document.getElementById('rec-progress').style.display = '';
+  document.getElementById('rec-message').style.display = 'none';
+
+  var fd = new FormData();
+  var ext = recFileName.split('.').pop() || 'webm';
+  fd.append('file', recAudioBlob, 'upload.' + ext);
+  fd.append('tune', tuneName);
+  fd.append('is_new', window.recIsNewTune ? '1' : '0');
+
+  var xhr = new XMLHttpRequest();
+  xhr.upload.addEventListener('progress', function(e) {
+    if (e.lengthComputable) {
+      var pct = Math.round(e.loaded / e.total * 100);
+      document.getElementById('rec-progress-pct').textContent = pct;
+      document.getElementById('rec-progress-fill').style.width = pct + '%%';
+    }
+  });
+  xhr.addEventListener('load', function() {
+    document.getElementById('rec-progress').style.display = 'none';
+    try {
+      var resp = JSON.parse(xhr.responseText);
+    } catch(e) {
+      recShowMessage('Upload failed: invalid response', 'error');
+      return;
+    }
+    if (resp.ok) {
+      recShowMessage('Recording uploaded successfully!', 'success');
+      window.recHasRecording = true;
+      recUploadedThisSession = true;
+      var icon = document.getElementById('rec-speaker-icon');
+      if (icon) icon.src = '/image/speaker_louder_32.png';
+      // Make icon playable: replace wrapper <span> with <a> so player.js intercepts clicks
+      var wrapper = document.getElementById('rec-speaker-link');
+      var recUrl = '/recording/' + recGetTuneName() + '?v=' + Date.now();
+      if (wrapper && wrapper.tagName === 'A') {
+        wrapper.href = recUrl;
+      } else if (wrapper) {
+        var a = document.createElement('a');
+        a.id = 'rec-speaker-link';
+        a.href = recUrl;
+        a.innerHTML = wrapper.innerHTML;
+        wrapper.parentNode.replaceChild(a, wrapper);
+      }
+      setTimeout(recClose, 1500);
+    } else {
+      recShowMessage('Upload failed: ' + (resp.error || 'unknown error'), 'error');
+    }
+  });
+  xhr.addEventListener('error', function() {
+    document.getElementById('rec-progress').style.display = 'none';
+    recShowMessage('Upload failed: network error', 'error');
+  });
+  xhr.open('POST', '/ajax/recording/upload');
+  xhr.send(fd);
+}
+
+function recShowMessage(msg, cls) {
+  var el = document.getElementById('rec-message');
+  el.textContent = msg;
+  el.className = cls;
+  el.style.display = '';
+}
+
+// Drag and drop handlers
+document.addEventListener('DOMContentLoaded', function() {
+  var dz = document.getElementById('rec-drop-zone');
+  if (!dz) return;
+  dz.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dz.classList.add('dragover');
+  });
+  dz.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    dz.classList.remove('dragover');
+  });
+  dz.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dz.classList.remove('dragover');
+    if (e.dataTransfer.files.length) recHandleFile(e.dataTransfer.files[0]);
+  });
+
+  // Escape key closes overlays
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      if (document.getElementById('rec-cancel-overlay').style.display !== 'none') {
+        recCancelGoBack();
+      } else if (document.getElementById('rec-overlay').style.display !== 'none') {
+        recClose();
+      }
+    }
+  });
+});
+
+var recCancelUrl = '';
+var recCancelAudio = null;
+
+function recHandleCancel(cancelUrl) {
+  if (!recUploadedThisSession) {
+    window.location = cancelUrl;
+    return;
+  }
+  recCancelUrl = cancelUrl;
+  recCancelStopAudio();
+  var url = '/recording/' + recGetTuneName() + '?v=' + Date.now();
+  recCancelAudio = new Audio(url);
+  recCancelAudio.addEventListener('timeupdate', function() {
+    document.getElementById('rec-cancel-play-time').textContent = recFormatTime(recCancelAudio.currentTime);
+  });
+  recCancelAudio.addEventListener('ended', function() {
+    document.getElementById('rec-cancel-play-btn').innerHTML = '&#9654; Play New Recording';
+    document.getElementById('rec-cancel-play-time').textContent = '';
+  });
+  document.getElementById('rec-cancel-play-btn').innerHTML = '&#9654; Play New Recording';
+  document.getElementById('rec-cancel-play-time').textContent = '';
+  document.getElementById('rec-cancel-overlay').style.display = 'flex';
+}
+
+function recCancelTogglePlay() {
+  if (!recCancelAudio) return;
+  if (recCancelAudio.paused) {
+    recSafePlay(recCancelAudio);
+    document.getElementById('rec-cancel-play-btn').innerHTML = '&#9646;&#9646; Pause';
+  } else {
+    recCancelAudio.pause();
+    document.getElementById('rec-cancel-play-btn').innerHTML = '&#9654; Play New Recording';
+  }
+}
+
+function recCancelStopAudio() {
+  if (recCancelAudio) {
+    recCancelAudio.pause();
+    recCancelAudio.src = '';
+    recCancelAudio = null;
+  }
+  document.getElementById('rec-cancel-play-time').textContent = '';
+}
+
+function recCancelGoBack() {
+  recCancelStopAudio();
+  document.getElementById('rec-cancel-overlay').style.display = 'none';
+}
+
+function recCancelKeep() {
+  recCancelStopAudio();
+  document.getElementById('rec-cancel-overlay').style.display = 'none';
+  window.location = recCancelUrl;
+}
+
+function recCancelDiscard() {
+  recCancelStopAudio();
+  document.getElementById('rec-cancel-overlay').style.display = 'none';
+  var fd = new FormData();
+  fd.append('tune', recGetTuneName());
+  fd.append('is_new', window.recIsNewTune ? '1' : '0');
+  var xhr = new XMLHttpRequest();
+  xhr.addEventListener('load', function() {
+    window.location = recCancelUrl;
+  });
+  xhr.addEventListener('error', function() {
+    window.location = recCancelUrl;
+  });
+  xhr.open('POST', '/ajax/recording/undo');
+  xhr.send(fd);
+}
+</script>""" % kMaxRecordingSize
+
 def _build_tune_form(obj, tune, heading, save_action, cancel_url):
   """Build the full tune editor form, shared by edit and new tune pages."""
 
@@ -6333,7 +6855,33 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
     url_list = [u.strip() for u in obj.url.split('\n') if u.strip()]
 
   parts = []
-  parts.append(CH(heading, 2))
+
+  # Check if tune has a recording
+  is_new_tune = (tune == 'new')
+  has_recording = False
+  rec_mtime = 0
+  if not is_new_tune:
+    for enc in ['.mp3', '.m4a']:
+      rec_path = os.path.join(utils.kRecordingsDir, tune + enc)
+      if os.path.isfile(rec_path):
+        has_recording = True
+        rec_mtime = int(os.path.getmtime(rec_path))
+        break
+  speaker_icon = '/image/speaker_louder_32.png' if has_recording else '/image/speaker_louder_disabled_32.png'
+  if has_recording:
+    speaker_html = '<a id="rec-speaker-link" href="/recording/%s?v=%d"><img id="rec-speaker-icon" class="rec-speaker-icon" src="%s"></a>' % (tune, rec_mtime, speaker_icon)
+  else:
+    speaker_html = '<span id="rec-speaker-link"><img id="rec-speaker-icon" class="rec-speaker-icon" src="%s"></span>' % speaker_icon
+
+  parts.append('<div class="rec-heading-flex">'
+               '<h2>%s</h2>'
+               '<span class="rec-upload-link" onclick="recShowOverlay()">Upload Recording</span>'
+               '%s'
+               '</div>' % (heading, speaker_html))
+  parts.append('<script>var recTuneName=%s;var recIsNewTune=%s;var recHasRecording=%s;</script>'
+               % (json.dumps(tune if not is_new_tune else ''),
+                  'true' if is_new_tune else 'false',
+                  'true' if has_recording else 'false'))
 
   # Build the editor JavaScript
   editor_js = _build_editor_js(tune, chord_parts, max(len(url_list), 1))
@@ -6431,7 +6979,7 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
     CBreak(2),
     CInput(type='SUBMIT', value='  Save  '),
     CText(' '),
-    CInput(type='button', value='  Cancel  ', onclick="window.location='%s'" % cancel_url),
+    CInput(type='button', value='  Cancel  ', onclick="recHandleCancel('%s')" % cancel_url),
   ])
 
   parts.append(CForm(form_body, action=save_action, method='POST',
@@ -6439,6 +6987,10 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
 
   # Chord notation guide
   parts.append(_chord_notation_guide())
+
+  # Recording upload overlay and JS
+  parts.append(_recording_upload_overlay())
+  parts.append(_build_recording_upload_js())
 
   return PageWrapper(parts, 'index', show_eye_candy=False)
 
@@ -7231,7 +7783,6 @@ def doprint(format=None, bookname=None):
 @app.route('/recording/<tune>')
 def recording(tune):
   obj = utils.CTune(tune)
-  obj.ReadDatabase()
   recording, mimetype, filename = obj.GetRecording()
   if recording is None:
     return Response()
@@ -8724,6 +9275,184 @@ min-height:40px;
 }
 }
 
+/* Recording upload overlay */
+#rec-overlay, #rec-cancel-overlay {
+position:fixed;
+top:0; left:0; right:0; bottom:0;
+background:rgba(0,0,0,0.5);
+z-index:2000;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+#rec-popup, #rec-cancel-popup {
+background:#ffffff;
+border-radius:8px;
+max-width:480px;
+width:90%;
+padding:30px;
+box-shadow:0 4px 20px rgba(0,0,0,0.3);
+position:relative;
+}
+#rec-close {
+position:absolute;
+top:10px; right:14px;
+background:none;
+border:none;
+font-size:24px;
+cursor:pointer;
+color:#666;
+padding:0;
+line-height:1;
+}
+#rec-close:hover {
+color:#333;
+}
+#rec-popup h2, #rec-cancel-popup h2 {
+margin:0 0 10px 0;
+padding:0;
+color:#004400;
+}
+#rec-drop-zone {
+border:2px dashed #999;
+border-radius:8px;
+padding:30px 20px;
+text-align:center;
+color:#666;
+cursor:pointer;
+transition:border-color 0.2s, background 0.2s;
+}
+#rec-drop-zone.dragover {
+border-color:#3a6a3a;
+background:#f0f8f0;
+}
+.rec-btn {
+display:inline-block;
+padding:8px 18px;
+border:1px solid #999;
+border-radius:4px;
+background:#fff;
+color:#333;
+cursor:pointer;
+font-size:14px;
+margin:4px;
+}
+.rec-btn:hover {
+background:#f0f0f0;
+}
+.rec-btn-primary {
+background:#3a6a3a;
+color:#fff;
+border-color:#3a6a3a;
+}
+.rec-btn-primary:hover {
+background:#2d5a2d;
+}
+.rec-btn-danger {
+background:#c0392b;
+color:#fff;
+border-color:#c0392b;
+}
+.rec-btn-danger:hover {
+background:#a93226;
+}
+#rec-warning {
+background:#fff3cd;
+border:1px solid #ffc107;
+border-radius:4px;
+padding:10px;
+margin-bottom:12px;
+font-size:13px;
+color:#856404;
+}
+#rec-recording-area {
+text-align:center;
+padding:20px;
+}
+.rec-dot {
+display:inline-block;
+width:12px; height:12px;
+background:#c0392b;
+border-radius:50%;
+margin-right:8px;
+animation:rec-pulse 1s infinite;
+vertical-align:middle;
+}
+@keyframes rec-pulse {
+0%, 100% { opacity:1; }
+50% { opacity:0.3; }
+}
+#rec-player-area {
+padding:15px 0;
+text-align:center;
+}
+#rec-player-area .rec-filename {
+font-size:12px;
+color:#888;
+margin-top:6px;
+}
+#rec-progress {
+margin:10px 0;
+}
+#rec-progress-bar {
+width:100%;
+height:8px;
+background:#e0e0e0;
+border-radius:4px;
+overflow:hidden;
+}
+#rec-progress-fill {
+height:100%;
+width:0;
+background:#3a6a3a;
+transition:width 0.2s;
+}
+#rec-message {
+margin-top:10px;
+padding:8px;
+border-radius:4px;
+font-size:13px;
+text-align:center;
+}
+#rec-message.error {
+background:#fdecea;
+color:#c0392b;
+border:1px solid #f5c6cb;
+}
+#rec-message.success {
+background:#d4edda;
+color:#155724;
+border:1px solid #c3e6cb;
+}
+.rec-heading-flex {
+display:flex;
+align-items:center;
+gap:12px;
+}
+.rec-heading-flex h2 {
+margin:0;
+flex:1;
+}
+.rec-upload-link {
+color:#999;
+font-style:italic;
+font-size:14px;
+cursor:pointer;
+white-space:nowrap;
+}
+.rec-upload-link:hover {
+color:#3a6a3a;
+}
+.rec-speaker-icon {
+width:24px;
+height:24px;
+vertical-align:middle;
+}
+#rec-confirm {
+text-align:center;
+padding:15px 0;
+}
+
 """
 
 _kPrintCSS = """
@@ -8741,6 +9470,12 @@ display:none;
 display:none !important;
 }
 #login-overlay {
+display:none !important;
+}
+#rec-overlay {
+display:none !important;
+}
+.rec-heading-flex {
 display:none !important;
 }
 .footer-auth {
@@ -9911,6 +10646,131 @@ def ajax_notes_edit():
       _WriteNotes(owner_email, notes)
       return json.dumps({'ok': True})
   return json.dumps({'ok': False, 'error': 'note not found'})
+
+@app.route('/ajax/recording/upload', methods=['POST'])
+def ajax_recording_upload():
+  """Handle recording file upload with ffmpeg conversion to mp3."""
+  import subprocess
+  import shutil
+
+  email = GetUserEmail()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'Not logged in'}), 403, {'Content-Type': 'application/json'}
+
+  tune_name = request.form.get('tune', '').strip()
+  is_new = request.form.get('is_new', '0') == '1'
+  if not tune_name:
+    return json.dumps({'ok': False, 'error': 'No tune name'}), 400, {'Content-Type': 'application/json'}
+
+  # Auth check
+  if is_new:
+    if not HasCapability(kCapEditTunes):
+      return json.dumps({'ok': False, 'error': 'Permission denied'}), 403, {'Content-Type': 'application/json'}
+  else:
+    obj = utils.CTune(tune_name)
+    try:
+      obj.ReadDatabase()
+    except SystemExit:
+      return json.dumps({'ok': False, 'error': 'Tune not found'}), 404, {'Content-Type': 'application/json'}
+    if not CanEditTune(obj):
+      return json.dumps({'ok': False, 'error': 'Permission denied'}), 403, {'Content-Type': 'application/json'}
+
+  uploaded = request.files.get('file')
+  if not uploaded or not uploaded.filename:
+    return json.dumps({'ok': False, 'error': 'No file uploaded'}), 400, {'Content-Type': 'application/json'}
+
+  # Save to temp file preserving extension for ffmpeg format detection
+  ext = os.path.splitext(uploaded.filename)[1] or '.webm'
+  tmp_input = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
+  tmp_output = tempfile.NamedTemporaryFile(suffix='.mp3', delete=False)
+  tmp_input_path = tmp_input.name
+  tmp_output_path = tmp_output.name
+  tmp_input.close()
+  tmp_output.close()
+
+  try:
+    uploaded.save(tmp_input_path)
+
+    # Convert to mp3 via ffmpeg
+    proc = subprocess.Popen(
+      [kFfmpegPath, '-i', tmp_input_path, '-y', '-q:a', '2', '-map', 'a', tmp_output_path],
+      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = proc.communicate()
+    if proc.returncode != 0:
+      error_msg = stderr.strip()[-200:] if stderr.strip() else 'Conversion failed'
+      return json.dumps({'ok': False, 'error': 'Audio conversion failed: ' + error_msg}), 500, {'Content-Type': 'application/json'}
+
+    # Archive existing recording files
+    for enc in ['.mp3', '.m4a']:
+      existing = os.path.join(utils.kRecordingsDir, tune_name + enc)
+      if os.path.exists(existing):
+        arch_dest = os.path.join(utils.kRecordingsArchiveDir, tune_name + enc)
+        shutil.move(existing, arch_dest)
+        try:
+          os.utime(arch_dest, None)
+        except OSError:
+          pass
+
+    # Move new mp3 into place
+    dest = os.path.join(utils.kRecordingsDir, tune_name + '.mp3')
+    shutil.move(tmp_output_path, dest)
+    tmp_output_path = None  # prevent cleanup of moved file
+
+    action = 'replaced' if not is_new else 'uploaded'
+    LogNotification('tune', 'Recording %s for "%s" by %s' % (action, tune_name, email))
+    return json.dumps({'ok': True}), 200, {'Content-Type': 'application/json'}
+
+  except Exception as e:
+    return json.dumps({'ok': False, 'error': str(e)}), 500, {'Content-Type': 'application/json'}
+
+  finally:
+    if os.path.exists(tmp_input_path):
+      os.unlink(tmp_input_path)
+    if tmp_output_path and os.path.exists(tmp_output_path):
+      os.unlink(tmp_output_path)
+
+@app.route('/ajax/recording/undo', methods=['POST'])
+def ajax_recording_undo():
+  """Undo a recording upload by restoring the archived original."""
+  import shutil
+
+  email = GetUserEmail()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'Not logged in'}), 403, {'Content-Type': 'application/json'}
+
+  tune_name = request.form.get('tune', '').strip()
+  is_new = request.form.get('is_new', '0') == '1'
+  if not tune_name:
+    return json.dumps({'ok': False, 'error': 'No tune name'}), 400, {'Content-Type': 'application/json'}
+
+  # Auth check
+  if is_new:
+    if not HasCapability(kCapEditTunes):
+      return json.dumps({'ok': False, 'error': 'Permission denied'}), 403, {'Content-Type': 'application/json'}
+  else:
+    obj = utils.CTune(tune_name)
+    try:
+      obj.ReadDatabase()
+    except SystemExit:
+      return json.dumps({'ok': False, 'error': 'Tune not found'}), 404, {'Content-Type': 'application/json'}
+    if not CanEditTune(obj):
+      return json.dumps({'ok': False, 'error': 'Permission denied'}), 403, {'Content-Type': 'application/json'}
+
+  # Remove the uploaded recording
+  for enc in ['.mp3', '.m4a']:
+    current = os.path.join(utils.kRecordingsDir, tune_name + enc)
+    if os.path.exists(current):
+      os.unlink(current)
+
+  # Restore archived recording if one exists (not for new tunes)
+  if not is_new:
+    for enc in ['.mp3', '.m4a']:
+      archived = os.path.join(utils.kRecordingsArchiveDir, tune_name + enc)
+      if os.path.exists(archived):
+        shutil.move(archived, os.path.join(utils.kRecordingsDir, tune_name + enc))
+
+  LogNotification('tune', 'Recording upload undone for "%s" by %s' % (tune_name, email))
+  return json.dumps({'ok': True}), 200, {'Content-Type': 'application/json'}
 
 # -- Profile page --
 
@@ -12959,25 +13819,31 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
   else:
     klass = ''
     
+  import re as _re
+  has_notes = bool(obj.raw_notes and _re.search(r'[a-gA-Gz]', obj.raw_notes))
+
   if pagetype == 'both':
-    if not obj.chords and not obj.notes:
-      notes = ''
-      chords = CDiv(CText("Notes and chords are not yet available for this tune", bold=1, italic=1),
-                    style="padding-top:10px")
+    if not has_notes and not obj.chords:
+      notes = CDiv(
+        '<div style="display:flex;width:100%%;margin-top:40px;font-size:26px;font-size:min(3vw, 26px);font-style:italic">'
+        '<div style="flex:1">No playing reminders</div>'
+        '<div style="flex:1">Chords not yet available</div>'
+        '</div>')
+      chords = ''
     else:
-      if obj.notes:
+      if has_notes:
         notes = '<img src="/png/%s"/ class="notes">' % name
       else:
-        notes = CText("Notes are not yet available for this tune", bold=1)
+        notes = ''
       if obj.chords:
         chords = ChordsToHTML(obj.chords)
       else:
         chords = ChordsToHTML('Chords not yet available')
   elif pagetype == 'notes':
-    if obj.notes:
+    if has_notes:
       notes = '<img src="/png/%s"/ class="notes-only">' % name
     else:
-      notes = CDiv(CText("Notes are not yet available for this tune", bold=1, italic=1),
+      notes = CDiv(CText("No playing reminders", bold=1, italic=1),
                    style="padding-top:10px")
     chords = ''
   elif pagetype == 'chords':
@@ -13050,7 +13916,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
     right_items.append(str(CNBSP()))
     right_items.append('<a href="/tune/%s/delete" class="red-button">Delete Tune</a>' % name)
   if left_items or right_items:
-    action_row = '<div style="clear:both;display:flex;justify-content:space-between;align-items:center;margin-top:4px">'\
+    action_row = '<div style="clear:both;display:flex;justify-content:space-between;align-items:center;margin-top:20px">'\
       '<div>%s</div><div>%s</div></div>' % (''.join(left_items), ''.join(right_items))
   else:
     action_row = ''
