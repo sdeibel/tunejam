@@ -7376,6 +7376,9 @@ function recDoUpload() {
         a.innerHTML = wrapper.innerHTML;
         wrapper.parentNode.replaceChild(a, wrapper);
       }
+      // Show AI Analysis link now that a recording exists
+      var aiLink = document.getElementById('ai-analyze-link');
+      if (aiLink) aiLink.style.display = '';
       setTimeout(recClose, 1500);
     } else {
       recShowMessage('Upload failed: ' + (resp.error || 'unknown error'), 'error');
@@ -7439,6 +7442,22 @@ function recHandleCancel(cancelUrl) {
       return;
     }
     window.location = cancelUrl;
+    return;
+  }
+  // For new tunes, there's no old recording to restore -- just confirm discard
+  if (window.recIsNewTune) {
+    siteConfirm('Discard all changes and the uploaded recording?', function() {
+      recCancelStopAudio();
+      formChanged = false;
+      var fd = new FormData();
+      fd.append('tune', recGetTuneName());
+      fd.append('is_new', '1');
+      var xhr = new XMLHttpRequest();
+      xhr.addEventListener('load', function() { window.location = cancelUrl; });
+      xhr.addEventListener('error', function() { window.location = cancelUrl; });
+      xhr.open('POST', '/ajax/recording/undo');
+      xhr.send(fd);
+    });
     return;
   }
   recCancelUrl = cancelUrl;
@@ -7517,6 +7536,7 @@ def _ai_analyze_overlay():
 <div style="text-align:center; margin:30px 0">
 <div class="ai-spinner"></div>
 <div style="margin-top:16px; color:#555">Analyzing recording... this may take 1-2 minutes</div>
+<div style="margin-top:16px; font-size:13px; color:#888; font-style:italic">This is an experimental feature. You may not get correct results,<br>depending on quality of your recording and other factors.</div>
 </div>
 </div>
 
@@ -7576,6 +7596,10 @@ def _build_ai_analyze_js():
 var aiResult = null;
 
 function aiShowOverlay() {
+  if (!recGetTuneName()) {
+    siteAlert('Please enter a title first');
+    return;
+  }
   document.getElementById('ai-overlay').style.display = 'flex';
   document.getElementById('ai-progress').style.display = 'block';
   document.getElementById('ai-results').style.display = 'none';
@@ -7730,7 +7754,7 @@ function aiAccept() {
   var warnings = [];
   if (fields.notes && aiResult.parts) {
     var textarea = document.getElementById('raw-notes-textarea');
-    if (textarea && textarea.value.trim()) {
+    if (textarea && /[a-gA-Gz]/.test(textarea.value)) {
       warnings.push('notes');
     }
   }
@@ -8028,8 +8052,9 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
     speaker_html = '<span id="rec-speaker-link"><img id="rec-speaker-icon" class="rec-speaker-icon" src="%s"></span>' % speaker_icon
 
   ai_link = ''
-  if has_recording and HasCapability(kCapEditTunes):
-    ai_link = '<span class="rec-upload-link" onclick="aiShowOverlay()">AI Analyze (beta)</span>'
+  if HasCapability(kCapEditTunes):
+    ai_display = '' if has_recording else 'display:none;'
+    ai_link = '<span id="ai-analyze-link" class="rec-upload-link" onclick="aiShowOverlay()" style="%s">AI Analyze (beta)</span>' % ai_display
   parts.append('<div class="rec-heading-flex">'
                '<h2>%s</h2>'
                '%s'
@@ -8154,8 +8179,8 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
   parts.append(_recording_upload_overlay())
   parts.append(_build_recording_upload_js())
 
-  # AI analysis overlay and JS (when recording exists and user is editor)
-  if has_recording and HasCapability(kCapEditTunes):
+  # AI analysis overlay and JS (when user is editor; link shown dynamically after upload)
+  if HasCapability(kCapEditTunes):
     parts.append(_ai_analyze_overlay())
     parts.append(_build_ai_analyze_js())
 
