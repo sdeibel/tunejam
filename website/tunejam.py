@@ -1451,6 +1451,8 @@ def admin_page():
              CText(" -- Tune set page PDFs")]),
       CItem([CText("Clear Book Cache", href=kAdminRoute + '/clear-cache/book'),
              CText(" -- Full book PDFs")]),
+      CItem([CText("Clear AI Cache", href=kAdminRoute + '/clear-cache/ai'),
+             CText(" -- AI analysis results")]),
       CItem([CText("Clear All Caches", href=kAdminRoute + '/clear-cache/all'),
              CText(" -- All of the above")]),
     ]))
@@ -1479,10 +1481,11 @@ def clear_cache(cache_type):
     'tune': os.path.join(utils.kCacheLoc, 'tune'),
     'tuneset': os.path.join(utils.kCacheLoc, 'tuneset'),
     'book': os.path.join(utils.kCacheLoc, 'book'),
+    'ai': os.path.join(utils.kDataDir, 'ai_cache'),
   }
 
   if cache_type == 'all':
-    targets = ['tune', 'tuneset', 'book']
+    targets = ['tune', 'tuneset', 'book', 'ai']
   elif cache_type in cache_dirs:
     targets = [cache_type]
   else:
