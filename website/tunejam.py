@@ -46,6 +46,17 @@ def request_entity_too_large(error):
 
 kSiteVersion = '4.0'
 
+# Cache-bust string for static assets — changes on every deploy
+import subprocess as _sp
+try:
+  kCacheBust = _sp.check_output(
+    ['git', 'rev-parse', '--short', 'HEAD'],
+    cwd=os.path.dirname(os.path.abspath(__file__)),
+    stderr=_sp.STDOUT
+  ).strip()
+except Exception:
+  kCacheBust = kSiteVersion
+
 # Email config file path
 kEmailConf = os.path.join(utils.kDataDir, 'config', 'email.conf')
 
@@ -14486,10 +14497,10 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
     CMeta("text/html; charset=utf-8", http_equiv="Content-Type"),
     CMeta("Copyright (c) 1999-%s Stephan Deibel" % year, name="Copyright"),
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
-    '<link rel="stylesheet" type="text/css" href="/css/screen.css" media="screen" />',
-    '<link rel="stylesheet" type="text/css" href="/css/print.css" media="print" />',
-    '<script src="/js/player.js"></script>',
-    '<script src="/js/login.js"></script>',
+    '<link rel="stylesheet" type="text/css" href="/css/screen.css?v=%s" media="screen" />' % kCacheBust,
+    '<link rel="stylesheet" type="text/css" href="/css/print.css?v=%s" media="print" />' % kCacheBust,
+    '<script src="/js/player.js?v=%s"></script>' % kCacheBust,
+    '<script src="/js/login.js?v=%s"></script>' % kCacheBust,
     '<script src="https://cdn.jsdelivr.net/npm/abcjs@6.6.2/dist/abcjs-basic-min.js"></script>',
   ]
   if refresh is not None:
