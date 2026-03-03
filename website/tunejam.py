@@ -35,7 +35,7 @@ app.permanent_session_lifetime = timedelta(days=30)
 
 # Recording upload limits
 kMaxRecordingSize = 20 * 1024 * 1024  # 20 MB
-kFfmpegPath = '/usr/local/bin/ffmpeg'
+kFfmpegPath = '/usr/bin/ffmpeg' if sys.platform == 'linux2' else '/usr/local/bin/ffmpeg'
 app.config['MAX_CONTENT_LENGTH'] = kMaxRecordingSize
 
 @app.errorhandler(413)
