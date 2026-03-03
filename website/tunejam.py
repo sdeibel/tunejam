@@ -3082,7 +3082,7 @@ var vePlayingPart = -1;  // index of part currently playing, or -1
 var vePlayDuration = 0;
 var vePlayStartTime = 0;
 var vePlayTimer = null;
-var vePlayTempo = parseInt(localStorage.getItem('vePlayTempo'), 10) || 100;
+var vePlayTempo = parseInt(localStorage.getItem('vePlayTempo'), 10) || 180;
 var veTempoHideTimer = null;
 var vePlayingAbc = null;   // ABC string currently playing
 var vePlayingBtnId = null; // button ID currently playing
@@ -3206,7 +3206,7 @@ function veBuildPartAbc(partIdx) {
     }
   }
   if (!partAbc) return null;
-  return 'X:1\\nK:' + h.key + '\\nL:' + h.unit + '\\nM:' + h.meter + '\\n' + partAbc + '\\n';
+  return 'X:1\\nM:' + h.meter + '\\nL:' + h.unit + '\\nK:' + h.key + '\\n' + partAbc + '\\n';
 }
 
 function vePlayAbc(abc, btnId) {
@@ -3217,28 +3217,43 @@ function vePlayAbc(abc, btnId) {
   if (btn) { btn.textContent = 'Stop'; btn.classList.add('ve-play-active'); }
   veShowTempoSlider(btnId);
 
-  // Inject Q: tempo into ABC using the natural beat unit for the meter
-  // x/8 compound meters: beat = dotted quarter (3/8)
-  // x/4 and others: beat = quarter note (1/4)
-  // x/2 meters: beat = half note (1/2)
+  // Inject Q: field for tempo. Simple: quarter note beat. Compound: dotted quarter beat.
   var h = veGetAbcHeaders();
-  var mDen = parseInt(h.meter.split('/')[1], 10) || 4;
-  var qBeat = (mDen === 8) ? '3/8' : (mDen === 2) ? '1/2' : '1/4';
-  var tempoAbc = abc.replace('K:', 'Q:' + qBeat + '=' + vePlayTempo + '\\nK:');
+  var mParts = h.meter.split('/');
+  var mNum = parseInt(mParts[0], 10) || 4;
+  var mDen = parseInt(mParts[1], 10) || 4;
+  var isCompound = (mDen === 8 && mNum >= 6);
+  var qField;
+  if (isCompound) {
+    qField = 'Q:3/8=' + vePlayTempo;
+  } else {
+    qField = 'Q:1/4=' + vePlayTempo;
+  }
+  var musicalBeats = isCompound ? (mNum / 3) : mNum;
+  var playAbc = abc.replace('K:', qField + '\\nK:');
 
   var offscreen = document.createElement('div');
   offscreen.style.display = 'none';
   offscreen.id = 've-play-offscreen';
   document.body.appendChild(offscreen);
-  var visualObj = ABCJS.renderAbc('ve-play-offscreen', tempoAbc, {});
+  var visualObj = ABCJS.renderAbc('ve-play-offscreen', playAbc, {});
   if (!visualObj || !visualObj[0]) {
     try { document.body.removeChild(offscreen); } catch(e) {}
     veStopPlay();
     return;
   }
 
+  var vo = visualObj[0];
+  // ABCJS has a playback bug where 3+ beat simple meters play ~1.5x slow.
+  // Override millisecondsPerMeasure with corrected value for those meters.
+  var initOpts = { visualObj: vo };
+  if (!isCompound && musicalBeats >= 3) {
+    var correctedMs = (60000 / vePlayTempo) * musicalBeats / 1.5;
+    initOpts.millisecondsPerMeasure = correctedMs;
+  }
+
   veSynth = new ABCJS.synth.CreateSynth();
-  veSynth.init({ visualObj: visualObj[0] })
+  veSynth.init(initOpts)
     .then(function() { return veSynth.prime(); })
     .then(function(response) {
       try { document.body.removeChild(offscreen); } catch(e) {}
@@ -3305,7 +3320,7 @@ function veTogglePlayAll() {
   if (!textarea || !textarea.value.trim()) return;
   var h = veGetAbcHeaders();
   var lines = textarea.value.trim().split('\\n');
-  var abc = 'X:1\\nK:' + h.key + '\\nL:' + h.unit + '\\nM:' + h.meter + '\\n';
+  var abc = 'X:1\\nM:' + h.meter + '\\nL:' + h.unit + '\\nK:' + h.key + '\\n';
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i];
     if (line.length > 1 && line[1] === ':') {
@@ -3403,7 +3418,7 @@ function chordTogglePlay() {
   }
   if (!abcBody.trim()) return;
   var mDen = parseInt(h.meter.split('/')[1], 10) || 4;
-  var abc = 'X:1\\nK:' + h.key + '\\nL:1/' + mDen + '\\nM:' + h.meter + '\\n' + abcBody;
+  var abc = 'X:1\\nM:' + h.meter + '\\nL:1/' + mDen + '\\nK:' + h.key + '\\n' + abcBody;
   vePlayingPart = 998;
   vePlayAbc(abc, 'chord-play-btn');
 }
@@ -9730,10 +9745,9 @@ user-select:auto;
 -webkit-user-select:auto;
 touch-action:auto;
 }
-.ve-tempo-slider-wrap #ve-tempo-label {
+#ve-tempo-label {
 font-size:11px;
 color:#666;
-min-width:52px;
 white-space:nowrap;
 }
 
