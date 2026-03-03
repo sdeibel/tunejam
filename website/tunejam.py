@@ -6041,7 +6041,7 @@ function startPaletteDrag(e, btn, tool) {
     // Check if over staff
     var overStaff = getStaffAtPoint(ev.clientX, ev.clientY);
     if (overStaff) {
-      // Show pitch label
+      // Show pitch label and pitch marker for note tools
       if (tool !== 'bar' && tool !== 'bar-open' && tool !== 'bar-close' && !tool.match(/^rest-/)) {
         var snappedPos = yToStaffPosition(overStaff.localY, overStaff.geo);
         var pp = staffPositionToPitch(snappedPos);
@@ -6051,12 +6051,17 @@ function startPaletteDrag(e, btn, tool) {
           pitchLabel.style.left = (ev.clientX + 20) + 'px';
           pitchLabel.style.top = (ev.clientY - 25) + 'px';
         }
+        var svgPt = clientToSvgCoords(overStaff.svg, ev.clientX, ev.clientY);
+        showPitchMarker(overStaff.svg, overStaff.geo, svgPt.x, snappedPos);
+      } else {
+        removePitchMarker();
       }
       // Show insertion marker
       showInsertionMarker(overStaff, ev.clientX);
     } else {
       if (pitchLabel) pitchLabel.style.display = 'none';
       removeInsertionMarker();
+      removePitchMarker();
     }
   }
 
@@ -6068,6 +6073,7 @@ function startPaletteDrag(e, btn, tool) {
     if (dragGhost) { document.body.removeChild(dragGhost); dragGhost = null; }
     if (pitchLabel) pitchLabel.style.display = 'none';
     removeInsertionMarker();
+    removePitchMarker();
 
     // Only place element if drag actually started (moved enough)
     if (dragStarted) {
