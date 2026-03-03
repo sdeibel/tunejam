@@ -14473,7 +14473,7 @@ def FooterAuth():
     CText(display_name, href='/profile/%s' % _ProfileHash(email), hclass='user-email-display'),
     role_label,
     CNBSP(2),
-    '<button class="footer-logout" type="button" onclick="location.href=\'/logout\'+location.pathname">Logout</button>',
+    '<button class="footer-logout" type="button" onclick="siteConfirm(\'Do you really want to log out?\',function(){location.href=\'/logout\'+location.pathname})">Logout</button>',
   ], hclass='footer-auth')
   
 def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy_image=None):
