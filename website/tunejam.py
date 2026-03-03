@@ -10010,19 +10010,25 @@ margin-left:8px;
 background:#aa1111;
 }
 #chord-parts-container {
-margin-top:20px;
+margin-top:30px;
 }
 .edit-form table.edit-chords {
 border-collapse:collapse;
 margin:4px 0 2px 0;
+max-width:100%;
 }
 .edit-form table.edit-chords td {
 padding:2px 4px;
 }
 .edit-form table.edit-chords input[type="text"] {
 width:70px;
+min-width:40px;
 font-size:100%;
 padding:2px 4px;
+box-sizing:border-box;
+}
+.edit-form td:last-child {
+white-space:nowrap;
 }
 .edit-form .row-ctl-btn {
 font-size:80%;
@@ -10521,6 +10527,27 @@ box-sizing:border-box;
 }
 .edit-form .chord-editor-pane input[type="text"] {
 box-sizing:border-box;
+}
+.edit-form table.edit-chords {
+display:block;
+max-width:100%;
+}
+.edit-form table.edit-chords tbody {
+display:block;
+}
+.edit-form table.edit-chords tr {
+display:flex;
+flex-wrap:wrap;
+gap:2px;
+margin-bottom:4px;
+}
+.edit-form table.edit-chords td {
+display:block;
+padding:1px;
+}
+.edit-form table.edit-chords input[type="text"] {
+width:60px;
+min-width:40px;
 }
 }
 @media (max-width: 595px) {
