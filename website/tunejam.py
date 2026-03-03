@@ -3082,7 +3082,7 @@ var vePlayingPart = -1;  // index of part currently playing, or -1
 var vePlayDuration = 0;
 var vePlayStartTime = 0;
 var vePlayTimer = null;
-var vePlayTempo = 90;
+var vePlayTempo = parseInt(localStorage.getItem('vePlayTempo'), 10) || 100;
 var veTempoHideTimer = null;
 var vePlayingAbc = null;   // ABC string currently playing
 var vePlayingBtnId = null; // button ID currently playing
@@ -3108,6 +3108,7 @@ function veCreateTempoSlider() {
   slider.addEventListener('pointermove', function(e) { e.stopPropagation(); });
   slider.addEventListener('input', function() {
     vePlayTempo = parseInt(this.value, 10);
+    try { localStorage.setItem('vePlayTempo', vePlayTempo); } catch(e) {}
     label.textContent = vePlayTempo + ' BPM';
     // Debounced restart: stop immediately, restart after sliding stops
     if (vePlayingAbc && vePlayingBtnId) {
@@ -3216,11 +3217,20 @@ function vePlayAbc(abc, btnId) {
   if (btn) { btn.textContent = 'Stop'; btn.classList.add('ve-play-active'); }
   veShowTempoSlider(btnId);
 
+  // Inject Q: tempo into ABC using the natural beat unit for the meter
+  // x/8 compound meters: beat = dotted quarter (3/8)
+  // x/4 and others: beat = quarter note (1/4)
+  // x/2 meters: beat = half note (1/2)
+  var h = veGetAbcHeaders();
+  var mDen = parseInt(h.meter.split('/')[1], 10) || 4;
+  var qBeat = (mDen === 8) ? '3/8' : (mDen === 2) ? '1/2' : '1/4';
+  var tempoAbc = abc.replace('K:', 'Q:' + qBeat + '=' + vePlayTempo + '\\nK:');
+
   var offscreen = document.createElement('div');
   offscreen.style.display = 'none';
   offscreen.id = 've-play-offscreen';
   document.body.appendChild(offscreen);
-  var visualObj = ABCJS.renderAbc('ve-play-offscreen', abc, {});
+  var visualObj = ABCJS.renderAbc('ve-play-offscreen', tempoAbc, {});
   if (!visualObj || !visualObj[0]) {
     try { document.body.removeChild(offscreen); } catch(e) {}
     veStopPlay();
@@ -3228,7 +3238,7 @@ function vePlayAbc(abc, btnId) {
   }
 
   veSynth = new ABCJS.synth.CreateSynth();
-  veSynth.init({ visualObj: visualObj[0], options: { qpm: vePlayTempo } })
+  veSynth.init({ visualObj: visualObj[0] })
     .then(function() { return veSynth.prime(); })
     .then(function(response) {
       try { document.body.removeChild(offscreen); } catch(e) {}
@@ -3308,6 +3318,37 @@ function veTogglePlayAll() {
   vePlayAbc(abc, 've-abc-play-btn');
 }
 
+// Split a chord cell like "AmG" or "GA" into individual chord names
+function chordCellSplit(val) {
+  var chords = [];
+  var j = 0;
+  var len = val.length;
+  // Skip alt ending prefix like "1:" "2:"
+  if (j < len && '123'.indexOf(val[j]) >= 0 && j + 1 < len && val[j+1] === ':') j += 2;
+  while (j < len) {
+    var c = val[j];
+    // Skip parens, slashes, dashes
+    if (c === '(' || c === ')' || c === '/' || c === '-') { j++; continue; }
+    if ('ABCDEFGH'.indexOf(c) >= 0) {
+      var start = j;
+      j++;
+      if (j < len && (val[j] === 'b' || val[j] === '#')) j++;
+      if (j + 2 < len && (val.substring(j,j+3)==='Dim' || val.substring(j,j+3)==='dim')) j+=3;
+      else if (j + 2 < len && (val.substring(j,j+3)==='sup' || val.substring(j,j+3)==='sus' || val.substring(j,j+3)==='Sus')) {
+        j+=3;
+        if (j < len && '0123456789'.indexOf(val[j]) >= 0) j++;
+      }
+      else if (j < len && val[j] === 'm') j++;
+      else if (j < len && val[j] === '+') j++;
+      if (j < len && '769'.indexOf(val[j]) >= 0) j++;
+      chords.push(val.substring(start, j));
+    } else {
+      j++;
+    }
+  }
+  return chords;
+}
+
 function chordTogglePlay() {
   if (vePlayingPart === 998) {
     veStopPlay();
@@ -3321,7 +3362,6 @@ function chordTogglePlay() {
   else if (h.meter === '6/8') beats = 6;
   else if (h.meter === '9/8') beats = 9;
   else if (h.meter === '2/4' || h.meter === '2/2') beats = 2;
-  var restBar = 'z' + beats;
   var wrappers = document.querySelectorAll('#chord-parts-container .part-wrapper');
   if (!wrappers.length) return;
   var abcBody = '';
@@ -3336,22 +3376,34 @@ function chordTogglePlay() {
     for (var r = 0; r < rows.length; r++) {
       var inputs = rows[r].querySelectorAll('input[type="text"]');
       for (var c = 0; c < inputs.length; c++) {
-        var chord = inputs[c].value.trim();
-        if (chord) {
-          partLine += '"' + chord + '"' + restBar + '|';
+        var cell = inputs[c].value.trim();
+        if (!cell || cell === '-') {
+          partLine += 'z' + beats + '|';
         } else {
-          partLine += restBar + '|';
+          var chords = chordCellSplit(cell);
+          if (chords.length <= 1) {
+            partLine += '"' + (chords[0] || cell) + '"z' + beats + '|';
+          } else {
+            // Split beats evenly among chords in this measure
+            var base = Math.floor(beats / chords.length);
+            var extra = beats - base * chords.length;
+            for (var ci = 0; ci < chords.length; ci++) {
+              var b = base + (ci < extra ? 1 : 0);
+              partLine += '"' + chords[ci] + '"z' + b;
+            }
+            partLine += '|';
+          }
         }
       }
     }
     if (hasRepeat) {
-      // Replace trailing | with :|
       if (partLine.slice(-1) === '|') partLine = partLine.slice(0, -1) + ':|';
     }
     abcBody += partLine + '\\n';
   }
   if (!abcBody.trim()) return;
-  var abc = 'X:1\\nK:' + h.key + '\\nL:1/4\\nM:' + h.meter + '\\n' + abcBody;
+  var mDen = parseInt(h.meter.split('/')[1], 10) || 4;
+  var abc = 'X:1\\nK:' + h.key + '\\nL:1/' + mDen + '\\nM:' + h.meter + '\\n' + abcBody;
   vePlayingPart = 998;
   vePlayAbc(abc, 'chord-play-btn');
 }
@@ -7422,7 +7474,7 @@ function aiFillNotes(parts) {
   for (var i = 0; i < parts.length; i++) {
     var p = parts[i];
     if (p.first_3_measures) {
-      lines.push(p.name + ':' + p.first_3_measures);
+      lines.push(p.first_3_measures);
     }
   }
   var textarea = document.getElementById('raw-notes-textarea');
