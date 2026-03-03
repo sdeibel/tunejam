@@ -1402,6 +1402,23 @@ border:1px solid #3a6a3a;
 border-radius:3px;
 padding:2px;
 }
+.ve-elem-drag-ghost {
+position:fixed;
+pointer-events:none;
+opacity:0.8;
+z-index:1000;
+background:rgba(58,106,58,0.15);
+border:1px solid #3a6a3a;
+border-radius:3px;
+padding:2px 6px;
+font-size:12px;
+font-family:monospace;
+color:#3a6a3a;
+white-space:nowrap;
+}
+[data-ve-dragging] {
+opacity:0.3 !important;
+}
 
 /* Visual Editor - Pitch label */
 .ve-pitch-label {
@@ -1423,6 +1440,17 @@ stroke:#cc3333;
 stroke-width:1.5;
 stroke-dasharray:4,3;
 pointer-events:none;
+}
+.ve-pitch-marker {
+pointer-events:none;
+}
+.ve-pitch-marker line {
+stroke:#cc3333;
+stroke-width:1.2;
+}
+.ve-pitch-marker ellipse {
+fill:#cc3333;
+fill-opacity:0.5;
 }
 
 /* Visual Editor - Selection */

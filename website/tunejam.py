@@ -3926,7 +3926,9 @@ var selectedElements = []; // array of {partIdx, elemIdx}
 var isDragging = false;
 var lastPointerShift = false;  // Track shift key from pointer events
 var dragGhost = null;
+var elemDragState = null;  // State for dragging existing elements
 var insertionMarker = null;
+var pitchMarker = null;  // SVG group showing target pitch during element drag
 var lastTuneObj = null;
 
 // Max undo/redo
@@ -6618,6 +6620,547 @@ function setupStaffClick() {
   });
 }
 
+// --- Element Drag-and-Drop ---
+
+// Identify which model element was clicked, given an event target inside an SVG
+function identifyClickedElement(e) {
+  var target = e.target;
+  // Check for bar line first
+  var barEl = findBarAncestor(target);
+  if (barEl) {
+    var barPartIdx = findPartForSvgElement(barEl);
+    if (barPartIdx >= 0) {
+      var modelIdx = findBarModelIndex(barPartIdx, barEl);
+      if (modelIdx >= 0) return {partIdx: barPartIdx, elemIdx: modelIdx};
+    }
+    return null;
+  }
+  // For notes/rests: find part, then hit-test against element positions
+  var partIdx = -1;
+  for (var pi = 0; pi < partRenderings.length; pi++) {
+    var svg = partRenderings[pi].renderTarget.querySelector('svg');
+    if (svg && svg.contains(target)) { partIdx = pi; break; }
+  }
+  if (partIdx < 0) return null;
+  var pr = partRenderings[partIdx];
+  var part = notationModel.parts[pr.partIdx];
+  if (!part) return null;
+  var positions = pr.elementPositions || [];
+  var svg = pr.renderTarget.querySelector('svg');
+  if (!svg || positions.length === 0) return null;
+  var clickSvgX = clientToSvgCoords(svg, e.clientX, e.clientY).x;
+  var closestSelIdx = -1, closestDist = Infinity;
+  for (var i = 0; i < positions.length; i++) {
+    var dist = Math.abs(positions[i].centerX - clickSvgX);
+    if (dist < closestDist) { closestDist = dist; closestSelIdx = i; }
+  }
+  if (closestSelIdx < 0 || closestDist > 30) return null;
+  var modelIdx = selectableIdxToModelIdx(part, closestSelIdx);
+  return {partIdx: pr.partIdx, elemIdx: modelIdx};
+}
+
+// Expand selection to include grace note partners for a given part
+function expandSelectionForGraceNotes(partIdx) {
+  var part = notationModel.parts[partIdx];
+  if (!part) return;
+  var selSet = {};
+  for (var si = 0; si < selectedElements.length; si++) {
+    if (selectedElements[si].partIdx === partIdx) {
+      selSet[selectedElements[si].elemIdx] = true;
+    }
+  }
+  var toAdd = [];
+  for (var si = 0; si < selectedElements.length; si++) {
+    if (selectedElements[si].partIdx !== partIdx) continue;
+    var idx = selectedElements[si].elemIdx;
+    var el = part.elements[idx];
+    if (el && el.grace && idx + 1 < part.elements.length && !selSet[idx + 1]) {
+      toAdd.push({partIdx: partIdx, elemIdx: idx + 1});
+      selSet[idx + 1] = true;
+    }
+    if (idx > 0 && part.elements[idx - 1] && part.elements[idx - 1].grace && !selSet[idx - 1]) {
+      toAdd.push({partIdx: partIdx, elemIdx: idx - 1});
+      selSet[idx - 1] = true;
+    }
+  }
+  for (var ai = 0; ai < toAdd.length; ai++) {
+    selectedElements.push(toAdd[ai]);
+  }
+}
+
+// Ensure grace notes travel with their main note in drag set
+function expandDragSetForGraceNotes(draggedElems) {
+  var result = draggedElems.slice();
+  var inSet = {};
+  for (var i = 0; i < result.length; i++) {
+    inSet[result[i].partIdx + ',' + result[i].elemIdx] = true;
+  }
+  for (var i = 0; i < draggedElems.length; i++) {
+    var d = draggedElems[i];
+    var part = notationModel.parts[d.partIdx];
+    if (!part) continue;
+    var el = part.elements[d.elemIdx];
+    if (!el) continue;
+    // If this is a grace note, also include following main note
+    if (el.grace && d.elemIdx + 1 < part.elements.length) {
+      var key = d.partIdx + ',' + (d.elemIdx + 1);
+      if (!inSet[key]) {
+        result.push({partIdx: d.partIdx, elemIdx: d.elemIdx + 1});
+        inSet[key] = true;
+      }
+    }
+    // If preceding element is a grace note, also include it
+    if (d.elemIdx > 0 && part.elements[d.elemIdx - 1] && part.elements[d.elemIdx - 1].grace) {
+      var key = d.partIdx + ',' + (d.elemIdx - 1);
+      if (!inSet[key]) {
+        result.push({partIdx: d.partIdx, elemIdx: d.elemIdx - 1});
+        inSet[key] = true;
+      }
+    }
+  }
+  return result;
+}
+
+// Start tracking a potential drag on an existing element
+function startElementDragTracking(e, preview) {
+  if (veMode !== 'visual') return;
+  if (currentTool !== null) return;
+  e.preventDefault();
+
+  var clicked = identifyClickedElement(e);
+  if (!clicked) return;
+
+  // If clicked element is not already selected, select it (replacing selection)
+  var alreadySelected = false;
+  for (var i = 0; i < selectedElements.length; i++) {
+    if (selectedElements[i].partIdx === clicked.partIdx &&
+        selectedElements[i].elemIdx === clicked.elemIdx) {
+      alreadySelected = true;
+      break;
+    }
+  }
+  if (!alreadySelected) {
+    // Shift-click adds to selection
+    var isShift = e.shiftKey;
+    if (isShift && selectedElements.length > 0) {
+      selectedElements.push(clicked);
+    } else {
+      selectedElements = [clicked];
+    }
+    expandSelectionForGraceNotes(clicked.partIdx);
+    highlightSelected();
+    showPropertyIndicator();
+  }
+
+  // Init drag state
+  elemDragState = {
+    startX: e.clientX,
+    startY: e.clientY,
+    dragStarted: false,
+    alreadySelected: alreadySelected,
+    clickedElem: clicked,
+    pointerId: e.pointerId,
+    ghost: null,
+    dimmedElements: []
+  };
+
+  preview.setPointerCapture(e.pointerId);
+}
+
+// Create ghost div showing what's being dragged
+function createDragGhost(e) {
+  var ghost = document.createElement('div');
+  ghost.className = 've-elem-drag-ghost';
+  if (selectedElements.length === 1) {
+    var sel = selectedElements[0];
+    var part = notationModel.parts[sel.partIdx];
+    if (part) {
+      var el = part.elements[sel.elemIdx];
+      if (el) {
+        if (el.type === 'note') {
+          ghost.textContent = (el.accidental || '') + el.pitch + (el.octave + 4);
+        } else if (el.type === 'rest') {
+          ghost.textContent = 'rest';
+        } else if (el.type === 'bar') {
+          ghost.textContent = el.subtype || '|';
+        }
+      }
+    }
+  } else {
+    ghost.textContent = selectedElements.length + ' elements';
+  }
+  ghost.style.left = (e.clientX + 10) + 'px';
+  ghost.style.top = (e.clientY - 15) + 'px';
+  document.body.appendChild(ghost);
+  return ghost;
+}
+
+// Dim source elements being dragged
+function dimSourceElements() {
+  var dimmed = [];
+  for (var s = 0; s < selectedElements.length; s++) {
+    var sel = selectedElements[s];
+    if (sel.partIdx >= partRenderings.length) continue;
+    var pr = partRenderings[sel.partIdx];
+    if (!pr || !pr.elemSvgMap) continue;
+    var svgElems = pr.elemSvgMap[sel.elemIdx];
+    if (svgElems) {
+      for (var k = 0; k < svgElems.length; k++) {
+        svgElems[k].setAttribute('data-ve-dragging', '1');
+        dimmed.push(svgElems[k]);
+      }
+    }
+  }
+  return dimmed;
+}
+
+// Restore dimmed elements
+function restoreDimmedElements(dimmed) {
+  for (var i = 0; i < dimmed.length; i++) {
+    dimmed[i].removeAttribute('data-ve-dragging');
+  }
+}
+
+// Handle pointer move during element drag
+function handleElementDragMove(e) {
+  if (!elemDragState || e.pointerId !== elemDragState.pointerId) return;
+  var dx = e.clientX - elemDragState.startX;
+  var dy = e.clientY - elemDragState.startY;
+  if (!elemDragState.dragStarted && (dx * dx + dy * dy) < 25) return;
+
+  if (!elemDragState.dragStarted) {
+    elemDragState.dragStarted = true;
+    isDragging = true;
+    pushUndo();
+    hidePropertyIndicator();
+    elemDragState.ghost = createDragGhost(e);
+    elemDragState.dimmedElements = dimSourceElements();
+    // Record start staff position for vertical pitch delta
+    var startStaff = getStaffAtPoint(elemDragState.startX, elemDragState.startY);
+    if (startStaff) {
+      var startSvgPt = clientToSvgCoords(startStaff.svg, elemDragState.startX, elemDragState.startY);
+      elemDragState.startStaffPos = yToStaffPosition(startSvgPt.y, startStaff.geo);
+    }
+  }
+
+  // Move ghost
+  if (elemDragState.ghost) {
+    elemDragState.ghost.style.left = (e.clientX + 10) + 'px';
+    elemDragState.ghost.style.top = (e.clientY - 15) + 'px';
+  }
+
+  // Show insertion marker and pitch label
+  var overStaff = getStaffAtPoint(e.clientX, e.clientY);
+  var pitchLabel = document.getElementById('ve-pitch-label');
+  if (overStaff) {
+    showInsertionMarker(overStaff, e.clientX);
+    // Show pitch indicators for note elements
+    var hasNotes = false;
+    for (var i = 0; i < selectedElements.length; i++) {
+      var part = notationModel.parts[selectedElements[i].partIdx];
+      if (part && part.elements[selectedElements[i].elemIdx] &&
+          part.elements[selectedElements[i].elemIdx].type === 'note') {
+        hasNotes = true;
+        break;
+      }
+    }
+    if (hasNotes) {
+      var svgPt = clientToSvgCoords(overStaff.svg, e.clientX, e.clientY);
+      var snappedPos = yToStaffPosition(svgPt.y, overStaff.geo);
+      var pp = staffPositionToPitch(snappedPos);
+      if (pitchLabel) {
+        pitchLabel.textContent = pitchToDisplayName(pp.pitch, pp.octave);
+        pitchLabel.style.display = 'block';
+        pitchLabel.style.left = (e.clientX + 20) + 'px';
+        pitchLabel.style.top = (e.clientY - 25) + 'px';
+      }
+      showPitchMarker(overStaff.svg, overStaff.geo, svgPt.x, snappedPos);
+    } else {
+      removePitchMarker();
+    }
+  } else {
+    removeInsertionMarker();
+    removePitchMarker();
+    if (pitchLabel) pitchLabel.style.display = 'none';
+  }
+}
+
+// Repair ties after elements are removed from a part
+function repairTiesAfterRemoval(part) {
+  for (var i = 0; i < part.elements.length; i++) {
+    var el = part.elements[i];
+    if (el.type === 'note' && el.tied) {
+      // Find next note (skip bars, rests, grace notes that don't match)
+      var nextNote = null;
+      for (var j = i + 1; j < part.elements.length; j++) {
+        if (part.elements[j].type === 'note' && !part.elements[j].grace) {
+          nextNote = part.elements[j];
+          break;
+        }
+        if (part.elements[j].type === 'bar') break;
+      }
+      // Clear tie if next note doesn't match pitch
+      if (!nextNote || nextNote.pitch !== el.pitch || nextNote.octave !== el.octave) {
+        el.tied = false;
+      }
+    }
+  }
+}
+
+// Repair ties after elements are inserted into a part
+function repairTiesAfterInsertion(part) {
+  repairTiesAfterRemoval(part);
+}
+
+// Validate slurs: fix orphan starts/ends and degenerate slurs
+function validateSlurs(part) {
+  var inSlur = false;
+  var slurStart = -1;
+  var notesSinceStart = 0;
+  for (var i = 0; i < part.elements.length; i++) {
+    var el = part.elements[i];
+    if (el.type !== 'note' && el.type !== 'rest') continue;
+    if (el.grace) continue;
+    if (el.slurEnd && !inSlur) {
+      // Orphan slur end — clear it
+      el.slurEnd = false;
+    }
+    if (el.slurStart) {
+      if (inSlur) {
+        // Nested slur start — close previous, start new
+        // Find previous note and set slurEnd
+        for (var j = i - 1; j >= 0; j--) {
+          if (part.elements[j].type === 'note' && !part.elements[j].grace) {
+            part.elements[j].slurEnd = true;
+            break;
+          }
+        }
+        if (notesSinceStart < 2) {
+          // Degenerate: remove slur marks from previous
+          part.elements[slurStart].slurStart = false;
+          for (var j = slurStart + 1; j < i; j++) {
+            if (part.elements[j].slurEnd) part.elements[j].slurEnd = false;
+          }
+        }
+      }
+      inSlur = true;
+      slurStart = i;
+      notesSinceStart = 1;
+    } else if (inSlur) {
+      notesSinceStart++;
+      if (el.slurEnd) {
+        if (notesSinceStart < 2) {
+          // Degenerate slur — remove
+          part.elements[slurStart].slurStart = false;
+          el.slurEnd = false;
+        }
+        inSlur = false;
+        slurStart = -1;
+        notesSinceStart = 0;
+      }
+    }
+  }
+  // Unclosed slur at end
+  if (inSlur) {
+    if (notesSinceStart < 2) {
+      part.elements[slurStart].slurStart = false;
+    } else {
+      // Add slurEnd to last note
+      for (var j = part.elements.length - 1; j >= 0; j--) {
+        if (part.elements[j].type === 'note' && !part.elements[j].grace) {
+          part.elements[j].slurEnd = true;
+          break;
+        }
+      }
+    }
+  }
+}
+
+// Execute the element move: remove from source, insert at target
+function executeElementMove(dropPartIdx, dropLocalX, pitchDelta) {
+  var dragElems = expandDragSetForGraceNotes(selectedElements.slice());
+
+  // Group by source part
+  var byPart = {};
+  for (var i = 0; i < dragElems.length; i++) {
+    var d = dragElems[i];
+    if (!byPart[d.partIdx]) byPart[d.partIdx] = [];
+    byPart[d.partIdx].push(d.elemIdx);
+  }
+  // De-dup and sort indices per part
+  for (var partIdx in byPart) {
+    var u = {}, uniq = [];
+    for (var i = 0; i < byPart[partIdx].length; i++) {
+      if (!u[byPart[partIdx][i]]) { uniq.push(byPart[partIdx][i]); u[byPart[partIdx][i]] = true; }
+    }
+    byPart[partIdx] = uniq.sort(function(a, b) { return a - b; });
+  }
+
+  // Compute insertion index BEFORE removal (SVG positions are still valid)
+  var insertIdx = xToInsertionIndex(dropLocalX, dropPartIdx);
+
+  // Extract elements (collect before removal, in sorted order)
+  var extracted = [];
+  for (var partIdx in byPart) {
+    var indices = byPart[partIdx];
+    var part = notationModel.parts[partIdx];
+    if (!part) continue;
+    for (var i = 0; i < indices.length; i++) {
+      var el = part.elements[indices[i]];
+      if (el) extracted.push(JSON.parse(JSON.stringify(el)));
+    }
+  }
+  if (extracted.length === 0) return;
+
+  // Adjust insertIdx for same-part removals: count how many dragged
+  // elements in the target part are before the insertion point
+  if (byPart[dropPartIdx]) {
+    var beforeCount = 0;
+    for (var i = 0; i < byPart[dropPartIdx].length; i++) {
+      if (byPart[dropPartIdx][i] < insertIdx) beforeCount++;
+    }
+    insertIdx -= beforeCount;
+    if (insertIdx < 0) insertIdx = 0;
+  }
+
+  // Remove from source (high-index-first)
+  var allIndices = [];
+  for (var partIdx in byPart) {
+    var indices = byPart[partIdx];
+    for (var i = 0; i < indices.length; i++) {
+      allIndices.push({partIdx: parseInt(partIdx), elemIdx: indices[i]});
+    }
+  }
+  allIndices.sort(function(a, b) {
+    if (a.partIdx !== b.partIdx) return b.partIdx - a.partIdx;
+    return b.elemIdx - a.elemIdx;
+  });
+  for (var i = 0; i < allIndices.length; i++) {
+    var a = allIndices[i];
+    notationModel.parts[a.partIdx].elements.splice(a.elemIdx, 1);
+  }
+
+  // Repair ties/slurs on source parts after removal
+  var repairedParts = {};
+  for (var i = 0; i < allIndices.length; i++) {
+    if (!repairedParts[allIndices[i].partIdx]) {
+      repairTiesAfterRemoval(notationModel.parts[allIndices[i].partIdx]);
+      validateSlurs(notationModel.parts[allIndices[i].partIdx]);
+      repairedParts[allIndices[i].partIdx] = true;
+    }
+  }
+
+  // Apply pitch delta to note elements
+  if (pitchDelta !== 0) {
+    for (var i = 0; i < extracted.length; i++) {
+      var el = extracted[i];
+      if (el.type !== 'note') continue;
+      var pos = pitchToStaffPosition(el.pitch, el.octave);
+      pos += pitchDelta;
+      var pp = staffPositionToPitch(pos);
+      el.pitch = pp.pitch;
+      el.octave = pp.octave;
+    }
+  }
+
+  // Insert into target part
+  var targetPart = notationModel.parts[dropPartIdx];
+  if (!targetPart) return;
+  if (insertIdx > targetPart.elements.length) insertIdx = targetPart.elements.length;
+
+  for (var i = 0; i < extracted.length; i++) {
+    targetPart.elements.splice(insertIdx + i, 0, extracted[i]);
+  }
+
+  // Repair ties/slurs on target part
+  repairTiesAfterInsertion(targetPart);
+  validateSlurs(targetPart);
+
+  // Update selection to point to newly inserted elements
+  selectedElements = [];
+  for (var i = 0; i < extracted.length; i++) {
+    selectedElements.push({partIdx: dropPartIdx, elemIdx: insertIdx + i});
+  }
+
+  syncModelToTextarea();
+}
+
+// Handle pointer up / end of element drag
+function handleElementDragEnd(e, preview) {
+  if (!elemDragState) return;
+  var state = elemDragState;
+  elemDragState = null;
+
+  // Cleanup ghost and dimming
+  if (state.ghost) {
+    document.body.removeChild(state.ghost);
+  }
+  restoreDimmedElements(state.dimmedElements);
+  removeInsertionMarker();
+  removePitchMarker();
+  var pitchLabel = document.getElementById('ve-pitch-label');
+  if (pitchLabel) pitchLabel.style.display = 'none';
+
+  try { preview.releasePointerCapture(state.pointerId); } catch(ex) {}
+
+  if (!state.dragStarted) {
+    // No drag happened — this was a click
+    if (state.alreadySelected) {
+      // Let veClickListener handle toggle-deselect for already-selected elements
+      // Don't suppress the click
+    } else {
+      // We already selected the element on pointerdown; suppress the click
+      // so veClickListener doesn't toggle-deselect it
+      isDragging = true;
+      setTimeout(function() { isDragging = false; }, 50);
+    }
+    return;
+  }
+
+  // Drag completed — determine drop target
+  var overStaff = getStaffAtPoint(e.clientX, e.clientY);
+  if (!overStaff) {
+    // Dropped outside staff — cancel (pop undo)
+    if (undoStack.length > 0) {
+      notationModel = JSON.parse(undoStack.pop());
+      syncModelToTextarea();
+    }
+    isDragging = true;
+    setTimeout(function() { isDragging = false; }, 100);
+    return;
+  }
+
+  // Compute pitch delta from vertical movement
+  var pitchDelta = 0;
+  if (state.startStaffPos !== undefined) {
+    var endSvgPt = clientToSvgCoords(overStaff.svg, e.clientX, e.clientY);
+    var endStaffPos = yToStaffPosition(endSvgPt.y, overStaff.geo);
+    pitchDelta = endStaffPos - state.startStaffPos;
+  }
+
+  // Check if all dragged elements are bars — suppress vertical for bars
+  var allBars = true;
+  for (var i = 0; i < selectedElements.length; i++) {
+    var p = notationModel.parts[selectedElements[i].partIdx];
+    if (p && p.elements[selectedElements[i].elemIdx] &&
+        p.elements[selectedElements[i].elemIdx].type !== 'bar') {
+      allBars = false;
+      break;
+    }
+  }
+  if (allBars) pitchDelta = 0;
+
+  // Execute the move
+  executeElementMove(overStaff.partIdx, overStaff.localX, pitchDelta);
+
+  // Show property indicator after re-render completes
+  setTimeout(function() { if (selectedElements.length > 0) showPropertyIndicator(); }, 120);
+
+  // Suppress click handlers
+  isDragging = true;
+  setTimeout(function() { isDragging = false; }, 100);
+}
+
 // --- Rubber-Band Drag Selection ---
 function setupRubberBandSelection() {
   var preview = document.getElementById('ve-preview-container');
@@ -6642,7 +7185,11 @@ function setupRubberBandSelection() {
           cls.indexOf('ve-slur-hitarea') >= 0) { onInteractive = true; break; }
       t = t.parentElement;
     }
-    if (onInteractive) return;
+    if (onInteractive) {
+      // Start tracking for potential element drag
+      startElementDragTracking(e, preview);
+      return;
+    }
     // Prevent native browser drag on SVG elements
     e.preventDefault();
     // Determine which part we're starting in
@@ -6665,6 +7212,11 @@ function setupRubberBandSelection() {
   });
 
   preview.addEventListener('pointermove', function(e) {
+    // Handle element drag if active
+    if (elemDragState && e.pointerId === elemDragState.pointerId) {
+      handleElementDragMove(e);
+      return;
+    }
     if (rbPointerId === null || e.pointerId !== rbPointerId) return;
     var dx = e.clientX - rbStartX;
     var dy = e.clientY - rbStartY;
@@ -6715,37 +7267,20 @@ function setupRubberBandSelection() {
         }
       }
     }
-    // Expand selection to include grace note partners: if a main note
-    // is selected, also select its preceding grace note, and vice versa.
-    if (rbPart && newSelected.length > 0) {
-      var selSet = {};
-      for (var si = 0; si < newSelected.length; si++) {
-        selSet[newSelected[si].elemIdx] = true;
-      }
-      var toAdd = [];
-      for (var si = 0; si < newSelected.length; si++) {
-        var idx = newSelected[si].elemIdx;
-        var el = rbPart.elements[idx];
-        // If this is a grace note, also select the following main note
-        if (el && el.grace && idx + 1 < rbPart.elements.length && !selSet[idx + 1]) {
-          toAdd.push({partIdx: newSelected[si].partIdx, elemIdx: idx + 1});
-          selSet[idx + 1] = true;
-        }
-        // If preceding element is a grace note, also select it
-        if (idx > 0 && rbPart.elements[idx - 1].grace && !selSet[idx - 1]) {
-          toAdd.push({partIdx: newSelected[si].partIdx, elemIdx: idx - 1});
-          selSet[idx - 1] = true;
-        }
-      }
-      for (var ai = 0; ai < toAdd.length; ai++) {
-        newSelected.push(toAdd[ai]);
-      }
-    }
     selectedElements = newSelected;
+    // Expand selection to include grace note partners
+    if (rbPart && selectedElements.length > 0) {
+      expandSelectionForGraceNotes(partRenderings[rbPartIdx].partIdx);
+    }
     highlightSelected();
   });
 
   function endRubberBand(e) {
+    // Handle element drag end if active
+    if (elemDragState && e.pointerId === elemDragState.pointerId) {
+      handleElementDragEnd(e, preview);
+      return;
+    }
     if (rbPointerId === null || e.pointerId !== rbPointerId) return;
     if (rbDiv) {
       rbDiv.parentNode.removeChild(rbDiv);
@@ -6877,6 +7412,38 @@ function removeInsertionMarker() {
     insertionMarker.parentNode.removeChild(insertionMarker);
   }
   insertionMarker = null;
+}
+
+function showPitchMarker(svg, geo, localX, staffPos) {
+  removePitchMarker();
+  // Convert staff position to Y coordinate
+  // pos 8 = geo.y0 (top line), pos 0 = geo.y4 (bottom line)
+  var y = geo.y0 + (8 - staffPos) * geo.halfSpacing;
+  var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('class', 've-pitch-marker');
+  // Short horizontal ledger-style line at pitch Y
+  var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', localX - 14);
+  line.setAttribute('y1', y);
+  line.setAttribute('x2', localX + 14);
+  line.setAttribute('y2', y);
+  g.appendChild(line);
+  // Small filled circle (notehead indicator) at pitch Y
+  var circle = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+  circle.setAttribute('cx', localX);
+  circle.setAttribute('cy', y);
+  circle.setAttribute('rx', 3.5);
+  circle.setAttribute('ry', 2.8);
+  g.appendChild(circle);
+  svg.appendChild(g);
+  pitchMarker = g;
+}
+
+function removePitchMarker() {
+  if (pitchMarker && pitchMarker.parentNode) {
+    pitchMarker.parentNode.removeChild(pitchMarker);
+  }
+  pitchMarker = null;
 }
 
 // --- Keyboard Shortcuts ---
@@ -10428,6 +10995,23 @@ border:1px solid #3a6a3a;
 border-radius:3px;
 padding:2px;
 }
+.ve-elem-drag-ghost {
+position:fixed;
+pointer-events:none;
+opacity:0.8;
+z-index:1000;
+background:rgba(58,106,58,0.15);
+border:1px solid #3a6a3a;
+border-radius:3px;
+padding:2px 6px;
+font-size:12px;
+font-family:monospace;
+color:#3a6a3a;
+white-space:nowrap;
+}
+[data-ve-dragging] {
+opacity:0.3 !important;
+}
 
 /* Visual Editor - Pitch label */
 .ve-pitch-label {
@@ -10449,6 +11033,17 @@ stroke:#cc3333;
 stroke-width:1.5;
 stroke-dasharray:4,3;
 pointer-events:none;
+}
+.ve-pitch-marker {
+pointer-events:none;
+}
+.ve-pitch-marker line {
+stroke:#cc3333;
+stroke-width:1.2;
+}
+.ve-pitch-marker ellipse {
+fill:#cc3333;
+fill-opacity:0.5;
 }
 
 /* Visual Editor - Selection */
