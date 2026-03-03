@@ -9926,20 +9926,20 @@ margin-bottom:10px;
 }
 .edit-form .chord-editor-pane {
 flex:1;
-min-width:300px;
+min-width:375px;
 }
 .edit-form .chord-preview-pane {
 flex:1;
-min-width:300px;
-text-align:right;
+min-width:375px;
+margin-left:10px;
 }
 .edit-form .chord-preview-pane table.chords-preview {
 border:0px;
 border-left:2px solid #000;
 border-right:2px solid #000;
 border-collapse:collapse;
-margin-left:auto;
 table-layout:fixed;
+width:100%;
 font-size:26px;
 font-size:min(3vw, 26px);
 }
@@ -10485,15 +10485,21 @@ min-width:0;
 width:50px;
 }
 }
-@media (max-width: 700px) {
+@media (max-width: 784px) {
 .edit-form .chord-preview-pane {
-text-align:left;
-}
-.edit-form .chord-preview-pane table.chords-preview {
 margin-left:0;
 }
-.edit-form .chord-preview-pane .chord-note {
-text-align:left;
+.edit-form .chord-preview-pane table.chords-preview {
+font-size:min(5vw, 26px);
+width:100%;
+table-layout:auto;
+}
+.edit-form .chord-editor-pane {
+max-width:100%;
+box-sizing:border-box;
+}
+.edit-form .chord-editor-pane input[type="text"] {
+box-sizing:border-box;
 }
 }
 @media (max-width: 595px) {
