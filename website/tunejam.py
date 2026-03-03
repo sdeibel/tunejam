@@ -842,21 +842,9 @@ def _AdminPublishRequestsHTML(requests):
 </div>
 </div>
 
-<div id="pub-dialog-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:1000">
-<div style="position:fixed;top:50%%;left:50%%;transform:translate(-50%%,-50%%);background:white;border-radius:6px;padding:24px;min-width:360px;max-width:480px;box-shadow:0 4px 20px rgba(0,0,0,0.3)">
-  <div id="pub-dialog-title" style="font-weight:bold;font-size:1.1em;margin-bottom:12px"></div>
-  <div id="pub-dialog-body"></div>
-  <div id="pub-dialog-buttons" style="margin-top:16px;text-align:right"></div>
-</div>
-</div>
-
 <script>
 (function() {
   var adminRoute = %s;
-  var overlay = document.getElementById('pub-dialog-overlay');
-  var dlgTitle = document.getElementById('pub-dialog-title');
-  var dlgBody = document.getElementById('pub-dialog-body');
-  var dlgButtons = document.getElementById('pub-dialog-buttons');
 
   function hideIfEmpty() {
     if (!document.querySelector('.pub-req')) {
@@ -864,28 +852,6 @@ def _AdminPublishRequestsHTML(requests):
       if (wrap) wrap.style.display = 'none';
     }
   }
-
-  function showDialog(title, bodyHTML, buttons) {
-    dlgTitle.textContent = title;
-    dlgBody.innerHTML = bodyHTML;
-    dlgButtons.innerHTML = '';
-    for (var i = 0; i < buttons.length; i++) {
-      var btn = document.createElement('button');
-      btn.textContent = buttons[i].label;
-      btn.style.cssText = 'margin-left:8px;padding:4px 14px;border-radius:3px;border:1px solid #999;cursor:pointer;' + (buttons[i].style || '');
-      btn.onclick = buttons[i].action;
-      dlgButtons.appendChild(btn);
-    }
-    overlay.style.display = 'block';
-  }
-
-  function hideDialog() {
-    overlay.style.display = 'none';
-  }
-
-  overlay.addEventListener('click', function(e) {
-    if (e.target === overlay) hideDialog();
-  });
 
   document.getElementById('pub-req-section').addEventListener('click', function(e) {
     var div = e.target.closest('.pub-req');
@@ -913,13 +879,14 @@ def _AdminPublishRequestsHTML(requests):
       .catch(function() { msgEl.textContent = 'request failed'; });
     }
     else if (e.target.classList.contains('pub-deny')) {
-      showDialog('Deny Publish Request',
+      siteDialog(
+        '<b style="font-size:1.1em">Deny Publish Request</b><br><br>' +
         '<label style="display:block;margin-bottom:4px">Notes to include in denial email (optional):</label>' +
         '<textarea id="pub-deny-notes" rows="3" style="width:100%%;box-sizing:border-box;font-family:inherit"></textarea>',
         [
-          {label: 'Cancel', action: hideDialog},
-          {label: 'Deny Only', style: 'background:#da4;color:white;border-color:#c93', action: function() {
-            hideDialog();
+          {label: 'Cancel', cls: 'sd-cancel', action: function() { siteDialogHide(); }},
+          {label: 'Deny Only', cls: 'sd-ok', action: function() {
+            siteDialogHide();
             fetch(adminRoute + '/publish/deny', {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
@@ -932,9 +899,9 @@ def _AdminPublishRequestsHTML(requests):
             })
             .catch(function() { msgEl.textContent = 'request failed'; });
           }},
-          {label: 'Deny & Notify', style: 'background:#c33;color:white;border-color:#a22', action: function() {
+          {label: 'Deny & Notify', cls: 'sd-ok', action: function() {
             var notes = document.getElementById('pub-deny-notes').value;
-            hideDialog();
+            siteDialogHide();
             msgEl.textContent = 'Sending...';
             fetch(adminRoute + '/publish/deny', {
               method: 'POST',
@@ -952,31 +919,25 @@ def _AdminPublishRequestsHTML(requests):
             })
             .catch(function() { msgEl.textContent = 'request failed'; });
           }}
-        ]
+        ],
+        function() { siteDialogHide(); }
       );
     }
     else if (e.target.classList.contains('pub-ban')) {
-      showDialog('Ban User',
-        '<p style="margin:0">Ban this user? They will be logged out and unable to log in again.</p>',
-        [
-          {label: 'Cancel', action: hideDialog},
-          {label: 'Ban User', style: 'background:#c33;color:white;border-color:#a22', action: function() {
-            hideDialog();
-            fetch(adminRoute + '/publish/ban', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json'},
-              body: JSON.stringify({event_sid: sid, email: email})
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-              if (data.ok && data.profile_url) { window.location.href = data.profile_url; }
-              else if (data.ok) { div.remove(); hideIfEmpty(); }
-              else { msgEl.textContent = data.error || 'error'; }
-            })
-            .catch(function() { msgEl.textContent = 'request failed'; });
-          }}
-        ]
-      );
+      siteConfirm('Ban this user? They will be logged out and unable to log in again.', function() {
+        fetch(adminRoute + '/publish/ban', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({event_sid: sid, email: email})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok && data.profile_url) { window.location.href = data.profile_url; }
+          else if (data.ok) { div.remove(); hideIfEmpty(); }
+          else { msgEl.textContent = data.error || 'error'; }
+        })
+        .catch(function() { msgEl.textContent = 'request failed'; });
+      });
     }
   });
 })();
@@ -2995,7 +2956,7 @@ function testUrl(btn) {
   var row = btn.parentNode;
   var input = row.querySelector('input[type="text"]');
   var url = input ? input.value.trim() : '';
-  if (!url) { alert('No URL entered.'); return; }
+  if (!url) { siteAlert('No URL entered.'); return; }
   if (url.indexOf('://') === -1) url = 'http://' + url;
   btn.textContent = '...';
   btn.disabled = true;
@@ -3031,7 +2992,7 @@ function openUrl(btn) {
   var row = btn.parentNode;
   var input = row.querySelector('input[type="text"]');
   var url = input ? input.value.trim() : '';
-  if (!url) { alert('No URL entered.'); return; }
+  if (!url) { siteAlert('No URL entered.'); return; }
   if (url.indexOf('://') === -1) url = 'http://' + url;
   window.open(url, '_blank');
 }
@@ -3136,7 +3097,7 @@ function removePart(btn) {
   if (!wrapper) return;
   var container = document.getElementById('chord-parts-container');
   if (container.querySelectorAll('.part-wrapper').length <= 1) {
-    alert('Must have at least one part.');
+    siteAlert('Must have at least one part.');
     return;
   }
   var inputs = wrapper.querySelectorAll('input[type="text"]');
@@ -3144,7 +3105,15 @@ function removePart(btn) {
   for (var i = 0; i < inputs.length; i++) {
     if (inputs[i].value.trim()) { hasData = true; break; }
   }
-  if (hasData && !confirm('This part has chord data. Remove it?')) return;
+  if (hasData) {
+    siteConfirm('This part has chord data. Remove it?', function() {
+      container.removeChild(wrapper);
+      renumberParts();
+      formChanged = true;
+      updateChordPreview();
+    });
+    return;
+  }
   container.removeChild(wrapper);
   renumberParts();
   formChanged = true;
@@ -3251,21 +3220,23 @@ function addMeasureToRow(btn) {
 function removeMeasureFromRow(btn) {
   var tr = btn.closest('tr');
   var chordInputs = tr.querySelectorAll('input[type="text"]');
-  if (chordInputs.length <= 1) { alert('Must have at least one measure.'); return; }
+  if (chordInputs.length <= 1) { siteAlert('Must have at least one measure.'); return; }
   var lastInput = chordInputs[chordInputs.length - 1];
-  if (lastInput.value.trim() && !confirm('This measure has data. Remove it?')) return;
-  var td = lastInput.parentNode;
-  tr.removeChild(td);
-  // Renumber the inputs in this row
-  var inputs = tr.querySelectorAll('input[type="text"]');
-  var match = inputs[0] ? inputs[0].name.match(/chord_(\\d+)_(\\d+)_/) : null;
-  if (match) {
-    for (var c = 0; c < inputs.length; c++) {
-      inputs[c].name = 'chord_' + match[1] + '_' + match[2] + '_' + c;
+  function doRemoveMeasure() {
+    var td = lastInput.parentNode;
+    tr.removeChild(td);
+    var inputs = tr.querySelectorAll('input[type="text"]');
+    var match = inputs[0] ? inputs[0].name.match(/chord_(\\d+)_(\\d+)_/) : null;
+    if (match) {
+      for (var c = 0; c < inputs.length; c++) {
+        inputs[c].name = 'chord_' + match[1] + '_' + match[2] + '_' + c;
+      }
     }
+    formChanged = true;
+    updateChordPreview();
   }
-  formChanged = true;
-  updateChordPreview();
+  if (lastInput.value.trim()) { siteConfirm('This measure has data. Remove it?', doRemoveMeasure); return; }
+  doRemoveMeasure();
 }
 
 function addRowToPart(btn) {
@@ -3298,7 +3269,7 @@ function removeRow(btn) {
   var tr = btn.closest('tr');
   var table = tr.closest('table.edit-chords');
   if (table.querySelectorAll('tr').length <= 1) {
-    alert('Must have at least one row.');
+    siteAlert('Must have at least one row.');
     return;
   }
   var inputs = tr.querySelectorAll('input[type="text"]');
@@ -3306,12 +3277,14 @@ function removeRow(btn) {
   for (var i = 0; i < inputs.length; i++) {
     if (inputs[i].value.trim()) { hasData = true; break; }
   }
-  if (hasData && !confirm('This row has data. Remove it?')) return;
-  tr.parentNode.removeChild(tr);
-  // Renumber to fix row indices and update rows_in_part
-  renumberParts();
-  formChanged = true;
-  updateChordPreview();
+  function doRemoveRow() {
+    tr.parentNode.removeChild(tr);
+    renumberParts();
+    formChanged = true;
+    updateChordPreview();
+  }
+  if (hasData) { siteConfirm('This row has data. Remove it?', doRemoveRow); return; }
+  doRemoveRow();
 }
 
 // Chord preview
@@ -3806,8 +3779,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function validateForm() {
   var title = document.querySelector('input[name="title"]').value.trim();
   if (!title) {
-    alert('Title is required.');
-    document.querySelector('input[name="title"]').focus();
+    siteAlert('Title is required.', function() { document.querySelector('input[name="title"]').focus(); });
     return false;
   }
 
@@ -3823,7 +3795,7 @@ function validateForm() {
       meters[m] = 1;
     }
     if (Object.keys(meters).length > 1) {
-      alert('The selected tune types have different time signatures and cannot be combined.');
+      siteAlert('The selected tune types have different time signatures and cannot be combined.');
       return false;
     }
   }
@@ -3836,7 +3808,7 @@ function validateForm() {
     if (!/^https?:\\/\\/.+\\..+/.test(url)) {
       urlInputs[i].style.backgroundColor = '#ffcccc';
       urlInputs[i].focus();
-      alert('Invalid URL format: ' + url + '\\nURLs should start with http:// or https://');
+      siteAlert('Invalid URL format: ' + url + '\\nURLs should start with http:// or https://');
       return false;
     }
     urlInputs[i].style.backgroundColor = '';
@@ -3851,7 +3823,7 @@ function validateForm() {
     if (err) {
       chordInputs[i].style.backgroundColor = '#ffcccc';
       chordInputs[i].focus();
-      alert(err);
+      siteAlert(err);
       return false;
     }
     chordInputs[i].style.backgroundColor = '';
@@ -5732,20 +5704,23 @@ function addNotePart(beforeIndex) {
 
 function removeNotePart(index) {
   if (notationModel.parts.length <= 1) {
-    alert('Must have at least one part.');
+    siteAlert('Must have at least one part.');
     return;
   }
   var part = notationModel.parts[index];
-  if (part.elements.length > 0 && !confirm('Part ' + part.label + ' has data. Remove it?')) return;
-  pushUndo();
-  notationModel.parts.splice(index, 1);
-  var partLabels = 'ABCDEFGHIJ';
-  for (var i = 0; i < notationModel.parts.length; i++) {
-    notationModel.parts[i].label = i < partLabels.length ? partLabels[i] : '' + i;
+  function doRemoveNotePart() {
+    pushUndo();
+    notationModel.parts.splice(index, 1);
+    var partLabels = 'ABCDEFGHIJ';
+    for (var i = 0; i < notationModel.parts.length; i++) {
+      notationModel.parts[i].label = i < partLabels.length ? partLabels[i] : '' + i;
+    }
+    selectedElements = [];
+    hidePropertyIndicator();
+    syncModelToTextarea();
   }
-  selectedElements = [];
-  hidePropertyIndicator();
-  syncModelToTextarea();
+  if (part.elements.length > 0) { siteConfirm('Part ' + part.label + ' has data. Remove it?', doRemoveNotePart); return; }
+  doRemoveNotePart();
 }
 
 // --- Part Drag Reorder ---
@@ -7106,7 +7081,7 @@ function recShowOverlay() {
   if (window.recIsNewTune) {
     var title = document.querySelector('input[name="title"]');
     if (!title || !title.value.trim()) {
-      alert('Please enter a title first');
+      siteAlert('Please enter a title first');
       return;
     }
   }
@@ -7442,6 +7417,13 @@ var recCancelAudio = null;
 
 function recHandleCancel(cancelUrl) {
   if (!recUploadedThisSession) {
+    if (formChanged) {
+      siteConfirm('You have unsaved changes. Discard them?', function() {
+        formChanged = false;
+        window.location = cancelUrl;
+      });
+      return;
+    }
     window.location = cancelUrl;
     return;
   }
@@ -7748,54 +7730,58 @@ function aiAccept() {
       warnings.push('chords');
     }
   }
+  function doAiAccept() {
+    // Key
+    if (fields.key && aiResult.key) {
+      aiFillKey(aiResult.key);
+    }
+
+    // Type
+    if (fields.type && aiResult.tune_type) {
+      aiFillType(aiResult.tune_type);
+    }
+
+    // Meter
+    if (fields.meter && aiResult.time_signature) {
+      var meterSel = document.getElementById('field-meter');
+      if (meterSel) {
+        meterSel.value = aiResult.time_signature;
+      }
+    }
+
+    // Unit
+    if (fields.unit && aiResult.unit_note_length) {
+      var unitField = document.querySelector('select[name="unit"]');
+      if (unitField) {
+        unitField.value = aiResult.unit_note_length;
+      }
+    }
+
+    // Notes (ABC melody)
+    if (fields.notes && aiResult.parts) {
+      aiFillNotes(aiResult.parts);
+    }
+
+    // Chords
+    if (fields.chords && aiResult.parts) {
+      aiFillChords(aiResult.parts);
+    }
+
+    formChanged = true;
+    aiClose();
+
+    // Refresh previews
+    if (typeof renderAbcPreview === 'function') renderAbcPreview();
+    if (typeof updateChordPreview === 'function') updateChordPreview();
+  }
+
   if (warnings.length > 0) {
     var msg = 'This will overwrite existing ' + warnings.join(' and ') + '. '
-      + 'The old content won\\u0027t be permanently lost until you save your edits. Continue?';
-    if (!confirm(msg)) return;
+      + 'You can review the changes before saving \\u2014 nothing is permanent until you press Save. Continue?';
+    siteConfirm(msg, doAiAccept);
+    return;
   }
-
-  // Key
-  if (fields.key && aiResult.key) {
-    aiFillKey(aiResult.key);
-  }
-
-  // Type
-  if (fields.type && aiResult.tune_type) {
-    aiFillType(aiResult.tune_type);
-  }
-
-  // Meter
-  if (fields.meter && aiResult.time_signature) {
-    var meterSel = document.getElementById('field-meter');
-    if (meterSel) {
-      meterSel.value = aiResult.time_signature;
-    }
-  }
-
-  // Unit
-  if (fields.unit && aiResult.unit_note_length) {
-    var unitField = document.querySelector('select[name="unit"]');
-    if (unitField) {
-      unitField.value = aiResult.unit_note_length;
-    }
-  }
-
-  // Notes (ABC melody)
-  if (fields.notes && aiResult.parts) {
-    aiFillNotes(aiResult.parts);
-  }
-
-  // Chords
-  if (fields.chords && aiResult.parts) {
-    aiFillChords(aiResult.parts);
-  }
-
-  formChanged = true;
-  aiClose();
-
-  // Refresh previews
-  if (typeof renderAbcPreview === 'function') renderAbcPreview();
-  if (typeof updateChordPreview === 'function') updateChordPreview();
+  doAiAccept();
 }
 
 function aiFillKey(keyStr) {
@@ -10771,6 +10757,75 @@ text-align:center;
 padding:15px 0;
 }
 
+/* Site dialog overlay (replaces native alert/confirm/prompt) */
+#site-dialog-overlay {
+display:none;
+position:fixed;
+top:0; left:0; right:0; bottom:0;
+background:rgba(0,0,0,0.5);
+z-index:10001;
+align-items:center;
+justify-content:center;
+}
+#site-dialog-overlay.active {
+display:flex;
+}
+#site-dialog-box {
+background:#ffffff;
+border-radius:8px;
+max-width:440px;
+width:90%;
+padding:24px 28px;
+box-shadow:0 4px 20px rgba(0,0,0,0.3);
+position:relative;
+}
+#site-dialog-msg {
+font-size:105%;
+line-height:150%;
+margin-bottom:16px;
+white-space:pre-line;
+}
+#site-dialog-input {
+width:100%;
+padding:6px 8px;
+font-size:100%;
+border:1px solid #999;
+border-radius:4px;
+box-sizing:border-box;
+margin-bottom:12px;
+display:none;
+}
+#site-dialog-input:focus {
+border-color:#3a6a3a;
+outline:none;
+}
+#site-dialog-buttons {
+text-align:right;
+}
+#site-dialog-buttons button {
+margin-left:8px;
+padding:6px 18px;
+border-radius:4px;
+cursor:pointer;
+font-size:100%;
+}
+#site-dialog-buttons .sd-cancel {
+background:#f0f0f0;
+color:#333;
+border:1px solid #999;
+}
+#site-dialog-buttons .sd-cancel:hover {
+background:#e0e0e0;
+}
+#site-dialog-buttons .sd-ok {
+background:#3a6a3a;
+color:#ffffff;
+border:1px solid #1a3a1a;
+}
+#site-dialog-buttons .sd-ok:hover {
+background:#4a7a4a;
+}
+
 """
 
 _kPrintCSS = """
@@ -10791,6 +10846,9 @@ display:none !important;
 display:none !important;
 }
 #rec-overlay {
+display:none !important;
+}
+#site-dialog-overlay {
 display:none !important;
 }
 .rec-heading-flex {
@@ -11394,7 +11452,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
           '<a href="/sets/sid/%s/edit/%s" style="color:#999;font-style:italic">Edit</a>' % (sid, s),
           CText(' - '),
           '<a href="/event/%s/delete/%s" style="color:#999;font-style:italic" '
-          'onclick="return confirm(\'Delete this set from the event?\')">Delete</a>' % (sid, s),
+          'onclick="event.preventDefault();var el=this;siteConfirm(\'Delete this set from the event?\',function(){window.location=el.href})">Delete</a>' % (sid, s),
         ])
 
       parts.append('</span>')
@@ -11453,7 +11511,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
     left_items.append('<a href="#" id="add-note-link-trigger" style="color:#999;font-style:italic">Add Note</a>')
   if CanDeleteEvent(event):
     right_items.append(
-      '<a href="/events/delete/%s" class="red-button" onclick="return confirm(\'Are you sure you want to delete this event?\')">Delete Event</a>' % event.name
+      '<a href="/events/delete/%s" class="red-button" onclick="event.preventDefault();var el=this;siteConfirm(\'Are you sure you want to delete this event?\',function(){window.location=el.href})">Delete Event</a>' % event.name
     )
   if left_items or right_items:
     parts.append(
@@ -12313,7 +12371,7 @@ def profile_page(uid):
         line += (' <a href="/profile/%s/delete-tune/%s" '
                  'style="color:#c00;text-decoration:none;font-weight:bold;margin-left:6px" '
                  'title="Delete tune" '
-                 'onclick="return confirm(\'Delete %s?\')">&times;</a>' % (
+                 'onclick="event.preventDefault();var el=this;siteConfirm(\'Delete %s?\',function(){window.location=el.href})">&times;</a>' % (
                    uid, tune_name, esc_title.replace("'", "\\'")))
       line += '</div>'
       parts.append(line)
@@ -12353,7 +12411,7 @@ def profile_page(uid):
         line += (' <a href="/profile/%s/delete-event/%s" '
                  'style="color:#c00;text-decoration:none;font-weight:bold;margin-left:6px" '
                  'title="Delete event" '
-                 'onclick="return confirm(\'Delete %s?\')">&times;</a>' % (
+                 'onclick="event.preventDefault();var el=this;siteConfirm(\'Delete %s?\',function(){window.location=el.href})">&times;</a>' % (
                    uid, event_name, esc_title.replace("'", "\\'")))
       line += '</div>'
       parts.append(line)
@@ -12483,7 +12541,7 @@ def _ProfileJS(uid, profile_email):
       if (val && val !== origName) {
         ajax("/ajax/profile/display-name", {display_name: val}, function(resp) {
           if (resp.ok) { origName = val; }
-          else { nameEl.textContent = origName; alert(resp.error || "Error updating name"); }
+          else { nameEl.textContent = origName; siteAlert(resp.error || "Error updating name"); }
         });
       } else if (!val) {
         nameEl.textContent = origName;
@@ -12715,18 +12773,19 @@ def _ProfileJS(uid, profile_email):
       var del = e.target.closest ? e.target.closest(".profile-note-delete") : null;
       if (del) {
         e.preventDefault();
-        if (!confirm("Delete this note?")) return;
-        var owner = del.getAttribute("data-owner");
-        var nid = parseInt(del.getAttribute("data-note-id"));
-        ajax("/ajax/notes/delete", {owner_hash: owner, note_id: nid}, function(resp) {
-          if (resp.ok) {
-            var card = del.closest(".profile-note-card");
-            if (card) card.parentNode.removeChild(card);
-            if (!notesSection.querySelector(".profile-note-card")) {
-              var wrapper = document.getElementById("profile-notes-wrapper");
-              if (wrapper) wrapper.style.display = "none";
-            }
-          } else { alert(resp.error || "Error deleting note"); }
+        siteConfirm("Delete this note?", function() {
+          var owner = del.getAttribute("data-owner");
+          var nid = parseInt(del.getAttribute("data-note-id"));
+          ajax("/ajax/notes/delete", {owner_hash: owner, note_id: nid}, function(resp) {
+            if (resp.ok) {
+              var card = del.closest(".profile-note-card");
+              if (card) card.parentNode.removeChild(card);
+              if (!notesSection.querySelector(".profile-note-card")) {
+                var wrapper = document.getElementById("profile-notes-wrapper");
+                if (wrapper) wrapper.style.display = "none";
+              }
+            } else { siteAlert(resp.error || "Error deleting note"); }
+          });
         });
       }
     });
@@ -14251,13 +14310,14 @@ function saveTitle() {
 
   extra_js += """
 function duplicateEvent() {
-  var title = prompt("Name for the duplicate event:", %s);
-  if (title) {
-    var form = $("<form>", {method: "POST", action: "/event/%s/duplicate"});
-    form.append($("<input>", {type: "hidden", name: "title", value: title}));
-    $("body").append(form);
-    form.submit();
-  }
+  sitePrompt("Name for the duplicate event:", %s, function(title) {
+    if (title) {
+      var form = $("<form>", {method: "POST", action: "/event/%s/duplicate"});
+      form.append($("<input>", {type: "hidden", name: "title", value: title}));
+      $("body").append(form);
+      form.submit();
+    }
+  });
 }
 """ % (json.dumps(e.title + ' copy'), sid)
   ready_calls += '  $("#dup-btn").on("click", function(ev) { ev.preventDefault(); duplicateEvent(); });\n'
@@ -14517,6 +14577,106 @@ def PageWrapper(body, section=None, refresh=None, show_eye_candy=True, eye_candy
 <input type="hidden" id="login-target" value="" />
 </div>
 </div>""",
+    """<div id="site-dialog-overlay">
+<div id="site-dialog-box">
+<div id="site-dialog-msg"></div>
+<input type="text" id="site-dialog-input" />
+<div id="site-dialog-buttons"></div>
+</div>
+</div>
+<script>
+(function() {
+  var overlay = document.getElementById('site-dialog-overlay');
+  var msgEl = document.getElementById('site-dialog-msg');
+  var inputEl = document.getElementById('site-dialog-input');
+  var btnsEl = document.getElementById('site-dialog-buttons');
+  var currentDismiss = null;
+
+  function show(msg, opts) {
+    msgEl.innerHTML = msg;
+    inputEl.style.display = opts.input ? '' : 'none';
+    inputEl.value = opts.inputDefault || '';
+    btnsEl.innerHTML = '';
+    var btns = opts.buttons || [];
+    for (var i = 0; i < btns.length; i++) {
+      var b = document.createElement('button');
+      b.textContent = btns[i].label;
+      b.className = btns[i].cls || '';
+      b.onclick = btns[i].action;
+      btnsEl.appendChild(b);
+    }
+    currentDismiss = opts.onDismiss || null;
+    overlay.classList.add('active');
+    if (opts.input) { inputEl.focus(); inputEl.select(); }
+    else if (btnsEl.lastChild) btnsEl.lastChild.focus();
+  }
+
+  function hide() {
+    overlay.classList.remove('active');
+    currentDismiss = null;
+  }
+
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) {
+      if (currentDismiss) currentDismiss();
+      else hide();
+    }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && overlay.classList.contains('active')) {
+      if (currentDismiss) currentDismiss();
+      else hide();
+    }
+  });
+
+  window.siteAlert = function(msg, onClose) {
+    show(msg, {
+      buttons: [{label: 'OK', cls: 'sd-ok', action: function() { hide(); if (onClose) onClose(); }}]
+    });
+  };
+
+  window.siteConfirm = function(msg, onYes, onNo) {
+    var dismiss = function() { hide(); if (onNo) onNo(); };
+    show(msg, {
+      onDismiss: dismiss,
+      buttons: [
+        {label: 'Cancel', cls: 'sd-cancel', action: dismiss},
+        {label: 'OK', cls: 'sd-ok', action: function() { hide(); if (onYes) onYes(); }}
+      ]
+    });
+  };
+
+  window.sitePrompt = function(msg, defaultVal, onOK, onCancel) {
+    var dismiss = function() { hide(); if (onCancel) onCancel(); };
+    show(msg, {
+      input: true,
+      inputDefault: defaultVal || '',
+      onDismiss: dismiss,
+      buttons: [
+        {label: 'Cancel', cls: 'sd-cancel', action: dismiss},
+        {label: 'OK', cls: 'sd-ok', action: function() { hide(); if (onOK) onOK(inputEl.value); }}
+      ]
+    });
+    inputEl.addEventListener('keydown', function handler(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        inputEl.removeEventListener('keydown', handler);
+        hide(); if (onOK) onOK(inputEl.value);
+      }
+    });
+  };
+
+  window.siteDialog = function(htmlContent, buttons, onDismiss) {
+    show(htmlContent, {
+      onDismiss: onDismiss || function() { hide(); },
+      buttons: buttons
+    });
+  };
+
+  window.siteDialogHide = hide;
+})();
+</script>""",
   ])
   
   html = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">"""
@@ -14729,7 +14889,7 @@ def _NotesJS(target_type, target_id, can_make_public, is_admin):
     if (!val) return;
     ajax("/ajax/notes/add", {target_type: tt, target_id: tid, text: val}, function(resp) {
       if (resp.ok) location.reload();
-      else alert(resp.error || "Error adding note");
+      else siteAlert(resp.error || "Error adding note");
     });
   }
 
@@ -14763,14 +14923,15 @@ def _NotesJS(target_type, target_id, can_make_public, is_admin):
       var del = e.target.closest ? e.target.closest(".note-delete") : null;
       if (del) {
         e.preventDefault();
-        if (!confirm("Delete this note?")) return;
-        var owner = del.getAttribute("data-owner");
-        var nid = parseInt(del.getAttribute("data-note-id"));
-        ajax("/ajax/notes/delete", {owner_hash: owner, note_id: nid}, function(resp) {
-          if (resp.ok) {
-            var card = del.closest(".note-card");
-            if (card) { card.parentNode.removeChild(card); checkNotesHeader(); }
-          } else { alert(resp.error || "Error deleting note"); }
+        siteConfirm("Delete this note?", function() {
+          var owner = del.getAttribute("data-owner");
+          var nid = parseInt(del.getAttribute("data-note-id"));
+          ajax("/ajax/notes/delete", {owner_hash: owner, note_id: nid}, function(resp) {
+            if (resp.ok) {
+              var card = del.closest(".note-card");
+              if (card) { card.parentNode.removeChild(card); checkNotesHeader(); }
+            } else { siteAlert(resp.error || "Error deleting note"); }
+          });
         });
         return;
       }
@@ -14778,13 +14939,14 @@ def _NotesJS(target_type, target_id, can_make_public, is_admin):
       var chname = e.target.closest ? e.target.closest(".note-change-name") : null;
       if (chname) {
         e.preventDefault();
-        var name = prompt("Enter your display name:");
-        if (name && name.trim()) {
-          ajax("/ajax/profile/display-name", {display_name: name.trim()}, function(resp) {
-            if (resp.ok) location.reload();
-            else alert(resp.error || "Error updating name");
-          });
-        }
+        sitePrompt("Enter your display name:", "", function(name) {
+          if (name && name.trim()) {
+            ajax("/ajax/profile/display-name", {display_name: name.trim()}, function(resp) {
+              if (resp.ok) location.reload();
+              else siteAlert(resp.error || "Error updating name");
+            });
+          }
+        });
         return;
       }
     });
@@ -14795,7 +14957,7 @@ def _NotesJS(target_type, target_id, can_make_public, is_admin):
         var owner = toggle.getAttribute("data-owner");
         var nid = parseInt(toggle.getAttribute("data-note-id"));
         ajax("/ajax/notes/toggle-public", {owner_hash: owner, note_id: nid, target_type: tt, target_id: tid}, function(resp, status) {
-          if (!resp.ok) { alert(resp.error || "Error toggling public"); toggle.checked = !toggle.checked; }
+          if (!resp.ok) { siteAlert(resp.error || "Error toggling public"); toggle.checked = !toggle.checked; }
         });
       }
     });
@@ -14933,7 +15095,7 @@ def _SetTuneNotesJS():
     if (esid) payload.event_sid = esid;
     ajax("/ajax/notes/add", payload, function(resp) {
       if (resp.ok) location.reload();
-      else alert(resp.error || "Error adding note");
+      else siteAlert(resp.error || "Error adding note");
     });
   }
 
@@ -14971,14 +15133,15 @@ def _SetTuneNotesJS():
     var del = e.target.closest ? e.target.closest(".stn-delete") : null;
     if (del) {
       e.preventDefault();
-      if (!confirm("Delete this note?")) return;
-      var owner = del.getAttribute("data-owner");
-      var nid = parseInt(del.getAttribute("data-note-id"));
-      ajax("/ajax/notes/delete", {owner_hash: owner, note_id: nid}, function(resp) {
-        if (resp.ok) {
-          var card = del.closest(".stn-card");
-          if (card) card.parentNode.removeChild(card);
-        } else { alert(resp.error || "Error deleting note"); }
+      siteConfirm("Delete this note?", function() {
+        var owner = del.getAttribute("data-owner");
+        var nid = parseInt(del.getAttribute("data-note-id"));
+        ajax("/ajax/notes/delete", {owner_hash: owner, note_id: nid}, function(resp) {
+          if (resp.ok) {
+            var card = del.closest(".stn-card");
+            if (card) card.parentNode.removeChild(card);
+          } else { siteAlert(resp.error || "Error deleting note"); }
+        });
       });
       return;
     }
