@@ -12199,8 +12199,10 @@ def ajax_analyze():
   cmd = [ai_venv_python, ai_runner, tune_name, mp3_path]
   if sys.platform == 'darwin':
     cmd = ['/usr/bin/arch', '-arm64'] + cmd
+  env = os.environ.copy()
+  env['NUMBA_CACHE_DIR'] = '/tmp/numba_cache'
   proc = subprocess.Popen(
-    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=env)
   stdout, stderr = proc.communicate()
 
   if proc.returncode != 0:
