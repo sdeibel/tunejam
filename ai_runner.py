@@ -77,10 +77,18 @@ def run_basic_pitch(mp3_path, work_dir):
   """Run Basic Pitch on MP3 to produce MIDI. Returns MIDI path or error string."""
   bp_script = """
 import sys
+import pathlib
 from basic_pitch.inference import predict_and_save
-from basic_pitch import ICASSP_2022_MODEL_PATH
+from basic_pitch import build_icassp_2022_model_path, FilenameSuffix, ONNX_PRESENT, CT_PRESENT
+if ONNX_PRESENT:
+    model_path = build_icassp_2022_model_path(FilenameSuffix.onnx)
+elif CT_PRESENT:
+    model_path = build_icassp_2022_model_path(FilenameSuffix.coreml)
+else:
+    from basic_pitch import ICASSP_2022_MODEL_PATH
+    model_path = ICASSP_2022_MODEL_PATH
 predict_and_save([sys.argv[1]], sys.argv[2], save_midi=True, sonify_midi=False,
-    save_model_outputs=False, save_notes=False, model_or_model_path=ICASSP_2022_MODEL_PATH,
+    save_model_outputs=False, save_notes=False, model_or_model_path=model_path,
     onset_threshold=0.5, frame_threshold=0.3, minimum_note_length=58, midi_tempo=120)
 """
   bp_path = os.path.join(work_dir, 'bp_melody.py')
