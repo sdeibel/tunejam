@@ -7918,12 +7918,11 @@ function aiFillChords(parts) {
   }
   numParts = 0;
 
-  // Add fresh parts and fill them
-  for (var pi = 0; pi < parts.length; pi++) {
-    addPart();
+  var numCols = getDefaultCols();
 
+  // Add parts with exactly the right number of rows for the AI's bars
+  for (var pi = 0; pi < parts.length; pi++) {
     var chordStr = parts[pi].chords || '';
-    if (!chordStr) continue;
 
     // Parse chord string: "|: G | Am | D | G | C | Am | D | G :|"
     var hasRepeat = chordStr.indexOf('|:') >= 0 || chordStr.indexOf(':|') >= 0;
@@ -7935,22 +7934,43 @@ function aiFillChords(parts) {
       if (cell) bars.push(cell);
     }
 
-    // Set repeat checkbox
-    var repeatCb = document.querySelector('input[name="repeat_' + pi + '"]');
-    if (repeatCb) repeatCb.checked = hasRepeat;
+    // Calculate rows needed (at least 1)
+    var numRows = bars.length > 0 ? Math.ceil(bars.length / numCols) : 1;
 
-    // Fill chord cells: map bars to cells left-to-right, top-to-bottom
+    // Build the part HTML directly with the right number of rows
+    var label = pi < partLabels.length ? partLabels[pi] : '' + pi;
+    var html = '<div class="part-header">';
+    html += '<b>Part ' + label + '</b>';
+    html += ' &nbsp; Repeat: &nbsp;<input type="checkbox" name="repeat_' + pi + '" value="1"' + (hasRepeat ? ' checked' : '') + ' />';
+    html += ' <button type="button" class="part-remove-btn" onclick="removePart(this)" title="Remove part">X</button>';
+    html += '</div>';
+    html += '<table class="edit-chords" style="margin-bottom:2px">';
     var barIdx = 0;
-    for (var r = 0; barIdx < bars.length; r++) {
-      for (var c = 0; barIdx < bars.length; c++) {
-        var input = document.querySelector('input[name="chord_' + pi + '_' + r + '_' + c + '"]');
-        if (!input) break;
-        input.value = bars[barIdx];
+    for (var r = 0; r < numRows; r++) {
+      html += '<tr>';
+      for (var c = 0; c < numCols; c++) {
+        var val = barIdx < bars.length ? bars[barIdx] : '';
+        html += '<td><input type="text" name="chord_' + pi + '_' + r + '_' + c + '" value="' + val.replace(/"/g, '&quot;') + '" size="' + Math.max(6, val.length + 2) + '" /></td>';
         barIdx++;
       }
-      if (!document.querySelector('input[name="chord_' + pi + '_' + r + '_0"]')) break;
+      html += '<td><button type="button" class="row-ctl-btn add-measure-btn" onclick="addMeasureToRow(this)" title="Add measure">+</button>';
+      html += '<button type="button" class="row-ctl-btn remove-measure-btn" onclick="removeMeasureFromRow(this)" title="Remove measure">&minus;</button>';
+      html += '<button type="button" class="row-ctl-btn remove-row-btn" onclick="removeRow(this)" title="Remove row">X</button></td>';
+      html += '</tr>';
     }
+    html += '</table>';
+    html += '<button type="button" class="add-btn" style="font-size:80%%; padding:1px 6px; margin-bottom:8px" onclick="addRowToPart(this)">+ Row</button>';
+
+    var div = document.createElement('div');
+    div.className = 'part-wrapper';
+    div.setAttribute('data-part', '' + pi);
+    div.innerHTML = html;
+    container.appendChild(div);
+    setupOnePartDrag(div);
   }
+
+  renumberParts();
+  updateChordPreview();
 }
 
 // Close overlay on Escape
