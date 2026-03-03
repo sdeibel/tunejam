@@ -3340,10 +3340,17 @@ function chordCellSplit(val) {
   var len = val.length;
   // Skip alt ending prefix like "1:" "2:"
   if (j < len && '123'.indexOf(val[j]) >= 0 && j + 1 < len && val[j+1] === ':') j += 2;
+  var inParens = false;
   while (j < len) {
     var c = val[j];
-    // Skip parens, slashes, dashes
-    if (c === '(' || c === ')' || c === '/' || c === '-') { j++; continue; }
+    // Parens mark optional chords — skip content inside them for playback
+    if (c === '(') { inParens = true; j++; continue; }
+    if (c === ')') { inParens = false; j++; continue; }
+    if (inParens) { j++; continue; }
+    // Slash = alternative, just strip it and play both chords
+    if (c === '/') { j++; continue; }
+    // Dash or underscore = sustain: repeat previous chord
+    if (c === '-' || c === '_') { j++; if (chords.length) chords.push(chords[chords.length - 1]); continue; }
     if ('ABCDEFGH'.indexOf(c) >= 0) {
       var start = j;
       j++;
