@@ -3378,12 +3378,17 @@ function chordTogglePlay() {
   }
   if (vePlayingPart >= 0) veStopPlay();
   var h = veGetAbcHeaders();
-  // Determine beats per bar from meter
+  // Determine L-units per bar from meter (L:1/mDen, so beats = mNum)
   var beats = 4;
   if (h.meter === '3/4' || h.meter === '3/8') beats = 3;
   else if (h.meter === '6/8') beats = 6;
   else if (h.meter === '9/8') beats = 9;
   else if (h.meter === '2/4' || h.meter === '2/2') beats = 2;
+  // Musical beats and L-units per beat for rhythmic chord hits
+  var mDen = parseInt(h.meter.split('/')[1], 10) || 4;
+  var isCompoundMeter = (mDen === 8 && beats >= 6);
+  var musicalBeatsPerBar = isCompoundMeter ? Math.floor(beats / 3) : beats;
+  var lUnitsPerBeat = isCompoundMeter ? 3 : 1;
   var wrappers = document.querySelectorAll('#chord-parts-container .part-wrapper');
   if (!wrappers.length) return;
   var abcBody = '';
@@ -3404,7 +3409,12 @@ function chordTogglePlay() {
         } else {
           var chords = chordCellSplit(cell);
           if (chords.length <= 1) {
-            partLine += '"' + (chords[0] || cell) + '"z' + beats + '|';
+            // Repeat chord at each musical beat for rhythmic pulse
+            var cn = chords[0] || cell;
+            for (var bi = 0; bi < musicalBeatsPerBar; bi++) {
+              partLine += '"' + cn + '"z' + lUnitsPerBeat;
+            }
+            partLine += '|';
           } else {
             // Split beats evenly among chords in this measure
             var base = Math.floor(beats / chords.length);
@@ -3424,7 +3434,6 @@ function chordTogglePlay() {
     abcBody += partLine + '\\n';
   }
   if (!abcBody.trim()) return;
-  var mDen = parseInt(h.meter.split('/')[1], 10) || 4;
   var abc = 'X:1\\nM:' + h.meter + '\\nL:1/' + mDen + '\\nK:' + h.key + '\\n' + abcBody;
   vePlayingPart = 998;
   vePlayAbc(abc, 'chord-play-btn');
