@@ -3076,6 +3076,286 @@ function doRenderAbc() {
   });
 }
 
+// --- Per-part Play/Stop ---
+var veSynth = null;
+var vePlayingPart = -1;  // index of part currently playing, or -1
+var vePlayDuration = 0;
+var vePlayStartTime = 0;
+var vePlayTimer = null;
+var vePlayTempo = 90;
+var veTempoHideTimer = null;
+var vePlayingAbc = null;   // ABC string currently playing
+var vePlayingBtnId = null; // button ID currently playing
+var veTempoRestartTimer = null; // debounce timer for tempo-change restart
+
+function veCreateTempoSlider() {
+  var wrap = document.createElement('span');
+  wrap.id = 've-tempo-slider-wrap';
+  wrap.className = 've-tempo-slider-wrap';
+  var slider = document.createElement('input');
+  slider.type = 'range';
+  slider.id = 've-tempo-slider';
+  slider.min = '40';
+  slider.max = '240';
+  slider.value = String(vePlayTempo);
+  var label = document.createElement('span');
+  label.id = 've-tempo-label';
+  label.textContent = vePlayTempo + ' BPM';
+  wrap.appendChild(slider);
+  wrap.appendChild(label);
+  // Stop pointer events from reaching parent drag handlers
+  slider.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+  slider.addEventListener('pointermove', function(e) { e.stopPropagation(); });
+  slider.addEventListener('input', function() {
+    vePlayTempo = parseInt(this.value, 10);
+    label.textContent = vePlayTempo + ' BPM';
+    // Debounced restart: stop immediately, restart after sliding stops
+    if (vePlayingAbc && vePlayingBtnId) {
+      veStopPlayImmediate();
+      if (veTempoRestartTimer) clearTimeout(veTempoRestartTimer);
+      var abc = vePlayingAbc;
+      var btnId = vePlayingBtnId;
+      veTempoRestartTimer = setTimeout(function() {
+        veTempoRestartTimer = null;
+        if (!vePlayingAbc) return;  // user hit Stop during debounce
+        vePlayingPart = (btnId === 'chord-play-btn') ? 998 :
+          (btnId === 've-abc-play-btn') ? 999 :
+          parseInt(btnId.replace('ve-play-btn-', ''), 10);
+        vePlayAbc(abc, btnId);
+      }, 300);
+    }
+  });
+  return wrap;
+}
+
+var veTempoSliderBtn = null;  // button the slider is currently attached to
+
+function veShowTempoSlider(btnId) {
+  if (veTempoHideTimer) { clearTimeout(veTempoHideTimer); veTempoHideTimer = null; }
+  var wrap = document.getElementById('ve-tempo-slider-wrap');
+  if (!wrap) {
+    wrap = veCreateTempoSlider();
+  }
+  // Restore margin-left on previous button if any
+  if (veTempoSliderBtn && veTempoSliderBtn !== document.getElementById(btnId)) {
+    veTempoSliderBtn.style.marginLeft = '';
+  }
+  var btn = document.getElementById(btnId);
+  if (btn && btn.parentNode) {
+    btn.parentNode.insertBefore(wrap, btn);
+    // In flex parents, steal margin-left:auto from button so slider+button group right-aligns
+    var parentDisplay = window.getComputedStyle(btn.parentNode).display;
+    if (parentDisplay === 'flex' || parentDisplay === 'inline-flex') {
+      wrap.style.marginLeft = 'auto';
+      btn.style.marginLeft = '0';
+    } else {
+      wrap.style.marginLeft = '';
+    }
+  }
+  veTempoSliderBtn = btn;
+  wrap.style.display = 'inline-flex';
+  var sl = document.getElementById('ve-tempo-slider');
+  if (sl) sl.value = String(vePlayTempo);
+  var lb = document.getElementById('ve-tempo-label');
+  if (lb) lb.textContent = vePlayTempo + ' BPM';
+}
+
+function veHideTempoSlider() {
+  if (veTempoHideTimer) { clearTimeout(veTempoHideTimer); veTempoHideTimer = null; }
+  veTempoHideTimer = setTimeout(function() {
+    var wrap = document.getElementById('ve-tempo-slider-wrap');
+    if (wrap) wrap.style.display = 'none';
+    // Restore margin-left on button
+    if (veTempoSliderBtn) {
+      veTempoSliderBtn.style.marginLeft = '';
+      veTempoSliderBtn = null;
+    }
+    veTempoHideTimer = null;
+  }, 5000);
+}
+
+function veGetAbcHeaders() {
+  var key = document.getElementById('field-key').value || 'C';
+  var meterSel = document.getElementById('field-meter');
+  var meter = meterSel ? meterSel.value : '4/4';
+  var unitField = document.querySelector('select[name="unit"]');
+  var unit = unitField ? unitField.value : '1/8';
+  return {key: key, meter: meter, unit: unit};
+}
+
+function veBuildPartAbc(partIdx) {
+  var h = veGetAbcHeaders();
+  var partAbc = '';
+  if (typeof veMode !== 'undefined' && veMode === 'visual' && typeof notationModel !== 'undefined') {
+    if (partIdx < notationModel.parts.length) {
+      partAbc = modelToAbcPart(notationModel.parts[partIdx]);
+    }
+  } else {
+    // ABC text mode: get the Nth line from textarea
+    var textarea = document.getElementById('raw-notes-textarea');
+    if (!textarea) return null;
+    var lines = textarea.value.trim().split('\\n');
+    if (partIdx < lines.length) {
+      var line = lines[partIdx];
+      if (line.length > 1 && line[1] === ':') {
+        partAbc = line;
+      } else {
+        partAbc = 'M:' + h.meter + '\\n' + line;
+      }
+    }
+  }
+  if (!partAbc) return null;
+  return 'X:1\\nK:' + h.key + '\\nL:' + h.unit + '\\nM:' + h.meter + '\\n' + partAbc + '\\n';
+}
+
+function vePlayAbc(abc, btnId) {
+  if (typeof ABCJS === 'undefined' || !ABCJS.synth || !ABCJS.synth.CreateSynth) return;
+  vePlayingAbc = abc;
+  vePlayingBtnId = btnId;
+  var btn = document.getElementById(btnId);
+  if (btn) { btn.textContent = 'Stop'; btn.classList.add('ve-play-active'); }
+  veShowTempoSlider(btnId);
+
+  var offscreen = document.createElement('div');
+  offscreen.style.display = 'none';
+  offscreen.id = 've-play-offscreen';
+  document.body.appendChild(offscreen);
+  var visualObj = ABCJS.renderAbc('ve-play-offscreen', abc, {});
+  if (!visualObj || !visualObj[0]) {
+    try { document.body.removeChild(offscreen); } catch(e) {}
+    veStopPlay();
+    return;
+  }
+
+  veSynth = new ABCJS.synth.CreateSynth();
+  veSynth.init({ visualObj: visualObj[0], options: { qpm: vePlayTempo } })
+    .then(function() { return veSynth.prime(); })
+    .then(function(response) {
+      try { document.body.removeChild(offscreen); } catch(e) {}
+      vePlayDuration = (response && response.duration) ? response.duration : 0;
+      veSynth.start();
+      if (vePlayDuration > 0) {
+        vePlayTimer = setTimeout(function() { veStopPlay(); },
+          (vePlayDuration + 0.5) * 1000);
+      }
+    })
+    .catch(function(err) {
+      try { document.body.removeChild(offscreen); } catch(e) {}
+      veStopPlay();
+    });
+}
+
+function veTogglePlayPart(partIdx) {
+  if (vePlayingPart === partIdx) {
+    veStopPlay();
+    return;
+  }
+  if (vePlayingPart >= 0) veStopPlay();
+  var abc = veBuildPartAbc(partIdx);
+  if (!abc) return;
+  vePlayingPart = partIdx;
+  vePlayAbc(abc, 've-play-btn-' + partIdx);
+}
+
+// Stop synth/timer only (used internally for tempo-change restart)
+function veStopPlayImmediate() {
+  if (vePlayTimer) { clearTimeout(vePlayTimer); vePlayTimer = null; }
+  if (veSynth) {
+    try { veSynth.stop(); } catch(e) {}
+    veSynth = null;
+  }
+}
+
+function veStopPlay() {
+  veHideTempoSlider();
+  if (veTempoRestartTimer) { clearTimeout(veTempoRestartTimer); veTempoRestartTimer = null; }
+  veStopPlayImmediate();
+  vePlayingAbc = null;
+  vePlayingBtnId = null;
+  var oldPart = vePlayingPart;
+  vePlayingPart = -1;
+  if (oldPart >= 0) {
+    var btn = document.getElementById('ve-play-btn-' + oldPart);
+    if (btn) { btn.textContent = 'Play'; btn.classList.remove('ve-play-active'); }
+  }
+  // Also reset ABC text mode play button
+  var abcBtn = document.getElementById('ve-abc-play-btn');
+  if (abcBtn) { abcBtn.textContent = 'Play'; abcBtn.classList.remove('ve-play-active'); }
+  // Also reset chord play button
+  var chordBtn = document.getElementById('chord-play-btn');
+  if (chordBtn) { chordBtn.textContent = 'Play'; chordBtn.classList.remove('ve-play-active'); }
+}
+
+function veTogglePlayAll() {
+  if (vePlayingPart >= 0) {
+    veStopPlay();
+    return;
+  }
+  var textarea = document.getElementById('raw-notes-textarea');
+  if (!textarea || !textarea.value.trim()) return;
+  var h = veGetAbcHeaders();
+  var lines = textarea.value.trim().split('\\n');
+  var abc = 'X:1\\nK:' + h.key + '\\nL:' + h.unit + '\\nM:' + h.meter + '\\n';
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    if (line.length > 1 && line[1] === ':') {
+      abc += line + '\\n';
+    } else {
+      abc += 'M:' + h.meter + '\\n' + line + '\\n';
+    }
+  }
+  vePlayingPart = 999;
+  vePlayAbc(abc, 've-abc-play-btn');
+}
+
+function chordTogglePlay() {
+  if (vePlayingPart === 998) {
+    veStopPlay();
+    return;
+  }
+  if (vePlayingPart >= 0) veStopPlay();
+  var h = veGetAbcHeaders();
+  // Determine beats per bar from meter
+  var beats = 4;
+  if (h.meter === '3/4' || h.meter === '3/8') beats = 3;
+  else if (h.meter === '6/8') beats = 6;
+  else if (h.meter === '9/8') beats = 9;
+  else if (h.meter === '2/4' || h.meter === '2/2') beats = 2;
+  var restBar = 'z' + beats;
+  var wrappers = document.querySelectorAll('#chord-parts-container .part-wrapper');
+  if (!wrappers.length) return;
+  var abcBody = '';
+  for (var p = 0; p < wrappers.length; p++) {
+    var table = wrappers[p].querySelector('table.edit-chords');
+    if (!table) continue;
+    var repCheck = wrappers[p].querySelector('.part-header input[type="checkbox"]');
+    var hasRepeat = repCheck && repCheck.checked;
+    var rows = table.querySelectorAll('tr');
+    var partLine = '';
+    if (hasRepeat) partLine += '|:';
+    for (var r = 0; r < rows.length; r++) {
+      var inputs = rows[r].querySelectorAll('input[type="text"]');
+      for (var c = 0; c < inputs.length; c++) {
+        var chord = inputs[c].value.trim();
+        if (chord) {
+          partLine += '"' + chord + '"' + restBar + '|';
+        } else {
+          partLine += restBar + '|';
+        }
+      }
+    }
+    if (hasRepeat) {
+      // Replace trailing | with :|
+      if (partLine.slice(-1) === '|') partLine = partLine.slice(0, -1) + ':|';
+    }
+    abcBody += partLine + '\\n';
+  }
+  if (!abcBody.trim()) return;
+  var abc = 'X:1\\nK:' + h.key + '\\nL:1/4\\nM:' + h.meter + '\\n' + abcBody;
+  vePlayingPart = 998;
+  vePlayAbc(abc, 'chord-play-btn');
+}
+
 // Hook up live preview updates
 document.addEventListener('DOMContentLoaded', function() {
   // Update on any input in chord area
@@ -4283,12 +4563,27 @@ function veDoRenderAbc() {
     ABCJS.renderAbc("abcjs-preview", abc, {
       responsive: "resize", staffwidth: 500, add_classes: true
     });
+    // Add Play button in the mode toggle bar, right-justified
+    var oldAbcPlay = document.getElementById('ve-abc-play-btn');
+    if (oldAbcPlay) oldAbcPlay.parentNode.removeChild(oldAbcPlay);
+    var toggleBar = document.querySelector('.ve-mode-toggle');
+    if (toggleBar) {
+      var abcPlayBtn = document.createElement('button');
+      abcPlayBtn.type = 'button';
+      abcPlayBtn.className = 've-add-part-btn';
+      abcPlayBtn.id = 've-abc-play-btn';
+      abcPlayBtn.textContent = 'Play';
+      abcPlayBtn.addEventListener('click', function() { veTogglePlayAll(); });
+      toggleBar.appendChild(abcPlayBtn);
+    }
     partRenderings = [];
     updatePartHeaders();
     return;
   }
 
   // Visual mode: render each part into its own container
+  var oldAbcPlay2 = document.getElementById('ve-abc-play-btn');
+  if (oldAbcPlay2) oldAbcPlay2.parentNode.removeChild(oldAbcPlay2);
   var partLabels = 'ABCDEFGHIJ';
   previewEl.innerHTML = '';
   previewEl.removeAttribute('style');  // Clear responsive sizing ABCJS may have set
@@ -4321,6 +4616,18 @@ function veDoRenderAbc() {
       });
       partLabel.appendChild(removeBtn);
     }
+    var playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.className = 've-add-part-btn ve-part-play-btn';
+    playBtn.id = 've-play-btn-' + p;
+    playBtn.textContent = 'Play';
+    playBtn.setAttribute('data-part-idx', '' + p);
+    playBtn.addEventListener('click', function(ev) {
+      ev.stopPropagation();
+      veTogglePlayPart(parseInt(this.getAttribute('data-part-idx'), 10));
+    });
+    partLabel.appendChild(playBtn);
+
     setupPartLabelDrag(partLabel, p);
     partContainer.appendChild(partLabel);
 
@@ -5099,8 +5406,9 @@ function setupPartLabelDrag(partLabel, partIdx) {
   if (notationModel.parts.length <= 1) return;
 
   partLabel.addEventListener('pointerdown', function(e) {
-    // Skip if clicking × button
+    // Skip if clicking × button or play button (tempo slider uses stopPropagation)
     if (e.target.classList.contains('ve-part-label-remove')) return;
+    if (e.target.classList.contains('ve-part-play-btn')) return;
     if (notationModel.parts.length <= 1) return;
     partDragState.dragging = false;
     partDragState.fromIdx = partIdx;
@@ -6784,6 +7092,404 @@ function recCancelDiscard() {
 }
 </script>""" % kMaxRecordingSize
 
+def _ai_analyze_overlay():
+  """Return the AI analysis modal overlay HTML."""
+  return """<div id="ai-overlay" style="display:none">
+<div id="ai-popup">
+<button id="ai-close" onclick="aiClose()">&times;</button>
+<h2>AI Analysis</h2>
+
+<div id="ai-progress">
+<div style="text-align:center; margin:30px 0">
+<div class="ai-spinner"></div>
+<div style="margin-top:16px; color:#555">Analyzing recording... this may take 1-2 minutes</div>
+</div>
+</div>
+
+<div id="ai-results" style="display:none">
+<div id="ai-confidence" style="margin-bottom:12px; font-size:13px; color:#666"></div>
+<div id="ai-fields"></div>
+<div id="ai-notes-text" style="margin-top:10px; font-size:13px; color:#666; font-style:italic"></div>
+<div style="margin-top:16px">
+<button type="button" class="rec-btn rec-btn-primary" onclick="aiAccept()">Fill Selected Fields</button>
+<button type="button" class="rec-btn" onclick="aiClose()">Cancel</button>
+</div>
+</div>
+
+<div id="ai-error" style="display:none">
+<div style="color:#c33; margin:20px 0" id="ai-error-msg"></div>
+<button type="button" class="rec-btn" onclick="aiClose()">Close</button>
+</div>
+
+</div>
+</div>
+<style>
+#ai-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5); z-index: 10000;
+  display: flex; align-items: center; justify-content: center;
+}
+#ai-popup {
+  background: #fff; border-radius: 8px; padding: 24px;
+  max-width: 550px; width: 90%; max-height: 80vh; overflow-y: auto;
+  position: relative; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+#ai-close {
+  position: absolute; top: 8px; right: 12px; font-size: 24px;
+  background: none; border: none; cursor: pointer; color: #666;
+}
+#ai-close:hover { color: #000; }
+.ai-spinner {
+  display: inline-block; width: 32px; height: 32px;
+  border: 3px solid #ddd; border-top-color: #3a6a3a;
+  border-radius: 50%; animation: ai-spin 0.8s linear infinite;
+}
+@keyframes ai-spin { to { transform: rotate(360deg); } }
+.ai-field-row {
+  padding: 6px 0; border-bottom: 1px solid #eee;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.ai-field-row label { display: flex; align-items: flex-start; gap: 8px; width: 100%; cursor: pointer; }
+.ai-field-label { font-weight: bold; min-width: 60px; color: #333; }
+.ai-field-value { color: #555; font-family: monospace; font-size: 13px; word-break: break-all; }
+</style>"""
+
+
+def _build_ai_analyze_js():
+  """Return the AI analysis JavaScript."""
+  return """<script>
+var aiResult = null;
+
+function aiShowOverlay() {
+  document.getElementById('ai-overlay').style.display = 'flex';
+  document.getElementById('ai-progress').style.display = 'block';
+  document.getElementById('ai-results').style.display = 'none';
+  document.getElementById('ai-error').style.display = 'none';
+  aiRunAnalysis();
+}
+
+function aiClose() {
+  document.getElementById('ai-overlay').style.display = 'none';
+}
+
+function aiRunAnalysis() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/ajax/analyze');
+  xhr.timeout = 300000;
+  xhr.onload = function() {
+    try {
+      var resp = JSON.parse(xhr.responseText);
+      if (resp.ok) {
+        aiResult = resp.result;
+        aiShowResults(resp.result);
+      } else {
+        aiShowError(resp.error || 'Analysis failed');
+      }
+    } catch(e) {
+      aiShowError('Invalid response from server');
+    }
+  };
+  xhr.onerror = function() { aiShowError('Network error'); };
+  xhr.ontimeout = function() { aiShowError('Analysis timed out (5 min limit)'); };
+  var fd = new FormData();
+  fd.append('tune', recGetTuneName());
+  xhr.send(fd);
+}
+
+function aiShowError(msg) {
+  document.getElementById('ai-progress').style.display = 'none';
+  document.getElementById('ai-error').style.display = 'block';
+  document.getElementById('ai-error-msg').textContent = msg;
+}
+
+function aiShowResults(result) {
+  document.getElementById('ai-progress').style.display = 'none';
+  document.getElementById('ai-results').style.display = 'block';
+
+  // Confidence
+  var confEl = document.getElementById('ai-confidence');
+  if (result.confidence) {
+    confEl.textContent = 'Confidence: ' + result.confidence;
+  }
+
+  // Build field rows with checkboxes
+  var html = '';
+
+  // Key
+  if (result.key) {
+    html += '<div class="ai-field-row"><label>'
+      + '<input type="checkbox" checked data-field="key" />'
+      + '<span class="ai-field-label">Key:</span>'
+      + '<span class="ai-field-value">' + aiEsc(result.key) + '</span>'
+      + '</label></div>';
+  }
+
+  // Type
+  if (result.tune_type) {
+    html += '<div class="ai-field-row"><label>'
+      + '<input type="checkbox" checked data-field="type" />'
+      + '<span class="ai-field-label">Type:</span>'
+      + '<span class="ai-field-value">' + aiEsc(result.tune_type) + '</span>'
+      + '</label></div>';
+  }
+
+  // Meter
+  if (result.time_signature) {
+    html += '<div class="ai-field-row"><label>'
+      + '<input type="checkbox" checked data-field="meter" />'
+      + '<span class="ai-field-label">Meter:</span>'
+      + '<span class="ai-field-value">' + aiEsc(result.time_signature) + '</span>'
+      + '</label></div>';
+  }
+
+  // Unit
+  if (result.unit_note_length) {
+    html += '<div class="ai-field-row"><label>'
+      + '<input type="checkbox" checked data-field="unit" />'
+      + '<span class="ai-field-label">Unit:</span>'
+      + '<span class="ai-field-value">' + aiEsc(result.unit_note_length) + '</span>'
+      + '</label></div>';
+  }
+
+  // Notes (melody)
+  if (result.parts && result.parts.length > 0) {
+    var notesPreview = '';
+    for (var i = 0; i < result.parts.length; i++) {
+      var p = result.parts[i];
+      if (p.first_3_measures) {
+        notesPreview += p.name + ': ' + p.first_3_measures + '\\n';
+      }
+    }
+    if (notesPreview) {
+      html += '<div class="ai-field-row"><label>'
+        + '<input type="checkbox" checked data-field="notes" />'
+        + '<span class="ai-field-label">Notes:</span>'
+        + '<span class="ai-field-value">' + aiEsc(notesPreview).replace(/\\n/g, '<br>') + '</span>'
+        + '</label></div>';
+    }
+
+    // Chords
+    var chordsPreview = '';
+    for (var i = 0; i < result.parts.length; i++) {
+      var p = result.parts[i];
+      if (p.chords) {
+        chordsPreview += p.name + ': ' + p.chords + '\\n';
+      }
+    }
+    if (chordsPreview) {
+      html += '<div class="ai-field-row"><label>'
+        + '<input type="checkbox" checked data-field="chords" />'
+        + '<span class="ai-field-label">Chords:</span>'
+        + '<span class="ai-field-value">' + aiEsc(chordsPreview).replace(/\\n/g, '<br>') + '</span>'
+        + '</label></div>';
+    }
+  }
+
+  document.getElementById('ai-fields').innerHTML = html;
+
+  // Notes from Claude
+  var notesEl = document.getElementById('ai-notes-text');
+  if (result.notes) {
+    notesEl.textContent = result.notes;
+  } else {
+    notesEl.textContent = '';
+  }
+}
+
+function aiEsc(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function aiAccept() {
+  if (!aiResult) return;
+  var checks = document.querySelectorAll('#ai-fields input[type="checkbox"]:checked');
+  var fields = {};
+  for (var i = 0; i < checks.length; i++) {
+    fields[checks[i].getAttribute('data-field')] = true;
+  }
+
+  // Key
+  if (fields.key && aiResult.key) {
+    aiFillKey(aiResult.key);
+  }
+
+  // Type
+  if (fields.type && aiResult.tune_type) {
+    aiFillType(aiResult.tune_type);
+  }
+
+  // Meter
+  if (fields.meter && aiResult.time_signature) {
+    var meterSel = document.getElementById('field-meter');
+    if (meterSel) {
+      meterSel.value = aiResult.time_signature;
+    }
+  }
+
+  // Unit
+  if (fields.unit && aiResult.unit_note_length) {
+    var unitField = document.querySelector('select[name="unit"]');
+    if (unitField) {
+      unitField.value = aiResult.unit_note_length;
+    }
+  }
+
+  // Notes (ABC melody)
+  if (fields.notes && aiResult.parts) {
+    aiFillNotes(aiResult.parts);
+  }
+
+  // Chords
+  if (fields.chords && aiResult.parts) {
+    aiFillChords(aiResult.parts);
+  }
+
+  formChanged = true;
+  aiClose();
+
+  // Refresh previews
+  if (typeof renderAbcPreview === 'function') renderAbcPreview();
+  if (typeof updateChordPreview === 'function') updateChordPreview();
+}
+
+function aiFillKey(keyStr) {
+  // Parse AI key string: "D" -> letter=D, mode=""
+  // "Em" -> letter=E, mode=m; "Dmix" -> letter=D, mode=mix
+  // "G/D" -> multi-key (handle first key only for simplicity)
+  var keys = keyStr.split('/');
+  var parts = [];
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i].trim();
+    var letter = '', mode = '';
+    if (k.length === 0) continue;
+    if (k.endsWith('mix')) {
+      letter = k.slice(0, -3);
+      mode = 'mix';
+    } else if (k.endsWith('m') && k.length > 1) {
+      letter = k.slice(0, -1);
+      mode = 'm';
+    } else {
+      letter = k;
+      mode = '';
+    }
+    // Normalize letter to uppercase single char
+    letter = letter.charAt(0).toUpperCase();
+    parts.push([letter, mode]);
+  }
+  if (parts.length === 0) return;
+
+  // Build key string for hidden field (e.g. "D", "Em", "D/G")
+  var keyVal = parts.map(function(p) { return p[0] + p[1]; }).join('/');
+  document.getElementById('field-key').value = keyVal;
+
+  // Update display label
+  var displayParts = parts.map(function(p) {
+    if (p[1] === 'm') return p[0] + ' Minor';
+    if (p[1] === 'mix') return p[0] + ' Modal';
+    return p[0] + ' Major';
+  });
+  document.getElementById('key-display-label').textContent = displayParts.join(' / ');
+
+  // Update initialKeyParts and rebuild key editor rows
+  initialKeyParts = parts;
+  var container = document.getElementById('key-rows-container');
+  if (container) {
+    container.innerHTML = '';
+    for (var i = 0; i < parts.length; i++) {
+      container.innerHTML += keyRowHtml(i, parts[i][0], parts[i][1]);
+    }
+  }
+}
+
+function aiFillType(tuneType) {
+  // Uncheck all type checkboxes, then check the matching one
+  var allChecks = document.querySelectorAll('#type-menu-dropdown input[type="checkbox"]');
+  for (var i = 0; i < allChecks.length; i++) {
+    allChecks[i].checked = false;
+  }
+  var target = document.querySelector('input[name="klass_' + tuneType + '"]');
+  if (target) {
+    target.checked = true;
+  }
+  if (typeof updateTypeLabel === 'function') updateTypeLabel();
+}
+
+function aiFillNotes(parts) {
+  // Build ABC text from AI parts
+  var lines = [];
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i];
+    if (p.first_3_measures) {
+      lines.push(p.name + ':' + p.first_3_measures);
+    }
+  }
+  var textarea = document.getElementById('raw-notes-textarea');
+  if (textarea) {
+    textarea.value = lines.join('\\n');
+    // Switch to ABC text mode so the textarea value is shown directly
+    // without going through parseAbcToModel/modelToAbc round-trip
+    if (typeof toggleEditorMode === 'function') {
+      toggleEditorMode('abc');
+    }
+  }
+}
+
+function aiFillChords(parts) {
+  var container = document.getElementById('chord-parts-container');
+  if (!container) return;
+
+  // Remove all existing chord parts
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+  numParts = 0;
+
+  // Add fresh parts and fill them
+  for (var pi = 0; pi < parts.length; pi++) {
+    addPart();
+
+    var chordStr = parts[pi].chords || '';
+    if (!chordStr) continue;
+
+    // Parse chord string: "|: G | Am | D | G | C | Am | D | G :|"
+    var hasRepeat = chordStr.indexOf('|:') >= 0 || chordStr.indexOf(':|') >= 0;
+    var clean = chordStr.replace(/\\|:/g, '|').replace(/:\\|/g, '|');
+    var bars = [];
+    var cells = clean.split('|');
+    for (var ci = 0; ci < cells.length; ci++) {
+      var cell = cells[ci].trim();
+      if (cell) bars.push(cell);
+    }
+
+    // Set repeat checkbox
+    var repeatCb = document.querySelector('input[name="repeat_' + pi + '"]');
+    if (repeatCb) repeatCb.checked = hasRepeat;
+
+    // Fill chord cells: map bars to cells left-to-right, top-to-bottom
+    var barIdx = 0;
+    for (var r = 0; barIdx < bars.length; r++) {
+      for (var c = 0; barIdx < bars.length; c++) {
+        var input = document.querySelector('input[name="chord_' + pi + '_' + r + '_' + c + '"]');
+        if (!input) break;
+        input.value = bars[barIdx];
+        barIdx++;
+      }
+      if (!document.querySelector('input[name="chord_' + pi + '_' + r + '_0"]')) break;
+    }
+  }
+}
+
+// Close overlay on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('ai-overlay').style.display !== 'none') {
+    aiClose();
+  }
+});
+</script>"""
+
+
 def _build_tune_form(obj, tune, heading, save_action, cancel_url):
   """Build the full tune editor form, shared by edit and new tune pages."""
 
@@ -6873,11 +7579,14 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
   else:
     speaker_html = '<span id="rec-speaker-link"><img id="rec-speaker-icon" class="rec-speaker-icon" src="%s"></span>' % speaker_icon
 
+  ai_link = ''
+  if has_recording and HasCapability(kCapEditTunes):
+    ai_link = '<span class="rec-upload-link" onclick="aiShowOverlay()" style="margin-left:12px">AI Analyze</span>'
   parts.append('<div class="rec-heading-flex">'
                '<h2>%s</h2>'
                '<span class="rec-upload-link" onclick="recShowOverlay()">Upload Recording</span>'
-               '%s'
-               '</div>' % (heading, speaker_html))
+               '%s%s'
+               '</div>' % (heading, ai_link, speaker_html))
   parts.append('<script>var recTuneName=%s;var recIsNewTune=%s;var recHasRecording=%s;</script>'
                % (json.dumps(tune if not is_new_tune else ''),
                   'true' if is_new_tune else 'false',
@@ -6956,6 +7665,10 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
     # Chords
     CDiv('Chords:', hclass='section-header'),
     CDiv([
+      '<button type="button" class="ve-add-part-btn" id="chord-play-btn" '
+      'onclick="chordTogglePlay()" style="margin-top:0;white-space:nowrap">Play</button>',
+    ], style='text-align:right;padding-right:10px'),
+    CDiv([
       # Left: chord editor
       CDiv([
         CDiv([
@@ -6991,6 +7704,11 @@ def _build_tune_form(obj, tune, heading, save_action, cancel_url):
   # Recording upload overlay and JS
   parts.append(_recording_upload_overlay())
   parts.append(_build_recording_upload_js())
+
+  # AI analysis overlay and JS (when recording exists and user is editor)
+  if has_recording and HasCapability(kCapEditTunes):
+    parts.append(_ai_analyze_overlay())
+    parts.append(_build_ai_analyze_js())
 
   return PageWrapper(parts, 'index', show_eye_candy=False)
 
@@ -7221,7 +7939,7 @@ def _build_notes_section(obj, tune, meter_options, unit_options):
       CText('Unit:', bold=1, hclass='edit-label'),
       CSelect(unit_options, current=obj.unit or '1/8', name='unit', id='field-unit'),
     ], hclass='inline-fields'),
-  ], hclass='field-row', style='margin-bottom:8px')
+  ], hclass='field-row', style='margin-top:4px;margin-bottom:5px')
 
   # ABC textarea (hidden in visual mode, shown in abc mode)
   textarea_pane = CDiv([
@@ -8763,15 +9481,20 @@ min-width:300px;
 font-family:monospace;
 font-size:95%;
 }
+#ve-textarea-pane {
+margin-top:25px;
+}
 .edit-form .notes-preview-pane {
 flex:1;
 min-width:300px;
 position:relative;
+margin-top:-15px;
 }
 .edit-form .chord-layout {
 display:flex;
 gap:10px;
 flex-wrap:wrap;
+margin-top:35px;
 }
 .edit-form .chord-layout > * {
 margin-bottom:10px;
@@ -8907,7 +9630,7 @@ margin-right:6px;
 
 /* Visual Editor - Mode Toggle */
 .edit-form .ve-mode-toggle {
-margin-bottom:8px;
+margin-bottom:0;
 display:flex;
 gap:0;
 }
@@ -8923,7 +9646,7 @@ font-weight:bold;
 .edit-form .ve-mode-btn:first-child {
 border-radius:3px 0 0 3px;
 }
-.edit-form .ve-mode-btn:last-child {
+.edit-form .ve-mode-btn + .ve-mode-btn {
 border-radius:0 3px 3px 0;
 border-left:none;
 }
@@ -8931,6 +9654,35 @@ border-left:none;
 background:#3a6a3a;
 color:white;
 border-color:#1a3a1a;
+}
+.ve-play-active {
+background:#c33 !important;
+color:white !important;
+border-color:#933 !important;
+}
+.ve-play-active:hover {
+background:#a22 !important;
+}
+.ve-tempo-slider-wrap {
+display:inline-flex;
+align-items:center;
+gap:4px;
+margin-right:6px;
+}
+.ve-tempo-slider-wrap input[type=range] {
+width:100px;
+margin:0;
+vertical-align:middle;
+cursor:pointer;
+user-select:auto;
+-webkit-user-select:auto;
+touch-action:auto;
+}
+.ve-tempo-slider-wrap #ve-tempo-label {
+font-size:11px;
+color:#666;
+min-width:52px;
+white-space:nowrap;
 }
 
 /* Visual Editor - Toolbar Palette */
@@ -9032,13 +9784,17 @@ background:#f0f4f0;
 border:1px solid #ddd;
 border-bottom:none;
 border-radius:3px 3px 0 0;
-display:inline-flex;
+display:flex;
 align-items:center;
 gap:4px;
 cursor:grab;
 user-select:none;
 -webkit-user-select:none;
 touch-action:none;
+}
+.ve-part-play-btn {
+margin-left:auto;
+margin-top:0;
 }
 .ve-part-label-remove {
 font-size:14px;
@@ -9067,6 +9823,10 @@ display:inline-block;
 }
 .ve-add-part-btn:hover {
 background:#d0e0d0;
+}
+#ve-abc-play-btn {
+margin-left:auto;
+margin-top:0;
 }
 .ve-part-render {
 border:1px solid #ddd;
@@ -10771,6 +11531,66 @@ def ajax_recording_undo():
 
   LogNotification('tune', 'Recording upload undone for "%s" by %s' % (tune_name, email))
   return json.dumps({'ok': True}), 200, {'Content-Type': 'application/json'}
+
+@app.route('/ajax/analyze', methods=['POST'])
+def ajax_analyze():
+  """Run AI analysis on a tune's recording."""
+  import subprocess
+
+  email = GetUserEmail()
+  if not email:
+    return json.dumps({'ok': False, 'error': 'Not logged in'}), 403, {'Content-Type': 'application/json'}
+
+  tune_name = request.form.get('tune', '').strip()
+  if not tune_name:
+    return json.dumps({'ok': False, 'error': 'No tune name'}), 400, {'Content-Type': 'application/json'}
+
+  # Auth check
+  if not HasCapability(kCapEditTunes):
+    return json.dumps({'ok': False, 'error': 'Permission denied'}), 403, {'Content-Type': 'application/json'}
+
+  # Verify recording exists
+  mp3_path = os.path.join(utils.kRecordingsDir, tune_name + '.mp3')
+  if not os.path.isfile(mp3_path):
+    return json.dumps({'ok': False, 'error': 'No recording found'}), 404, {'Content-Type': 'application/json'}
+
+  # Verify ai_config.json exists
+  config_path = os.path.join(utils.kDataDir, 'ai_config.json')
+  if not os.path.isfile(config_path):
+    return json.dumps({'ok': False, 'error': 'AI analysis is not configured on this server'}), 500, {'Content-Type': 'application/json'}
+
+  # Verify ai_venv exists
+  ai_venv_python = os.path.join(utils.kBaseDir, 'ai_venv', 'bin', 'python3')
+  if not os.path.isfile(ai_venv_python):
+    return json.dumps({'ok': False, 'error': 'AI environment not installed'}), 500, {'Content-Type': 'application/json'}
+
+  # Run ai_runner.py as subprocess under ai_venv Python 3.
+  # On macOS, Flask runs under x86_64 Python 2.7 and child processes inherit
+  # that architecture. The ai_venv packages are arm64, so we force arm64.
+  ai_runner = os.path.join(utils.kBaseDir, 'src', 'ai_runner.py')
+  cmd = [ai_venv_python, ai_runner, tune_name, mp3_path]
+  if sys.platform == 'darwin':
+    cmd = ['/usr/bin/arch', '-arm64'] + cmd
+  proc = subprocess.Popen(
+    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+  stdout, stderr = proc.communicate()
+
+  if proc.returncode != 0:
+    try:
+      err = json.loads(stdout)
+      msg = err.get('error', 'Analysis failed')
+    except (ValueError, KeyError):
+      msg = stderr.strip()[-200:] if stderr.strip() else 'Analysis failed'
+    sys.stderr.write('AI analysis error for %s: %s\n' % (tune_name, msg))
+    return json.dumps({'ok': False, 'error': msg}), 500, {'Content-Type': 'application/json'}
+
+  try:
+    result = json.loads(stdout)
+  except ValueError:
+    return json.dumps({'ok': False, 'error': 'Invalid response from analysis'}), 500, {'Content-Type': 'application/json'}
+
+  LogNotification('tune', 'AI analysis run for "%s" by %s' % (tune_name, email))
+  return json.dumps({'ok': True, 'result': result}), 200, {'Content-Type': 'application/json'}
 
 # -- Profile page --
 
