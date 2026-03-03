@@ -10155,6 +10155,23 @@ width:100%;
 margin-top:30px;
 margin-bottom:0;
 }
+@media only screen and (max-width: 784px) {
+.view-notes-wrap {
+display:block;
+width:100%;
+}
+.view-chords-wrap {
+float:none;
+width:100%;
+margin-top:5px;
+}
+.view-chords-wrap table.chords {
+margin-top:15px;
+}
+.view-chords-wrap div.chord-group {
+margin-top:15px;
+}
+}
 
 /* Visual Editor - Toolbar Palette */
 .edit-form .ve-toolbar {
