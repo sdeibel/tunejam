@@ -46,6 +46,7 @@ DATA_DATA_DIRS = [
   'config/profiles',
   'config/notes',
   'config/email-jobs',
+  'ai_cache',
 ]
 
 def fix(log=True, dry_run=False):
