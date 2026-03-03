@@ -198,7 +198,7 @@ class CTune:
             elif part == 1:
                 self.raw_notes += line
                 spec = '"%s part"' % kPartMap[notes_part]
-                if self.key.find('/') > 0:
+                if self.key and self.key.find('/') > 0:
                     keys = self.key.split('/')
                     curr_key = keys[notes_part]
                     self.notes += 'K:%s\n' % curr_key
@@ -474,8 +474,9 @@ class CTune:
         recording, mimetype, filename = self.GetRecording()
         hclass, size = self.__GetIconInfo(index, pos)
         if recording is not None:
+            mtime = int(os.path.getmtime(filename))
             play = CImage(src='/image/speaker_louder_32.png', hclass=hclass,
-                          href='/recording/%s' % self.name, width=size, height=size)
+                          href='/recording/%s?v=%d' % (self.name, mtime), width=size, height=size)
         elif not index:
             play = CImage(src='/image/speaker_louder_disabled_32.png', hclass=hclass,
                           width=size, height=size)
@@ -930,6 +931,8 @@ M:%(meter)s
             
     def _FullKey(self):
         key = self.key
+        if not key:
+            return ''
         if key.lower().find('modal') > 0:
             pass
         elif key.endswith('m'):
