@@ -3101,7 +3101,7 @@ function addPart() {
 
   var html = '<div class="part-header">';
   html += '<b>Part ' + label + '</b>';
-  html += ' &nbsp; Repeat: <input type="checkbox" name="repeat_' + p + '" value="1" checked />';
+  html += ' &nbsp; Repeat: &nbsp;<input type="checkbox" name="repeat_' + p + '" value="1" checked />';
   html += ' <button type="button" class="part-remove-btn" onclick="removePart(this)" title="Remove part">X</button>';
   html += '</div>';
   html += '<table class="edit-chords" style="margin-bottom:2px">';
@@ -8418,7 +8418,7 @@ def _build_chord_tables(chord_parts, num_columns):
     part_content = [
       CDiv([
         CText('Part %s' % label, bold=1),
-        ' &nbsp; Repeat: ',
+        ' &nbsp; Repeat: &nbsp;',
         CInput(**repeat_attrs),
         ' <button type="button" class="part-remove-btn" onclick="removePart(this)" title="Remove part">X</button>',
       ], hclass='part-header'),
@@ -9986,8 +9986,7 @@ font-weight:bold;
 padding:4px 6px;
 margin-top:8px;
 background:#e8f0e8;
-width:50%;
-display:flex;
+display:inline-flex;
 align-items:center;
 }
 .edit-form .part-header b {
@@ -10005,7 +10004,7 @@ font-size:80%;
 padding:1px 5px;
 cursor:pointer;
 font-weight:bold;
-margin-left:auto;
+margin-left:8px;
 }
 .edit-form .part-remove-btn:hover {
 background:#aa1111;
