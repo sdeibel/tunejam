@@ -2438,8 +2438,341 @@ def tune(tune):
     return redirect('/index', code=303)
   can_edit = CanEditTune(obj)
   can_delete = CanDeleteTune(obj)[0]
-  parts.extend(CreateTuneHTML(tune, metadata=True, can_edit=can_edit, can_delete=can_delete))
+  parts.extend(CreateTuneHTML(tune, metadata=True, can_edit=can_edit, can_delete=can_delete, show_play=True))
+  if obj.raw_notes or obj.chords:
+    parts.append(_build_view_playback_js(obj.key, obj.meter, obj.unit, obj.raw_notes, obj.chords))
   return PageWrapper(parts, 'index', show_eye_candy=False)
+
+def _build_view_playback_js(key, meter, unit, raw_notes, chords_text):
+  """Build self-contained playback JavaScript for the tune view page."""
+  import json
+  js_key = json.dumps(key or 'C')
+  js_meter = json.dumps(meter or '4/4')
+  js_unit = json.dumps(unit or '1/8')
+  js_raw_notes = json.dumps(raw_notes.rstrip('\n') if raw_notes else '')
+  js_chords = json.dumps(chords_text.rstrip('\n') if chords_text else '')
+
+  return '<script>\n' + \
+    'var vpKey = ' + js_key + ';\n' + \
+    'var vpMeter = ' + js_meter + ';\n' + \
+    'var vpUnit = ' + js_unit + ';\n' + \
+    'var vpRawNotes = ' + js_raw_notes + ';\n' + \
+    'var vpChordsText = ' + js_chords + ';\n' + \
+    r'''
+// --- View page playback ---
+var veSynth = null;
+var vePlayingPart = -1;
+var vePlayDuration = 0;
+var vePlayStartTime = 0;
+var vePlayTimer = null;
+var vePlayTempo = parseInt(localStorage.getItem('vePlayTempo'), 10) || 180;
+var veTempoHideTimer = null;
+var vePlayingAbc = null;
+var vePlayingBtnId = null;
+var veTempoRestartTimer = null;
+
+function veCreateTempoSlider() {
+  var wrap = document.createElement('span');
+  wrap.id = 've-tempo-slider-wrap';
+  wrap.className = 've-tempo-slider-wrap';
+  var slider = document.createElement('input');
+  slider.type = 'range';
+  slider.id = 've-tempo-slider';
+  slider.min = '40';
+  slider.max = '240';
+  slider.value = String(vePlayTempo);
+  var label = document.createElement('span');
+  label.id = 've-tempo-label';
+  label.textContent = vePlayTempo + ' BPM';
+  wrap.appendChild(slider);
+  wrap.appendChild(label);
+  slider.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+  slider.addEventListener('pointermove', function(e) { e.stopPropagation(); });
+  slider.addEventListener('input', function() {
+    vePlayTempo = parseInt(this.value, 10);
+    try { localStorage.setItem('vePlayTempo', vePlayTempo); } catch(e) {}
+    label.textContent = vePlayTempo + ' BPM';
+    if (vePlayingAbc && vePlayingBtnId) {
+      veStopPlayImmediate();
+      if (veTempoRestartTimer) clearTimeout(veTempoRestartTimer);
+      var abc = vePlayingAbc;
+      var btnId = vePlayingBtnId;
+      veTempoRestartTimer = setTimeout(function() {
+        veTempoRestartTimer = null;
+        if (!vePlayingAbc) return;
+        vePlayingPart = (btnId === 'view-chords-play-btn') ? 998 : 999;
+        vePlayAbc(abc, btnId);
+      }, 300);
+    }
+  });
+  return wrap;
+}
+
+var veTempoSliderBtn = null;
+
+function veShowTempoSlider(btnId) {
+  if (veTempoHideTimer) { clearTimeout(veTempoHideTimer); veTempoHideTimer = null; }
+  var wrap = document.getElementById('ve-tempo-slider-wrap');
+  if (!wrap) {
+    wrap = veCreateTempoSlider();
+  }
+  if (veTempoSliderBtn && veTempoSliderBtn !== document.getElementById(btnId)) {
+    veTempoSliderBtn.style.marginLeft = '';
+  }
+  var btn = document.getElementById(btnId);
+  if (btn && btn.parentNode) {
+    // Insert slider AFTER the button (left-justified layout)
+    btn.parentNode.insertBefore(wrap, btn.nextSibling);
+    wrap.style.marginLeft = '6px';
+  }
+  veTempoSliderBtn = btn;
+  wrap.style.display = 'inline-flex';
+  var sl = document.getElementById('ve-tempo-slider');
+  if (sl) sl.value = String(vePlayTempo);
+  var lb = document.getElementById('ve-tempo-label');
+  if (lb) lb.textContent = vePlayTempo + ' BPM';
+}
+
+function veHideTempoSlider() {
+  if (veTempoHideTimer) { clearTimeout(veTempoHideTimer); veTempoHideTimer = null; }
+  veTempoHideTimer = setTimeout(function() {
+    var wrap = document.getElementById('ve-tempo-slider-wrap');
+    if (wrap) wrap.style.display = 'none';
+    if (veTempoSliderBtn) {
+      veTempoSliderBtn.style.marginLeft = '';
+      veTempoSliderBtn = null;
+    }
+    veTempoHideTimer = null;
+  }, 5000);
+}
+
+function veGetAbcHeaders() {
+  return {key: vpKey, meter: vpMeter, unit: vpUnit};
+}
+
+function vePlayAbc(abc, btnId) {
+  if (typeof ABCJS === 'undefined' || !ABCJS.synth || !ABCJS.synth.CreateSynth) return;
+  vePlayingAbc = abc;
+  vePlayingBtnId = btnId;
+  var btn = document.getElementById(btnId);
+  if (btn) { btn.textContent = 'Stop'; btn.classList.add('ve-play-active'); }
+  veShowTempoSlider(btnId);
+
+  var h = veGetAbcHeaders();
+  var mParts = h.meter.split('/');
+  var mNum = parseInt(mParts[0], 10) || 4;
+  var mDen = parseInt(mParts[1], 10) || 4;
+  var isCompound = (mDen === 8 && mNum >= 6);
+  var qField;
+  if (isCompound) {
+    qField = 'Q:3/8=' + vePlayTempo;
+  } else {
+    qField = 'Q:1/4=' + vePlayTempo;
+  }
+  var musicalBeats = isCompound ? (mNum / 3) : mNum;
+  var playAbc = abc.replace('K:', qField + '\nK:');
+
+  var offscreen = document.createElement('div');
+  offscreen.style.display = 'none';
+  offscreen.id = 've-play-offscreen';
+  document.body.appendChild(offscreen);
+  var visualObj = ABCJS.renderAbc('ve-play-offscreen', playAbc, {});
+  if (!visualObj || !visualObj[0]) {
+    try { document.body.removeChild(offscreen); } catch(e) {}
+    veStopPlay();
+    return;
+  }
+
+  var vo = visualObj[0];
+  var initOpts = { visualObj: vo };
+  if (!isCompound && musicalBeats >= 3) {
+    var correctedMs = (60000 / vePlayTempo) * musicalBeats / 1.5;
+    initOpts.millisecondsPerMeasure = correctedMs;
+  }
+
+  veSynth = new ABCJS.synth.CreateSynth();
+  veSynth.init(initOpts)
+    .then(function() { return veSynth.prime(); })
+    .then(function(response) {
+      try { document.body.removeChild(offscreen); } catch(e) {}
+      vePlayDuration = (response && response.duration) ? response.duration : 0;
+      veSynth.start();
+      if (vePlayDuration > 0) {
+        vePlayTimer = setTimeout(function() { veStopPlay(); },
+          (vePlayDuration + 0.5) * 1000);
+      }
+    })
+    .catch(function(err) {
+      try { document.body.removeChild(offscreen); } catch(e) {}
+      veStopPlay();
+    });
+}
+
+function veStopPlayImmediate() {
+  if (vePlayTimer) { clearTimeout(vePlayTimer); vePlayTimer = null; }
+  if (veSynth) {
+    try { veSynth.stop(); } catch(e) {}
+    veSynth = null;
+  }
+}
+
+function veStopPlay() {
+  veHideTempoSlider();
+  if (veTempoRestartTimer) { clearTimeout(veTempoRestartTimer); veTempoRestartTimer = null; }
+  veStopPlayImmediate();
+  vePlayingAbc = null;
+  vePlayingBtnId = null;
+  vePlayingPart = -1;
+  var notesBtn = document.getElementById('view-notes-play-btn');
+  if (notesBtn) { notesBtn.textContent = 'Play'; notesBtn.classList.remove('ve-play-active'); }
+  var chordsBtn = document.getElementById('view-chords-play-btn');
+  if (chordsBtn) { chordsBtn.textContent = 'Play'; chordsBtn.classList.remove('ve-play-active'); }
+}
+
+function chordCellSplit(val) {
+  var chords = [];
+  var j = 0;
+  var len = val.length;
+  if (j < len && '123'.indexOf(val[j]) >= 0 && j + 1 < len && val[j+1] === ':') j += 2;
+  var inParens = false;
+  while (j < len) {
+    var c = val[j];
+    if (c === '(') { inParens = true; j++; continue; }
+    if (c === ')') { inParens = false; j++; continue; }
+    if (inParens) { j++; continue; }
+    if (c === '/') { j++; continue; }
+    if (c === '-' || c === '_') { j++; if (chords.length) chords.push(chords[chords.length - 1]); continue; }
+    if ('ABCDEFGH'.indexOf(c) >= 0) {
+      var start = j;
+      j++;
+      if (j < len && (val[j] === 'b' || val[j] === '#')) j++;
+      if (j + 2 < len && (val.substring(j,j+3)==='Dim' || val.substring(j,j+3)==='dim')) j+=3;
+      else if (j + 2 < len && (val.substring(j,j+3)==='sup' || val.substring(j,j+3)==='sus' || val.substring(j,j+3)==='Sus')) {
+        j+=3;
+        if (j < len && '0123456789'.indexOf(val[j]) >= 0) j++;
+      }
+      else if (j < len && val[j] === 'm') j++;
+      else if (j < len && val[j] === '+') j++;
+      if (j < len && '769'.indexOf(val[j]) >= 0) j++;
+      chords.push(val.substring(start, j));
+    } else {
+      j++;
+    }
+  }
+  return chords;
+}
+
+function viewPlayNotes() {
+  if (vePlayingPart === 999) {
+    veStopPlay();
+    return;
+  }
+  if (vePlayingPart >= 0) veStopPlay();
+  if (!vpRawNotes) return;
+  var h = veGetAbcHeaders();
+  var lines = vpRawNotes.split('\n');
+  var abc = 'X:1\nM:' + h.meter + '\nL:' + h.unit + '\nK:' + h.key + '\n';
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    if (!line.trim()) continue;
+    if (line.length > 1 && line[1] === ':') {
+      abc += line + '\n';
+    } else {
+      abc += 'M:' + h.meter + '\n' + line + '\n';
+    }
+  }
+  vePlayingPart = 999;
+  vePlayAbc(abc, 'view-notes-play-btn');
+}
+
+function viewPlayChords() {
+  if (vePlayingPart === 998) {
+    veStopPlay();
+    return;
+  }
+  if (vePlayingPart >= 0) veStopPlay();
+  if (!vpChordsText) return;
+  var h = veGetAbcHeaders();
+  var beats = 4;
+  if (h.meter === '3/4' || h.meter === '3/8') beats = 3;
+  else if (h.meter === '6/8') beats = 6;
+  else if (h.meter === '9/8') beats = 9;
+  else if (h.meter === '2/4' || h.meter === '2/2') beats = 2;
+  var mDen = parseInt(h.meter.split('/')[1], 10) || 4;
+  var isCompoundMeter = (mDen === 8 && beats >= 6);
+  var musicalBeatsPerBar = isCompoundMeter ? Math.floor(beats / 3) : beats;
+  var lUnitsPerBeat = isCompoundMeter ? 3 : 1;
+
+  // Parse chords text into parts (same logic as Python ParseChords)
+  // Filter to only lines containing | (skip header/footer text)
+  var allLines = vpChordsText.split('\n');
+  var rawLines = [];
+  for (var fi = 0; fi < allLines.length; fi++) {
+    if (allLines[fi].indexOf('|') >= 0) rawLines.push(allLines[fi]);
+  }
+  var parts = [];
+  var currPart = [];
+  for (var li = 0; li < rawLines.length; li++) {
+    var measures = rawLines[li].split(' ');
+    for (var mi = 0; mi < measures.length; mi++) {
+      var m = measures[mi].replace(/^\s+|\s+$/g, '');
+      if (mi === 0 && (m === '|' || m === '|:') && currPart.length) {
+        parts.push(currPart);
+        currPart = [];
+      }
+      if (m && m !== '|') {
+        currPart.push(m);
+      }
+    }
+  }
+  if (currPart.length) parts.push(currPart);
+  if (!parts.length) return;
+
+  var abcBody = '';
+  for (var p = 0; p < parts.length; p++) {
+    var part = parts[p];
+    var partLine = '';
+    var hasRepeat = false;
+    var mi2 = 0;
+    // Check for repeat markers
+    if (part[0] === '|:') { hasRepeat = true; partLine += '|:'; mi2 = 1; }
+    var endsRepeat = false;
+    var partEnd = part.length;
+    if (part[part.length - 1] === ':|') { endsRepeat = true; partEnd = part.length - 1; }
+    for (var ci = mi2; ci < partEnd; ci++) {
+      var cell = part[ci];
+      if (!cell || cell === '-') {
+        partLine += 'z' + beats + '|';
+      } else {
+        var chords = chordCellSplit(cell);
+        if (chords.length <= 1) {
+          var cn = chords[0] || cell;
+          for (var bi = 0; bi < musicalBeatsPerBar; bi++) {
+            partLine += '"' + cn + '"z' + lUnitsPerBeat;
+          }
+          partLine += '|';
+        } else {
+          var base = Math.floor(beats / chords.length);
+          var extra = beats - base * chords.length;
+          for (var xi = 0; xi < chords.length; xi++) {
+            var b = base + (xi < extra ? 1 : 0);
+            partLine += '"' + chords[xi] + '"z' + b;
+          }
+          partLine += '|';
+        }
+      }
+    }
+    if (endsRepeat || hasRepeat) {
+      if (partLine.slice(-1) === '|') partLine = partLine.slice(0, -1) + ':|';
+    }
+    abcBody += partLine + '\n';
+  }
+  if (!abcBody.replace(/\s/g, '')) return;
+  var abc = 'X:1\nM:' + h.meter + '\nL:1/' + mDen + '\nK:' + h.key + '\n' + abcBody;
+  vePlayingPart = 998;
+  vePlayAbc(abc, 'view-chords-play-btn');
+}
+''' + '</script>\n'
 
 def _build_editor_js(tune, chord_parts, url_count=1):
   """Build the JavaScript for the tune editor page."""
@@ -9023,6 +9356,15 @@ font-size:4vw !important;
 width:auto !important;
 min-width:0 !important;
 }
+.view-notes-wrap {
+width:100%;
+}
+.view-chords-wrap {
+float:left;
+width:calc(100% - 5px);
+margin-top:5px;
+margin-bottom:0;
+}
 }
 img.eye-candy {
 height:auto;
@@ -9765,6 +10107,53 @@ touch-action:auto;
 font-size:11px;
 color:#666;
 white-space:nowrap;
+}
+.view-play-row {
+margin-bottom:2px;
+}
+.view-play-btn {
+font-size:12px;
+padding:3px 10px;
+border:1px solid #3a6a3a;
+border-radius:3px;
+background:#e8f0e8;
+color:#3a6a3a;
+cursor:pointer;
+font-weight:bold;
+display:inline-block;
+}
+.view-play-btn:hover {
+background:#d0e0d0;
+}
+.view-notes-wrap {
+display:inline-block;
+width:48%;
+margin-top:20px;
+vertical-align:top;
+}
+.view-notes-wrap img.notes {
+width:100%;
+margin-top:0;
+left:0;
+}
+.view-chords-wrap {
+float:right;
+width:48%;
+margin-top:20px;
+margin-bottom:15px;
+}
+.view-chords-wrap table.chords {
+float:none;
+width:100%;
+margin-top:30px;
+margin-bottom:0;
+margin-left:0;
+}
+.view-chords-wrap div.chord-group {
+float:none;
+width:100%;
+margin-top:30px;
+margin-bottom:0;
 }
 
 /* Visual Editor - Toolbar Palette */
@@ -14696,7 +15085,7 @@ def _RenderSetTuneNotesSection(set_spec, tune_name, event_sid, event_obj):
   parts.append('</div>')
   return '\n'.join(parts)
 
-def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_delete=False, suppress_add_note=False, set_tune_notes=''):
+def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_delete=False, suppress_add_note=False, set_tune_notes='', show_play=False):
 
   obj = utils.CTune(name)
   try:
@@ -14734,11 +15123,25 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
       chords = ''
     else:
       if has_notes:
-        notes = '<img src="/png/%s"/ class="notes">' % name
+        notes_img = '<img src="/png/%s"/ class="notes">' % name
+        if show_play:
+          notes = ('<div class="view-notes-wrap">'
+                   '<div class="view-play-row"><button type="button" class="view-play-btn" '
+                   'id="view-notes-play-btn" onclick="viewPlayNotes()">Play</button></div>'
+                   + notes_img + '</div>')
+        else:
+          notes = notes_img
       else:
         notes = ''
       if obj.chords:
-        chords = ChordsToHTML(obj.chords)
+        chords_html = ChordsToHTML(obj.chords)
+        if show_play:
+          chords = ('<div class="view-chords-wrap">'
+                    '<div class="view-play-row"><button type="button" class="view-play-btn" '
+                    'id="view-chords-play-btn" onclick="viewPlayChords()">Play</button></div>'
+                    + str(chords_html) + '</div>')
+        else:
+          chords = chords_html
       else:
         chords = ChordsToHTML('Chords not yet available')
   elif pagetype == 'notes':
