@@ -9460,6 +9460,7 @@ var svSourceNode = null;     // Current AudioBufferSourceNode
 var svPlayStartTime = 0;     // Date.now() when current segment started
 var svPlayStartOffset = 0;   // Offset in seconds when current segment started
 var svPlayGen = 0;           // Generation counter to ignore stale async callbacks
+var svUserTempo = svPlayTempo; // User's preferred tempo, restored after playback
 
 function svCreateTempoSlider() {
   var wrap = document.createElement('span');
@@ -9481,6 +9482,7 @@ function svCreateTempoSlider() {
   slider.addEventListener('pointermove', function(e) { e.stopPropagation(); });
   slider.addEventListener('input', function() {
     svPlayTempo = parseInt(this.value, 10);
+    svUserTempo = svPlayTempo;
     try { localStorage.setItem('vePlayTempo', svPlayTempo); } catch(e) {}
     label.textContent = svPlayTempo + ' BPM';
     if (svPlayingAbc && svPlayingBtnId) {
@@ -9534,6 +9536,25 @@ function svHideTempoSlider() {
   }, 5000);
 }
 
+function svParseAbcTempo(abc, isCompound) {
+  // Parse the first Q: field from ABC and convert to slider BPM
+  var qMatch = abc.match(/Q:\s*(?:(\d+)\/(\d+)\s*=\s*)?(\d+)/);
+  if (!qMatch) return 0;
+  var tempo = parseInt(qMatch[3], 10);
+  if (qMatch[1] && qMatch[2]) {
+    var num = parseInt(qMatch[1], 10);
+    var den = parseInt(qMatch[2], 10);
+    if (isCompound) {
+      // Convert to dotted-quarter BPM: tempo * (num/den) / (3/8)
+      tempo = Math.round(tempo * 8 * num / (3 * den));
+    } else {
+      // Convert to quarter-note BPM: tempo * (num/den) / (1/4)
+      tempo = Math.round(tempo * 4 * num / den);
+    }
+  }
+  return tempo;
+}
+
 function svPlayAbc(abc, btnId, resumeFraction) {
   if (typeof ABCJS === 'undefined' || !ABCJS.synth || !ABCJS.synth.CreateSynth) return;
   var gen = ++svPlayGen;
@@ -9541,13 +9562,22 @@ function svPlayAbc(abc, btnId, resumeFraction) {
   svPlayingBtnId = btnId;
   var btn = document.getElementById(btnId);
   if (btn) { btn.textContent = 'Stop'; btn.classList.add('ve-play-active'); }
-  svShowTempoSlider(btnId);
 
   // Extract meter from ABC to determine compound vs simple
   var mMatch = abc.match(/M:\s*(\d+)\/(\d+)/);
   var mNum = mMatch ? parseInt(mMatch[1], 10) : 4;
   var mDen = mMatch ? parseInt(mMatch[2], 10) : 4;
   var isCompound = (mDen === 8 && mNum >= 6);
+
+  // On initial play, preset slider to the ABC's own tempo if present
+  if (resumeFraction == null) {
+    var abcTempo = svParseAbcTempo(abc, isCompound);
+    if (abcTempo >= 40 && abcTempo <= 240) {
+      svPlayTempo = abcTempo;
+    }
+  }
+  svShowTempoSlider(btnId);
+
   var qField;
   if (isCompound) {
     qField = 'Q:3/8=' + svPlayTempo;
@@ -9649,6 +9679,12 @@ function svStopPlay() {
   svHideTempoSlider();
   if (svTempoRestartTimer) { clearTimeout(svTempoRestartTimer); svTempoRestartTimer = null; }
   svStopPlayImmediate();
+  // Restore user's preferred tempo and update slider display
+  svPlayTempo = svUserTempo;
+  var sl = document.getElementById('sv-tempo-slider');
+  if (sl) sl.value = String(svPlayTempo);
+  var lb = document.getElementById('sv-tempo-label');
+  if (lb) lb.textContent = svPlayTempo + ' BPM';
   var btnId = svPlayingBtnId;
   svPlayingAbc = null;
   svPlayingBtnId = null;
