@@ -1,7 +1,6 @@
 * Website Phase Three
   ** Coding Tasks Near Term
     ** Try to improve notes/chord generation from AI
-    ** Drag and drop notes on staff in visual editing mode
     ** A way to also write out full tune draft from recording + edit full tune notes
   ** Content
     ** Complete the partial listings and add missing recordings and sheet music
