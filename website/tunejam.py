@@ -151,8 +151,16 @@ def _check_digest():
       except:
         pass
 
+@app.after_request
+def _set_cache_headers(response):
+  """HTML pages: revalidate on every visit so cache-bust hashes stay current.
+  Static assets (CSS, JS, images, recordings) set their own Cache-Control."""
+  if 'Cache-Control' not in response.headers:
+    response.headers['Cache-Control'] = 'public, max-age=300'
+  return response
+
 kMenu = [
-  ('Home', '/', 'home'), 
+  ('Home', '/', 'home'),
   ('Index', '/index', 'index'),
   ('Sets', '/sets', 'sets'),
   ('Events', '/events', 'event'),
