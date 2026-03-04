@@ -21,6 +21,7 @@ if (!Element.prototype.closest) {
   var timeEl = null;
   var rafId = null;
   var speedSelect = null;
+  var currentLink = null;  // The <a> element currently playing
 
   function init() {
     player = document.getElementById('audio-player');
@@ -72,9 +73,14 @@ if (!Element.prototype.closest) {
       var link = e.target.closest('a[href^="/recording/"]');
       if (!link) return;
       e.preventDefault();
+      // Toggle: click same link again to stop
+      if (currentLink === link) {
+        hide();
+        return;
+      }
       var href = link.getAttribute('href');
       var title = extractTitle(link);
-      play(href, title);
+      play(href, title, link);
     });
   }
 
@@ -116,8 +122,22 @@ if (!Element.prototype.closest) {
     });
   }
 
-  function play(url, title) {
+  function setLinkPlaying(link) {
+    clearLinkPlaying();
+    currentLink = link;
+    if (link) link.classList.add('ap-link-playing');
+  }
+
+  function clearLinkPlaying() {
+    if (currentLink) currentLink.classList.remove('ap-link-playing');
+    currentLink = null;
+  }
+
+  function play(url, title, link) {
     cancelAnimationFrame(rafId);
+    clearLinkPlaying();
+    // Notify other players (e.g. ABC synth) that recording is starting
+    document.dispatchEvent(new Event('audioPlayerStart'));
     audio.src = url;
     audio.playbackRate = parseFloat(speedSelect.value);
     audio.play();
@@ -126,6 +146,7 @@ if (!Element.prototype.closest) {
     progressFill.style.width = '0%';
     timeEl.textContent = '0:00 / 0:00';
     player.style.display = 'flex';
+    setLinkPlaying(link);
     tick();
   }
 
@@ -134,6 +155,7 @@ if (!Element.prototype.closest) {
     audio.pause();
     audio.src = '';
     player.style.display = 'none';
+    clearLinkPlaying();
   }
 
   function tick() {
@@ -158,6 +180,15 @@ if (!Element.prototype.closest) {
     var sec = Math.floor(s % 60);
     return m + ':' + (sec < 10 ? '0' : '') + sec;
   }
+
+  // Expose API for other scripts to stop/query the recording player
+  window.audioPlayerStop = function() { if (player) hide(); };
+  window.audioPlayerPlaying = function() { return !!currentLink; };
+
+  // Stop playback when navigating away (including browser back button)
+  window.addEventListener('pagehide', function() {
+    if (currentLink) hide();
+  });
 
   // Fade in uncached images; show cached images immediately
   function initImageFadeIn() {

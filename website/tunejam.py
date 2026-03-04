@@ -2645,6 +2645,7 @@ function viewPlayNotes() {
     return;
   }
   if (vePlayingPart >= 0) veStopPlay();
+  if (window.audioPlayerStop) window.audioPlayerStop();
   if (!vpRawNotes) return;
   var h = veGetAbcHeaders();
   var lines = vpRawNotes.split('\n');
@@ -2668,6 +2669,7 @@ function viewPlayChords() {
     return;
   }
   if (vePlayingPart >= 0) veStopPlay();
+  if (window.audioPlayerStop) window.audioPlayerStop();
   if (!vpChordsText) return;
   var h = veGetAbcHeaders();
   var beats = 4;
@@ -2749,6 +2751,11 @@ function viewPlayChords() {
   vePlayingPart = 998;
   vePlayAbc(abc, 'view-chords-play-btn');
 }
+
+// Stop ABC player when recording player starts
+document.addEventListener('audioPlayerStart', function() {
+  if (vePlayingPart >= 0) veStopPlay();
+});
 ''' + '</script>\n'
 
 def _build_editor_js(tune, chord_parts, url_count=1):
@@ -3598,6 +3605,7 @@ function veTogglePlayPart(partIdx) {
     return;
   }
   if (vePlayingPart >= 0) veStopPlay();
+  if (window.audioPlayerStop) window.audioPlayerStop();
   var abc = veBuildPartAbc(partIdx);
   if (!abc) return;
   vePlayingPart = partIdx;
@@ -3638,6 +3646,7 @@ function veTogglePlayAll() {
     veStopPlay();
     return;
   }
+  if (window.audioPlayerStop) window.audioPlayerStop();
   var textarea = document.getElementById('raw-notes-textarea');
   if (!textarea || !textarea.value.trim()) return;
   var h = veGetAbcHeaders();
@@ -7544,6 +7553,11 @@ document.addEventListener('DOMContentLoaded', function() {
     undoStack = [];
     redoStack = [];
   }
+
+  // Stop ABC synth when recording player starts
+  document.addEventListener('audioPlayerStart', function() {
+    if (vePlayingPart >= 0) veStopPlay();
+  });
 });
 
 </script>
@@ -9384,9 +9398,284 @@ def sheet(tune):
 def sheet_view(tunes):
   tunes = tunes.split('&')
   parts = []
-  for tune in tunes:
-    parts.append(CDiv(CImage(src='/sheet/%s' % tune, width="100%")))
+  play_abc_data = []  # [(btn_id, full_abc), ...] for tunes with sheet music
+  for idx, tune in enumerate(tunes):
+    img_html = str(CImage(src='/sheet/%s' % tune, width="100%"))
+    # Check if this tune has full ABC sheet music for playback
+    obj = utils.CTune(tune)
+    try:
+      obj.ReadDatabase()
+      full_abc = obj.ReadSheetMusic()
+    except:
+      full_abc = None
+    # Get recording URL if available
+    recording_url, _mtype, rec_filename = obj.GetRecording()
+    rec_html = ''
+    if recording_url is not None:
+      mtime = int(os.path.getmtime(rec_filename))
+      rec_html = ('<a href="%s?v=%d" class="sheet-view-speaker">'
+                  '<img src="/image/speaker_louder_32.png" width="24" height="24">'
+                  '</a>' % (recording_url, mtime))
+    if full_abc:
+      btn_id = 'sheet-play-btn-%d' % idx
+      play_abc_data.append((btn_id, full_abc))
+      parts.append('<div class="sheet-view-wrap">'
+                   '<div class="sheet-view-play-row">'
+                   '<button type="button" class="view-play-btn" '
+                   'id="%s" onclick="sheetViewPlay(\'%s\')">Play ABC</button>'
+                   '%s</div>'
+                   '%s</div>' % (btn_id, btn_id, rec_html, img_html))
+    elif rec_html:
+      parts.append('<div class="sheet-view-wrap">'
+                   '<div class="sheet-view-play-row">%s</div>'
+                   '%s</div>' % (rec_html, img_html))
+    else:
+      parts.append(CDiv(img_html))
+  if play_abc_data:
+    parts.append(_build_sheet_view_playback_js(play_abc_data))
   return PageWrapper(parts, None)
+
+def _build_sheet_view_playback_js(play_abc_data):
+  """Build playback JavaScript for the sheet view page using full ABC."""
+  import json
+  # Build a JS map of button ID -> full ABC string
+  abc_map_js = '{\n'
+  for btn_id, full_abc in play_abc_data:
+    abc_map_js += '    %s: %s,\n' % (json.dumps(btn_id), json.dumps(full_abc))
+  abc_map_js += '  }'
+
+  return '<script>\n' + \
+    'var svAbcMap = ' + abc_map_js + ';\n' + \
+    r'''
+var svSynth = null;
+var svPlayDuration = 0;
+var svPlayTimer = null;
+var svPlayTempo = parseInt(localStorage.getItem('vePlayTempo'), 10) || 180;
+var svTempoHideTimer = null;
+var svPlayingAbc = null;
+var svPlayingBtnId = null;
+var svTempoRestartTimer = null;
+var svAudioCtx = null;       // Shared AudioContext for our own playback
+var svSourceNode = null;     // Current AudioBufferSourceNode
+var svPlayStartTime = 0;     // Date.now() when current segment started
+var svPlayStartOffset = 0;   // Offset in seconds when current segment started
+var svPlayGen = 0;           // Generation counter to ignore stale async callbacks
+
+function svCreateTempoSlider() {
+  var wrap = document.createElement('span');
+  wrap.id = 'sv-tempo-slider-wrap';
+  wrap.className = 've-tempo-slider-wrap';
+  var slider = document.createElement('input');
+  slider.type = 'range';
+  slider.id = 'sv-tempo-slider';
+  slider.min = '40';
+  slider.max = '240';
+  slider.value = String(svPlayTempo);
+  var label = document.createElement('span');
+  label.id = 'sv-tempo-label';
+  label.className = 've-tempo-label-text';
+  label.textContent = svPlayTempo + ' BPM';
+  wrap.appendChild(slider);
+  wrap.appendChild(label);
+  slider.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+  slider.addEventListener('pointermove', function(e) { e.stopPropagation(); });
+  slider.addEventListener('input', function() {
+    svPlayTempo = parseInt(this.value, 10);
+    try { localStorage.setItem('vePlayTempo', svPlayTempo); } catch(e) {}
+    label.textContent = svPlayTempo + ' BPM';
+    if (svPlayingAbc && svPlayingBtnId) {
+      // Compute current position as fraction of tune before stopping
+      var posFraction = 0;
+      if (svPlayDuration > 0) {
+        var elapsed = (Date.now() - svPlayStartTime) / 1000;
+        posFraction = (svPlayStartOffset + elapsed) / svPlayDuration;
+        if (posFraction > 1) posFraction = 1;
+        if (posFraction < 0) posFraction = 0;
+      }
+      svStopPlayImmediate();
+      if (svTempoRestartTimer) clearTimeout(svTempoRestartTimer);
+      var abc = svPlayingAbc;
+      var btnId = svPlayingBtnId;
+      var savedFraction = posFraction;
+      svTempoRestartTimer = setTimeout(function() {
+        svTempoRestartTimer = null;
+        if (!svPlayingAbc) return;
+        svPlayAbc(abc, btnId, savedFraction);
+      }, 300);
+    }
+  });
+  return wrap;
+}
+
+function svShowTempoSlider(btnId) {
+  if (svTempoHideTimer) { clearTimeout(svTempoHideTimer); svTempoHideTimer = null; }
+  var wrap = document.getElementById('sv-tempo-slider-wrap');
+  if (!wrap) {
+    wrap = svCreateTempoSlider();
+  }
+  var btn = document.getElementById(btnId);
+  if (btn && btn.parentNode) {
+    btn.parentNode.insertBefore(wrap, btn);
+    wrap.style.marginRight = '6px';
+  }
+  wrap.style.display = 'inline-flex';
+  var sl = document.getElementById('sv-tempo-slider');
+  if (sl) sl.value = String(svPlayTempo);
+  var lb = document.getElementById('sv-tempo-label');
+  if (lb) lb.textContent = svPlayTempo + ' BPM';
+}
+
+function svHideTempoSlider() {
+  if (svTempoHideTimer) { clearTimeout(svTempoHideTimer); svTempoHideTimer = null; }
+  svTempoHideTimer = setTimeout(function() {
+    var wrap = document.getElementById('sv-tempo-slider-wrap');
+    if (wrap) wrap.style.display = 'none';
+    svTempoHideTimer = null;
+  }, 5000);
+}
+
+function svPlayAbc(abc, btnId, resumeFraction) {
+  if (typeof ABCJS === 'undefined' || !ABCJS.synth || !ABCJS.synth.CreateSynth) return;
+  var gen = ++svPlayGen;
+  svPlayingAbc = abc;
+  svPlayingBtnId = btnId;
+  var btn = document.getElementById(btnId);
+  if (btn) { btn.textContent = 'Stop'; btn.classList.add('ve-play-active'); }
+  svShowTempoSlider(btnId);
+
+  // Extract meter from ABC to determine compound vs simple
+  var mMatch = abc.match(/M:\s*(\d+)\/(\d+)/);
+  var mNum = mMatch ? parseInt(mMatch[1], 10) : 4;
+  var mDen = mMatch ? parseInt(mMatch[2], 10) : 4;
+  var isCompound = (mDen === 8 && mNum >= 6);
+  var qField;
+  if (isCompound) {
+    qField = 'Q:3/8=' + svPlayTempo;
+  } else {
+    qField = 'Q:1/4=' + svPlayTempo;
+  }
+  var musicalBeats = isCompound ? (mNum / 3) : mNum;
+  var playAbc = abc.replace('K:', qField + '\nK:');
+
+  var offscreen = document.createElement('div');
+  offscreen.style.display = 'none';
+  offscreen.id = 'sv-play-offscreen';
+  document.body.appendChild(offscreen);
+  var visualObj = ABCJS.renderAbc('sv-play-offscreen', playAbc, {});
+  if (!visualObj || !visualObj[0]) {
+    try { document.body.removeChild(offscreen); } catch(e) {}
+    svStopPlay();
+    return;
+  }
+
+  var vo = visualObj[0];
+  var initOpts = { visualObj: vo };
+  if (!isCompound && musicalBeats >= 3) {
+    var correctedMs = (60000 / svPlayTempo) * musicalBeats / 1.5;
+    initOpts.millisecondsPerMeasure = correctedMs;
+  }
+
+  svSynth = new ABCJS.synth.CreateSynth();
+  svSynth.init(initOpts)
+    .then(function() {
+      if (gen !== svPlayGen) return Promise.reject('stale');
+      return svSynth.prime();
+    })
+    .then(function(response) {
+      if (gen !== svPlayGen) return;
+      try { document.body.removeChild(offscreen); } catch(e) {}
+
+      // Get rendered AudioBuffer and play it ourselves for reliable seeking
+      var audioBuffer = svSynth.getAudioBuffer();
+      if (!audioBuffer) { svStopPlay(); return; }
+      svPlayDuration = audioBuffer.duration;
+
+      if (!svAudioCtx) {
+        svAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (svAudioCtx.state === 'suspended') {
+        svAudioCtx.resume();
+      }
+
+      // Stop any previous source node
+      if (svSourceNode) {
+        try { svSourceNode.stop(); } catch(e) {}
+        svSourceNode = null;
+      }
+
+      var offset = (resumeFraction || 0) * svPlayDuration;
+      if (offset >= svPlayDuration) offset = 0;
+
+      svSourceNode = svAudioCtx.createBufferSource();
+      svSourceNode.buffer = audioBuffer;
+      svSourceNode.connect(svAudioCtx.destination);
+      svSourceNode.onended = function() {
+        if (gen === svPlayGen) svStopPlay();
+      };
+      svSourceNode.start(0, offset);
+
+      svPlayStartTime = Date.now();
+      svPlayStartOffset = offset;
+
+      var remaining = svPlayDuration - offset;
+      if (remaining > 0) {
+        svPlayTimer = setTimeout(function() { svStopPlay(); },
+          (remaining + 0.5) * 1000);
+      }
+    })
+    .catch(function(err) {
+      if (err === 'stale') {
+        try { document.body.removeChild(offscreen); } catch(e) {}
+        return;
+      }
+      try { document.body.removeChild(offscreen); } catch(e) {}
+      svStopPlay();
+    });
+}
+
+function svStopPlayImmediate() {
+  if (svPlayTimer) { clearTimeout(svPlayTimer); svPlayTimer = null; }
+  if (svSourceNode) {
+    try { svSourceNode.onended = null; svSourceNode.stop(); } catch(e) {}
+    svSourceNode = null;
+  }
+  if (svSynth) {
+    try { svSynth.stop(); } catch(e) {}
+    svSynth = null;
+  }
+}
+
+function svStopPlay() {
+  svHideTempoSlider();
+  if (svTempoRestartTimer) { clearTimeout(svTempoRestartTimer); svTempoRestartTimer = null; }
+  svStopPlayImmediate();
+  var btnId = svPlayingBtnId;
+  svPlayingAbc = null;
+  svPlayingBtnId = null;
+  if (btnId) {
+    var btn = document.getElementById(btnId);
+    if (btn) { btn.textContent = 'Play ABC'; btn.classList.remove('ve-play-active'); }
+  }
+}
+
+function sheetViewPlay(btnId) {
+  if (svPlayingBtnId === btnId) {
+    svStopPlay();
+    return;
+  }
+  if (svPlayingBtnId) svStopPlay();
+  // Stop recording player if active
+  if (window.audioPlayerStop) window.audioPlayerStop();
+  var abc = svAbcMap[btnId];
+  if (!abc) return;
+  svPlayAbc(abc, btnId);
+}
+
+// Stop ABC player when recording player starts
+document.addEventListener('audioPlayerStart', function() {
+  if (svPlayingBtnId) svStopPlay();
+});
+''' + '</script>\n'
 
 @app.route('/sheet/print/<tunes>')
 def sheet_print(tunes):
@@ -9567,7 +9856,9 @@ def doprint(format=None, bookname=None):
 
 @app.route('/recording/<tune>')
 def recording(tune):
-  obj = utils.CTune(tune)
+  # Strip file extension — GetRecording() adds it back when probing for files
+  tune_name = tune.rsplit('.', 1)[0] if '.' in tune else tune
+  obj = utils.CTune(tune_name)
   recording, mimetype, filename = obj.GetRecording()
   if recording is None:
     return Response()
@@ -9830,6 +10121,10 @@ margin-top:8px;
 div.tune-break {
 clear:both;
 height:20px;
+}
+/* Speaker icon green highlight when playing */
+a.ap-link-playing img {
+filter:hue-rotate(90deg) saturate(2) brightness(0.8);
 }
 img.action-icon-1 {
 position:absolute;
@@ -10764,13 +11059,32 @@ user-select:auto;
 -webkit-user-select:auto;
 touch-action:auto;
 }
-#ve-tempo-label {
+#ve-tempo-label, #sv-tempo-label {
 font-size:11px;
 color:#666;
 white-space:nowrap;
 }
 .view-play-row {
 margin-bottom:2px;
+}
+.sheet-view-wrap {
+position:relative;
+}
+.sheet-view-play-row {
+position:absolute;
+top:10px;
+right:10px;
+z-index:10;
+display:flex;
+align-items:center;
+gap:6px;
+}
+.sheet-view-speaker img {
+vertical-align:middle;
+opacity:0.7;
+}
+.sheet-view-speaker:hover img {
+opacity:1.0;
 }
 .view-play-btn {
 font-size:12px;

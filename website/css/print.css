@@ -232,6 +232,10 @@ div.tune-break {
 clear:both;
 height:20px;
 }
+/* Speaker icon green highlight when playing */
+a.ap-link-playing img {
+filter:hue-rotate(90deg) saturate(2) brightness(0.8);
+}
 img.action-icon-1 {
 position:absolute;
 right:10px;
@@ -1165,13 +1169,32 @@ user-select:auto;
 -webkit-user-select:auto;
 touch-action:auto;
 }
-#ve-tempo-label {
+#ve-tempo-label, #sv-tempo-label {
 font-size:11px;
 color:#666;
 white-space:nowrap;
 }
 .view-play-row {
 margin-bottom:2px;
+}
+.sheet-view-wrap {
+position:relative;
+}
+.sheet-view-play-row {
+position:absolute;
+top:10px;
+right:10px;
+z-index:10;
+display:flex;
+align-items:center;
+gap:6px;
+}
+.sheet-view-speaker img {
+vertical-align:middle;
+opacity:0.7;
+}
+.sheet-view-speaker:hover img {
+opacity:1.0;
 }
 .view-play-btn {
 font-size:12px;
