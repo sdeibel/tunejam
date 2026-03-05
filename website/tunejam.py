@@ -3,6 +3,7 @@
 import sys, os
 import time
 import struct
+import re
 import json
 import glob
 from html import *
@@ -1850,7 +1851,10 @@ def sets(spec=None, sid=None):
 
           parts.extend([CBreak(2), CDiv(bottom_items, style="overflow:auto"), CBreak(2)])
           
-        LogNotification('view', 'Set viewed: "%s" by %s' % (', '.join(tunes), GetUserEmail() or 'anonymous'))
+        if sid is not None:
+          LogNotification('view', 'Set viewed: "%s" (event "%s") by %s' % (', '.join(tunes), s.title, GetUserEmail() or 'anonymous'))
+        else:
+          LogNotification('view', 'Set viewed: "%s" by %s' % (', '.join(tunes), GetUserEmail() or 'anonymous'))
         return PageWrapper(parts, 'event', show_eye_candy=False)
 
   filter = request.form.get('filter')
@@ -10297,6 +10301,9 @@ left:0in;
 right:none;
 font-size:54px;
 font-size:min(5.0vw, 54px);
+border:0px;
+border-left:2px solid #000;
+border-right:2px solid #000;
 width:95%;
 float:left;
 margin-top:2vw;
@@ -12141,6 +12148,11 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
 
   editor = CanEditEvent(event)
 
+  if event.on_air and event.last_active > 0 and time.time() - event.last_active > 60 * 60:
+    event.on_air = 0
+    event.WriteEvent()
+    LogNotification('event', 'Event auto off air (idle 1hr): "%s"' % event.title)
+
   if add is not None and editor:
     session['event_undo_%s' % sid] = {
       'sets': list(event.sets),
@@ -12188,6 +12200,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
         if ptime > time.time() - 60 * 60:
           event.stats[curr].remove(ptime)
       event.stats[curr].append(time.time())
+    event.last_active = time.time()
     event.WriteEvent()
     return redirect('/event/%s?_=%d' % (sid, int(time.time())), code=303)
 
@@ -12821,6 +12834,10 @@ def ajax_event_description(sid):
 def ajax_event_current(sid):
   s = utils.CEvent(sid)
   s.ReadEvent()
+  if s.on_air and s.last_active > 0 and time.time() - s.last_active > 60 * 60:
+    s.on_air = 0
+    s.WriteEvent()
+    LogNotification('event', 'Event auto off air (idle 1hr): "%s"' % s.title)
   content_hash = hashlib.md5((s.title + '\n' + s.description + '\n' + '\n'.join(s.sets)).encode('utf-8')).hexdigest()[:8]
   return s.current_set + '&' + str(len(s.sets)) + '&' + str(s.on_air) + '&' + content_hash
 
@@ -15095,8 +15112,29 @@ def IsRateLimited(email):
 
 # -- Notification digest system --
 
+_kBotPatterns = re.compile(
+  r'bot|crawl|spider|slurp|baiduspider|yandex|sogou|exabot|facebot|ia_archiver'
+  r'|semrush|ahref|mj12bot|dotbot|petalbot|bytespider|gptbot|ccbot|chatgpt'
+  r'|applebot|duckduckbot|headlesschrome|phantomjs|wget|curl|python-requests'
+  r'|go-http-client|libwww|httpunit|nutch|biglotron|teoma|convera|gigablast'
+  r'|scrub|ia_archiver|httrack|winhttp|linkcheck|ltx71|netcraft',
+  re.IGNORECASE
+)
+
+def _IsBot():
+  """Check if the current request is from a known bot/crawler."""
+  try:
+    ua = request.headers.get('User-Agent', '')
+    if not ua:
+      return True
+    return bool(_kBotPatterns.search(ua))
+  except RuntimeError:
+    return False
+
 def LogNotification(category, message):
   """Append a notification entry, truncating entries older than 2 weeks."""
+  if category == 'view' and _IsBot():
+    return
   timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
   line = '%s|%s|%s\n' % (timestamp, category, message)
   try:
@@ -15198,7 +15236,7 @@ def _SendNotificationDigest():
     return msg
 
   # Group by category
-  category_order = ['tune', 'event', 'user', 'admin']
+  category_order = ['tune', 'event', 'user', 'admin', 'view']
   category_labels = {
     'tune': 'Tunes',
     'event': 'Events',
@@ -15223,9 +15261,48 @@ def _SendNotificationDigest():
   for cat, messages in grouped.items():
     if not messages:
       continue
-    body_lines.append('%s:' % category_labels.get(cat, cat))
-    for msg in messages:
-      body_lines.append('  %s' % msg)
+    if cat == 'view':
+      # Tally views by name under Tune/Event headings; sets grouped under events
+      tune_counts = collections.OrderedDict()
+      event_counts = collections.OrderedDict()
+      event_set_counts = collections.OrderedDict()
+      standalone_set_count = 0
+      for msg in messages:
+        # Parse: 'Tune viewed: "Name" by ...'
+        #        'Event viewed: "Name" by ...'
+        #        'Set viewed: "tunes" (event "Name") by ...'
+        #        'Set viewed: "tunes" by ...'
+        if msg.startswith('Tune viewed: "'):
+          name = msg.split('"')[1] if '"' in msg else 'Unknown'
+          tune_counts[name] = tune_counts.get(name, 0) + 1
+        elif msg.startswith('Event viewed: "'):
+          name = msg.split('"')[1] if '"' in msg else 'Unknown'
+          event_counts[name] = event_counts.get(name, 0) + 1
+        elif msg.startswith('Set viewed: '):
+          if '(event "' in msg:
+            ename = msg.split('(event "')[1].split('")')[0]
+            event_set_counts[ename] = event_set_counts.get(ename, 0) + 1
+          else:
+            standalone_set_count += 1
+      body_lines.append('Views:')
+      if tune_counts:
+        body_lines.append('  Tunes:')
+        for name, count in sorted(tune_counts.items(), key=lambda x: -x[1]):
+          body_lines.append('    %s: %d' % (name, count))
+      if event_counts or event_set_counts:
+        body_lines.append('  Events:')
+        all_events = set(list(event_counts.keys()) + list(event_set_counts.keys()))
+        for name in sorted(all_events):
+          line = '    %s: %d' % (name, event_counts.get(name, 0))
+          if name in event_set_counts:
+            line += ' (%d sets viewed)' % event_set_counts[name]
+          body_lines.append(line)
+      if standalone_set_count:
+        body_lines.append('  Sets (standalone): %d' % standalone_set_count)
+    else:
+      body_lines.append('%s:' % category_labels.get(cat, cat))
+      for msg in messages:
+        body_lines.append('  %s' % msg)
     body_lines.append('')
 
   body = '\n'.join(body_lines)
