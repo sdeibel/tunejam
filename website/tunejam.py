@@ -12152,9 +12152,15 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
       event.sets[pos] = add
     else:
       event.sets.append(add)
+    if event.on_air:
+      event.current_set = add
+      for ptime in event.stats[add][:]:
+        if ptime > time.time() - 60 * 60:
+          event.stats[add].remove(ptime)
+      event.stats[add].append(time.time())
     event.last_active = time.time()
     event.WriteEvent()
-    return redirect('/event/%s' % sid, code=303)
+    return redirect('/event/%s?_=%d' % (sid, int(time.time())), code=303)
 
   if delete is not None and editor:
     session['event_undo_%s' % sid] = {
@@ -12170,7 +12176,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
       event.current_set = ''
     event.last_active = time.time()
     event.WriteEvent()
-    return redirect('/event/%s' % sid, code=303)
+    return redirect('/event/%s?_=%d' % (sid, int(time.time())), code=303)
     
   if curr is not None and editor:
     event.current_set = curr
@@ -12445,10 +12451,9 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
         parts.append('<span class="drag-handle">&#x2630;</span>')
 
       if event.on_air and s == event.current_set:
-        parts.append(CImage(src='/image/check-mark.png', style="height:1.0em"))
+        parts.append('<img src="/image/check-mark.png" class="current-dot" data-set="%s" style="height:1.0em" border="0">' % s)
       elif event.on_air and editor:
-        parts.append(CImage(src='/image/red-square.png', href="/event/%s/current/%s" % (sid, s),
-                            style="height:1.0em;vertical-align:text-bottom"))
+        parts.append('<img src="/image/red-square.png" class="current-dot" data-set="%s" style="height:1.0em;vertical-align:text-bottom;cursor:pointer" border="0">' % s)
       elif event.on_air:
         parts.append(CImage(src='/image/red-square.png', style="height:1.0em;vertical-align:text-bottom"))
 
@@ -12815,6 +12820,25 @@ def ajax_event_current(sid):
   s.ReadEvent()
   content_hash = hashlib.md5((s.title + '\n' + s.description + '\n' + '\n'.join(s.sets)).encode('utf-8')).hexdigest()[:8]
   return s.current_set + '&' + str(len(s.sets)) + '&' + str(s.on_air) + '&' + content_hash
+
+@app.route('/ajax/event/<sid>/setcurrent', methods=['POST'])
+def ajax_event_setcurrent(sid):
+  event = utils.CEvent(sid)
+  event.ReadEvent()
+  if not CanEditEvent(event):
+    return json.dumps({'ok': False, 'error': 'permission denied'})
+  data = request.get_json(force=True)
+  curr = data.get('set', '')
+  if curr not in event.sets:
+    return json.dumps({'ok': False, 'error': 'set not found'})
+  event.current_set = curr
+  if event.on_air:
+    for ptime in event.stats[curr][:]:
+      if ptime > time.time() - 60 * 60:
+        event.stats[curr].remove(ptime)
+    event.stats[curr].append(time.time())
+  event.WriteEvent()
+  return json.dumps({'ok': True})
 
 @app.route('/event/<sid>/rename', methods=['POST'])
 def event_rename(sid):
@@ -15308,11 +15332,11 @@ function initSortable() {
         success: function(resp) {
           var data = typeof resp === "string" ? JSON.parse(resp) : resp;
           if (!data.ok) {
-            location.reload();
+            saveScrollAndReload();
           }
         },
         error: function() {
-          location.reload();
+          saveScrollAndReload();
         }
       });
     }
@@ -15320,6 +15344,10 @@ function initSortable() {
 }
 """ % sid
     ready_calls += '  initSortable();\n'
+    ready_calls += """  $("#add-set-form").on("submit", function() {
+    sessionStorage.setItem("eventScroll_" + eventSid, window.scrollY);
+  });
+"""
 
     extra_js += """
 var originalTitle;
@@ -15420,14 +15448,14 @@ function saveDesc() {
       e.preventDefault();
       $.post("/ajax/event/%s/undo", function(resp) {
         var data = typeof resp === "string" ? JSON.parse(resp) : resp;
-        if (data.ok) location.reload();
+        if (data.ok) saveScrollAndReload();
       });
     }
     if ((e.ctrlKey || e.metaKey) && (((e.key === 'z' || e.key === 'Z') && e.shiftKey) || e.key === 'y')) {
       e.preventDefault();
       $.post("/ajax/event/%s/redo", function(resp) {
         var data = typeof resp === "string" ? JSON.parse(resp) : resp;
-        if (data.ok) location.reload();
+        if (data.ok) saveScrollAndReload();
       });
     }
   });
@@ -15439,29 +15467,66 @@ function saveDesc() {
   parts.extend([
     """<script>
 %s
+var eventSid = "%s";
 var lastOnAir = %d;
 var lastSnapshot = "%s";
+function saveScrollAndReload() {
+  sessionStorage.setItem("eventScroll_" + eventSid, window.scrollY);
+  location.reload();
+}
 function CheckEvent() {
   $.ajax({
-    url: "/ajax/event/%s/current",
+    url: "/ajax/event/" + eventSid + "/current",
     cache: false,
     success: function(txt){
       var trimmed = txt.trim();
       var parts = trimmed.split("&");
       var nowOnAir = parseInt(parts[parts.length - 2]);
       if (lastOnAir != nowOnAir) {
-        location.reload();
+        saveScrollAndReload();
       } else if (nowOnAir && trimmed != lastSnapshot) {
-        location.reload();
+        saveScrollAndReload();
+      }
+    }
+  });
+}
+function setCurrentSet(setSpec) {
+  $.ajax({
+    url: "/ajax/event/" + eventSid + "/setcurrent",
+    type: "POST",
+    contentType: "application/json",
+    data: JSON.stringify({"set": setSpec}),
+    success: function(resp) {
+      var data = typeof resp === "string" ? JSON.parse(resp) : resp;
+      if (data.ok) {
+        $(".current-dot").each(function() {
+          var dot = $(this);
+          if (dot.data("set") === setSpec) {
+            dot.attr("src", "/image/check-mark.png").css({"cursor": "", "vertical-align": ""});
+          } else {
+            dot.attr("src", "/image/red-square.png").css({"cursor": "pointer", "vertical-align": "text-bottom"});
+          }
+        });
       }
     }
   });
 }
 $(document).ready(function() {
+   var savedScroll = sessionStorage.getItem("eventScroll_" + eventSid);
+   if (savedScroll !== null) {
+     sessionStorage.removeItem("eventScroll_" + eventSid);
+     window.scrollTo(0, parseInt(savedScroll));
+   }
    setInterval(CheckEvent, 5000);
+   $(document).on("click", ".current-dot", function() {
+     var dot = $(this);
+     if (dot.attr("src").indexOf("red-square") !== -1) {
+       setCurrentSet(dot.data("set"));
+     }
+   });
 %s
 });
-</script>""" % (extra_js, e.on_air, initial_snapshot, sid, ready_calls)
+</script>""" % (extra_js, sid, e.on_air, initial_snapshot, ready_calls)
 
   ])
 
