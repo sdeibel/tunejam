@@ -156,7 +156,10 @@ def _set_cache_headers(response):
   """HTML pages: revalidate on every visit so cache-bust hashes stay current.
   Static assets (CSS, JS, images, recordings) set their own Cache-Control."""
   if 'Cache-Control' not in response.headers:
-    response.headers['Cache-Control'] = 'public, max-age=300'
+    if 300 <= response.status_code < 400:
+      response.headers['Cache-Control'] = 'no-cache, no-store'
+    else:
+      response.headers['Cache-Control'] = 'public, max-age=300'
   return response
 
 kMenu = [
