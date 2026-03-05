@@ -12186,7 +12186,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
           event.stats[curr].remove(ptime)
       event.stats[curr].append(time.time())
     event.WriteEvent()
-    return redirect('/event/%s' % sid, code=303)
+    return redirect('/event/%s?_=%d' % (sid, int(time.time())), code=303)
 
   if status is not None and editor:
     if status == 'on-air':
@@ -12197,7 +12197,7 @@ def event(sid=None, add=None, delete=None, curr=None, old=None, status=None, sel
       event.on_air = 0
       LogNotification('event', 'Event off air: "%s"' % event.title)
     event.WriteEvent()
-    return redirect('/event/%s' % sid, code=303)
+    return redirect('/event/%s?_=%d' % (sid, int(time.time())), code=303)
     
   if selector is not None and editor:
     if selector == 'random':
