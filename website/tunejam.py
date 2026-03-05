@@ -1870,11 +1870,24 @@ def sets(spec=None, sid=None):
 var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 $(function() {
   if (isTouchDevice) {
-    // On touch devices, use tap to move items between lists
-    $(document).on("click", "#alltunes li", function() {
+    // On touch devices, use tap to move items between lists.
+    // Use touchend instead of click because old iOS Safari does not
+    // reliably fire click on non-anchor elements with delegated handlers.
+    var touchMoved = false;
+    $(document).on("touchstart", "#alltunes li, #selectedtunes li", function() {
+      touchMoved = false;
+    });
+    $(document).on("touchmove", "#alltunes li, #selectedtunes li", function() {
+      touchMoved = true;
+    });
+    $(document).on("touchend", "#alltunes li", function(e) {
+      if (touchMoved) return;
+      e.preventDefault();
       $(this).appendTo("#selectedtunes");
     });
-    $(document).on("click", "#selectedtunes li", function() {
+    $(document).on("touchend", "#selectedtunes li", function(e) {
+      if (touchMoved) return;
+      e.preventDefault();
       $(this).appendTo("#alltunes");
       $( "#alltunes" ).children().sortElements(function(a, b){
         return a.innerHTML > b.innerHTML ? 1 : -1;
@@ -2065,6 +2078,9 @@ $(document).ready(function() {
 <style>
 #alltunes {
 border:1px;
+}
+#alltunes li, #selectedtunes li {
+cursor:pointer;
 }
 #selectedtunes {
 border:1px;
