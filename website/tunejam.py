@@ -16882,6 +16882,8 @@ def _ChordQuickEditJS():
   var longPressTimer = null;
   var longPressFired = false;
   var longPressTd = null;
+  var longPressStartX = 0;
+  var longPressStartY = 0;
   var outsideTouchHandler = null;
 
   function startEdit(td) {
@@ -16899,8 +16901,8 @@ def _ChordQuickEditJS():
       'text-align:center;margin:0;';
     td.textContent = '';
     td.appendChild(input);
-    input.select();
     input.focus();
+    input.setSelectionRange(0, input.value.length);
 
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') {
@@ -17033,6 +17035,9 @@ def _ChordQuickEditJS():
     if (!td) return;
     longPressFired = false;
     longPressTd = td;
+    var touch = e.touches[0];
+    longPressStartX = touch.clientX;
+    longPressStartY = touch.clientY;
     longPressTimer = setTimeout(function() {
       longPressFired = true;
     }, 500);
@@ -17042,13 +17047,23 @@ def _ChordQuickEditJS():
     if (longPressFired && longPressTd) {
       e.preventDefault();
       startEdit(longPressTd);
+    }
+    longPressTd = null;
+  });
+  document.addEventListener('touchmove', function(e) {
+    if (!longPressTd) return;
+    var touch = e.touches[0];
+    var dx = touch.clientX - longPressStartX;
+    var dy = touch.clientY - longPressStartY;
+    if (dx * dx + dy * dy > 100) {
+      clearTimeout(longPressTimer);
       longPressTd = null;
     }
-  });
-  document.addEventListener('touchmove', function() {
+  }, {passive: true});
+  document.addEventListener('touchcancel', function() {
     clearTimeout(longPressTimer);
     longPressTd = null;
-  }, {passive: true});
+  });
 })();
 </script>"""
 
