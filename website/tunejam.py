@@ -7604,7 +7604,18 @@ def tune_edit(tune):
   if not CanEditTune(obj):
     return redirect('/authorize/tune/%s/edit' % tune, code=303)
 
-  return _build_tune_form(obj, tune, 'Edit Tune', '/tune/%s/save' % tune, '/tune/%s' % tune)
+  return_url = request.args.get('return')
+  if return_url and return_url.startswith('/'):
+    import urllib
+    save_action = '/tune/%s/save?return=%s' % (tune, urllib.quote(return_url, safe=''))
+    cancel_url = return_url
+  else:
+    save_action = '/tune/%s/save' % tune
+    cancel_url = '/tune/%s' % tune
+
+  resp = make_response(_build_tune_form(obj, tune, 'Edit Tune', save_action, cancel_url))
+  resp.headers['Cache-Control'] = 'no-cache, no-store'
+  return resp
 
 def _recording_upload_overlay():
   """Return the recording upload modal overlay HTML."""
@@ -9233,6 +9244,9 @@ def tune_save(tune):
   gTuneCountCache.clear()
   LogNotification('tune', 'Tune edited: "%s" by %s' % (obj.title, GetUserEmail() or 'anonymous'))
 
+  return_url = request.args.get('return')
+  if return_url and return_url.startswith('/'):
+    return redirect(return_url, code=303)
   return redirect('/tune/%s' % tune, code=303)
 
 @app.route('/tune/<tune>/delete', methods=['GET', 'POST'])
@@ -15882,15 +15896,32 @@ margin-top:0px;
     event_obj = utils.CEvent(event_sid)
     event_obj.ReadEvent()
 
+  # Build return URL for edit links on set pages
+  return_url = None
+  if set_spec:
+    return_url = request.full_path
+
   for i, tune in enumerate(tunes):
     if i > 0:
       parts.append(CDiv(hclass='tune-break'))
     set_tune_notes = ''
     if set_spec:
       set_tune_notes = _RenderSetTuneNotesSection(set_spec, tune, event_sid, event_obj)
+    # Build edit URL if user can edit this tune
+    edit_url = None
+    if return_url:
+      tune_obj = utils.CTune(tune)
+      try:
+        tune_obj.ReadDatabase()
+      except SystemExit:
+        pass
+      if CanEditTune(tune_obj):
+        import urllib
+        edit_url = '/tune/%s/edit?return=%s' % (tune, urllib.quote(return_url, safe=''))
     parts.extend(CreateTuneHTML(tune, pagetype, metadata,
                                 suppress_add_note=bool(set_spec),
-                                set_tune_notes=set_tune_notes))
+                                set_tune_notes=set_tune_notes,
+                                edit_url=edit_url))
   parts.append(CDiv(hclass='tune-break'))
 
   if set_spec:
@@ -16518,7 +16549,7 @@ def _RenderSetTuneNotesSection(set_spec, tune_name, event_sid, event_obj):
   parts.append('</div>')
   return '\n'.join(parts)
 
-def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_delete=False, suppress_add_note=False, set_tune_notes='', show_play=False):
+def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_delete=False, suppress_add_note=False, set_tune_notes='', show_play=False, edit_url=None):
 
   obj = utils.CTune(name)
   try:
@@ -16661,11 +16692,16 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
 
   notes_section = _RenderNotesSection('tune', name, can_make_public) if metadata else ''
 
+  if edit_url:
+    edit_link = ' <a href="%s" style="color:#999;font-style:italic;font-weight:normal;font-size:16px;vertical-align:middle;margin-left:0.3em">Edit</a>' % edit_url
+  else:
+    edit_link = ''
+
   tune = CDiv([
     CH([
       title + ' - ' + key_str,
       klass,
-    ] + obj.GetActionIcons(), 1, hclass=tclass),
+    ] + obj.GetActionIcons() + ([edit_link] if edit_link else []), 1, hclass=tclass),
     set_tune_notes,
     structure,
     author,
