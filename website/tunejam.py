@@ -10261,13 +10261,19 @@ margin-top:50px;
 margin-bottom:15px;
 float:right;
 width:48%;
-table-layout:fixed;
+}
+table.chords td {
+padding-right:0.5em;
+}
+table.chords td.last-chord {
+padding-right:0.2em;
 }
 table.chords td.first {
-width:1.2em;
+padding-left:3px;
+padding-right:0.2em;
 }
 table.chords td.last {
-width:1.2em;
+padding-right:2px;
 }
 div.chord-group {
 float:right;
@@ -10353,14 +10359,7 @@ right:none;
 font-size:4.5vw;
 width:calc(100% - 5px);
 max-width:none;
-table-layout:fixed;
 float:left;
-}
-table.chords td.first {
-width:1.2em;
-}
-table.chords td.last {
-width:1.2em;
 }
 div.chord-group {
 float:left;
