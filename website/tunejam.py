@@ -17029,7 +17029,12 @@ def _ChordQuickEditJS():
     if (td) { e.preventDefault(); startEdit(td); }
   });
 
-  // Long-press (touch) — start edit from timer; re-focus on touchend as fallback
+  function removeLongPressHint() {
+    var el = document.getElementById('cqe-hold-hint');
+    if (el) el.remove();
+  }
+
+  // Long-press (touch) — show hint above finger on hold, edit on finger lift
   document.addEventListener('touchstart', function(e) {
     var td = e.target.closest('td[data-tune]');
     if (!td) return;
@@ -17040,21 +17045,23 @@ def _ChordQuickEditJS():
     longPressStartY = touch.clientY;
     longPressTimer = setTimeout(function() {
       longPressFired = true;
-      startEdit(td);
+      var hint = document.createElement('div');
+      hint.id = 'cqe-hold-hint';
+      hint.textContent = 'Release to edit';
+      hint.style.cssText = 'position:fixed;z-index:10000;pointer-events:none;' +
+        'background:#333;color:#fff;padding:6px 12px;border-radius:4px;' +
+        'font-size:14px;white-space:nowrap;' +
+        'left:' + longPressStartX + 'px;top:' + (longPressStartY - 50) + 'px;' +
+        'transform:translateX(-50%)';
+      document.body.appendChild(hint);
     }, 500);
   }, {passive: true});
   document.addEventListener('touchend', function(e) {
     clearTimeout(longPressTimer);
+    removeLongPressHint();
     if (longPressFired && longPressTd) {
       e.preventDefault();
-      // Fallback: if iOS didn't allow focus from the timer, grab it now
-      if (editingCell) {
-        var inp = editingCell.querySelector('input');
-        if (inp && document.activeElement !== inp) {
-          inp.focus();
-          inp.setSelectionRange(0, inp.value.length);
-        }
-      }
+      startEdit(longPressTd);
     }
     longPressTd = null;
   });
@@ -17065,11 +17072,13 @@ def _ChordQuickEditJS():
     var dy = touch.clientY - longPressStartY;
     if (dx * dx + dy * dy > 100) {
       clearTimeout(longPressTimer);
+      removeLongPressHint();
       longPressTd = null;
     }
   }, {passive: true});
   document.addEventListener('touchcancel', function() {
     clearTimeout(longPressTimer);
+    removeLongPressHint();
     longPressTd = null;
   });
 })();
