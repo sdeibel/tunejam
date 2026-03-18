@@ -17054,7 +17054,7 @@ def _ChordQuickEditJS():
         'background:#333;color:#fff;padding:8px 14px;border-radius:4px;' +
         'font-size:14px;white-space:nowrap;' +
         'left:' + (rect.left + rect.width / 2 + window.scrollX) + 'px;' +
-        'top:' + (rect.top + window.scrollY) + 'px;' +
+        'top:' + (Math.max(rect.top, 50) - 50 + window.scrollY) + 'px;' +
         'transform:translate(-50%,-100%)';
       document.body.appendChild(hint);
     }, 500);
