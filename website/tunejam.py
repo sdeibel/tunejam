@@ -16869,9 +16869,9 @@ def _ChordQuickEditJS():
   if (window._cqeInit) return;
   window._cqeInit = true;
 
-  // Prevent iOS long-press context menu on editable chord cells
+  // Prevent iOS context menu and double-tap-to-zoom on editable chord cells
   var style = document.createElement('style');
-  style.textContent = 'td[data-tune]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}';
+  style.textContent = 'td[data-tune]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}';
   document.head.appendChild(style);
   document.addEventListener('contextmenu', function(e) {
     if (e.target.closest && e.target.closest('td[data-tune]')) e.preventDefault();
