@@ -16869,16 +16869,25 @@ def _ChordQuickEditJS():
   if (window._cqeInit) return;
   window._cqeInit = true;
 
+  // Prevent iOS long-press context menu on editable chord cells
+  var style = document.createElement('style');
+  style.textContent = 'td[data-tune]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}';
+  document.head.appendChild(style);
+  document.addEventListener('contextmenu', function(e) {
+    if (e.target.closest && e.target.closest('td[data-tune]')) e.preventDefault();
+  });
+
   var editingCell = null;
   var origValue = '';
   var longPressTimer = null;
   var longPressFired = false;
+  var outsideTouchHandler = null;
 
   function startEdit(td) {
     if (editingCell) return;
     editingCell = td;
     origValue = td.textContent.trim();
-    var w = td.offsetWidth;
+    var w = Math.max(td.offsetWidth + 30, 80);
     var input = document.createElement('input');
     input.type = 'text';
     input.value = origValue;
@@ -16909,6 +16918,23 @@ def _ChordQuickEditJS():
         }
       }, 150);
     });
+
+    // iOS: tapping non-focusable elements doesn't trigger blur,
+    // so listen for outside touches to dismiss editing
+    outsideTouchHandler = function(e) {
+      if (!editingCell) {
+        document.removeEventListener('touchstart', outsideTouchHandler, true);
+        return;
+      }
+      if (!editingCell.contains(e.target)) {
+        var inp = editingCell.querySelector('input');
+        if (inp) inp.blur();
+        document.removeEventListener('touchstart', outsideTouchHandler, true);
+      }
+    };
+    setTimeout(function() {
+      document.addEventListener('touchstart', outsideTouchHandler, true);
+    }, 400);
   }
 
   function finishEdit(input) {
@@ -16922,6 +16948,9 @@ def _ChordQuickEditJS():
 
   function cancelEdit() {
     if (!editingCell) return;
+    if (outsideTouchHandler) {
+      document.removeEventListener('touchstart', outsideTouchHandler, true);
+    }
     editingCell.style.width = '';
     editingCell.style.maxWidth = '';
     editingCell.textContent = origValue;
