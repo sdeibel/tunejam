@@ -15443,6 +15443,7 @@ def EventReloader(sid, editor=False):
   parts.append("""
 <script src="/js/jquery-3.7.0.min.js"></script>
 <script src="/js/ui/jquery-ui.min.js"></script>
+<script src="/js/jquery.ui.touch-punch.min.js"></script>
 """)
 
   extra_js = ''
