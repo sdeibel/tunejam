@@ -1828,7 +1828,7 @@ def sets(spec=None, sid=None):
 
           header = CText("Set from Event: <a href='%s'>%s</a>" % (event_link, s.title), bold=1)
           parts.insert(0, header)
-          parts.insert(1, CBreak())
+          parts.insert(1, CBreak(2))
           parts.insert(2, top_nav)
           parts.insert(3, CBreak(2))
 
@@ -1855,7 +1855,10 @@ def sets(spec=None, sid=None):
           LogNotification('view', 'Set viewed: "%s" (event "%s") by %s' % (', '.join(tunes), s.title, GetUserEmail() or 'anonymous'))
         else:
           LogNotification('view', 'Set viewed: "%s" by %s' % (', '.join(tunes), GetUserEmail() or 'anonymous'))
-        return PageWrapper(parts, 'event', show_eye_candy=False)
+        resp = make_response(PageWrapper(parts, 'event', show_eye_candy=False))
+        if HasCapability(kCapEditTunes):
+          resp.headers['Cache-Control'] = 'no-cache, no-store'
+        return resp
 
   filter = request.form.get('filter')
   if filter == 'all':
@@ -2449,7 +2452,10 @@ def tune(tune):
   if obj.raw_notes or obj.chords:
     parts.append(_build_view_playback_js(obj.key, obj.meter, obj.unit, obj.raw_notes, obj.chords))
   LogNotification('view', 'Tune viewed: "%s" by %s' % (obj.title, GetUserEmail() or 'anonymous'))
-  return PageWrapper(parts, 'index', show_eye_candy=False)
+  resp = make_response(PageWrapper(parts, 'index', show_eye_candy=False))
+  if can_edit:
+    resp.headers['Cache-Control'] = 'no-cache, no-store'
+  return resp
 
 def _build_view_playback_js(key, meter, unit, raw_notes, chords_text):
   """Build self-contained playback JavaScript for the tune view page."""
@@ -13242,6 +13248,88 @@ def ajax_recording_undo():
   LogNotification('tune', 'Recording upload undone for "%s" by %s' % (tune_name, email))
   return json.dumps({'ok': True}), 200, {'Content-Type': 'application/json'}
 
+@app.route('/ajax/chord/save', methods=['POST'])
+def ajax_chord_save():
+  """Quick-edit a single chord measure in a tune's chord chart."""
+  email = GetUserEmail()
+  if not email:
+    return '{"ok":false,"error":"not logged in"}', 403
+  data = request.get_json(force=True)
+  tune_name = data.get('tune', '').strip()
+  try:
+    cidx = int(data.get('cidx', -1))
+  except (ValueError, TypeError):
+    cidx = -1
+  value = data.get('value', '').strip()
+  if not tune_name or cidx < 0 or not value:
+    return json.dumps({'ok': False, 'error': 'missing fields'}), 400
+
+  obj = utils.CTune(tune_name)
+  try:
+    obj.ReadDatabase()
+  except SystemExit:
+    return json.dumps({'ok': False, 'error': 'tune not found'}), 404
+  if not CanEditTune(obj):
+    return json.dumps({'ok': False, 'error': 'not authorized'}), 403
+  if not obj.chords:
+    return json.dumps({'ok': False, 'error': 'no chords'}), 400
+
+  value = ValidateChord(value)
+
+  # Split chords into header, chart, footer (same as ChordsToHTML)
+  lines = obj.chords.splitlines()
+  header_lines = []
+  footer_lines = []
+  chart_lines = []
+  in_chart = False
+  past_chart = False
+  for line in lines:
+    if '|' in line:
+      in_chart = True
+      past_chart = False
+      chart_lines.append(line)
+    elif in_chart:
+      past_chart = True
+      in_chart = False
+      footer_lines.append(line)
+    elif past_chart:
+      footer_lines.append(line)
+    else:
+      header_lines.append(line)
+
+  # Walk through chart text counting chord tokens (skip |, |:, :|)
+  # to find and replace the one at cidx
+  import re as _re
+  chart_text = '\n'.join(chart_lines)
+  count = [0]
+  found = [False]
+  def _replace_match(m):
+    token = m.group()
+    if token in ('|', '|:', ':|'):
+      return token
+    if count[0] == cidx:
+      count[0] += 1
+      found[0] = True
+      return value
+    count[0] += 1
+    return token
+  new_chart_text = _re.sub(r'\S+', _replace_match, chart_text)
+
+  if not found[0]:
+    return json.dumps({'ok': False, 'error': 'chord index out of range'}), 400
+
+  # Reconstruct full chords text
+  result_lines = header_lines + new_chart_text.splitlines() + footer_lines
+  obj.chords = '\n'.join(result_lines)
+
+  obj.WriteSpec()
+  obj.InvalidateCaches()
+  utils.InvalidateTuneIndex()
+  gTuneCountCache.clear()
+  LogNotification('tune', 'Quick chord edit: "%s" by %s' % (obj.title, email))
+
+  return json.dumps({'ok': True, 'value': value})
+
 @app.route('/ajax/analyze', methods=['POST'])
 def ajax_analyze():
   """Run AI analysis on a tune's recording."""
@@ -15898,6 +15986,7 @@ margin-top:0px;
 
   # Build return URL for edit links on set pages
   return_url = None
+  any_editable = False
   if set_spec:
     return_url = request.full_path
 
@@ -15918,6 +16007,7 @@ margin-top:0px;
       if CanEditTune(tune_obj):
         import urllib
         edit_url = '/tune/%s/edit?return=%s' % (tune, urllib.quote(return_url, safe=''))
+        any_editable = True
     parts.extend(CreateTuneHTML(tune, pagetype, metadata,
                                 suppress_add_note=bool(set_spec),
                                 set_tune_notes=set_tune_notes,
@@ -15926,6 +16016,8 @@ margin-top:0px;
 
   if set_spec:
     parts.append(_SetTuneNotesJS())
+  if any_editable:
+    parts.append(_ChordQuickEditJS())
 
   return parts
 
@@ -16577,6 +16669,8 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
   import re as _re
   has_notes = bool(obj.raw_notes and _re.search(r'[a-gA-Gz]', obj.raw_notes))
 
+  editable_tune = name if (can_edit or edit_url) else None
+
   if pagetype == 'both':
     if not has_notes and not obj.chords:
       notes = CDiv(
@@ -16598,7 +16692,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
       else:
         notes = ''
       if obj.chords:
-        chords_html = ChordsToHTML(obj.chords)
+        chords_html = ChordsToHTML(obj.chords, tune_name=editable_tune)
         if show_play:
           chords = ('<div class="view-chords-wrap">'
                     '<div class="view-play-row"><button type="button" class="view-play-btn" '
@@ -16618,7 +16712,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
   elif pagetype == 'chords':
     notes = ''
     if obj.chords:
-      chords = ChordsToHTML(obj.chords, tclass='chords-only')
+      chords = ChordsToHTML(obj.chords, tclass='chords-only', tune_name=editable_tune)
     else:
       chords = CDiv(CText("Chords are not yet available for this tune", bold=1, italic=1),
                    style="padding-top:10px")
@@ -16717,6 +16811,8 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
   result = [tune]
   if notes_section:
     result.append(notes_section)
+  if editable_tune:
+    result.append(_ChordQuickEditJS())
   return result
   
 def GetNumColumns(chords):
@@ -16784,7 +16880,162 @@ def ValidateChord(val):
       continue
   return val
 
-def ChordsToHTML(chords, tclass='chords'):
+def _ChordQuickEditJS():
+  """Return <script> block for inline chord quick-editing."""
+  return """<script>
+(function() {
+  if (window._cqeInit) return;
+  window._cqeInit = true;
+
+  var editingCell = null;
+  var origValue = '';
+  var longPressTimer = null;
+  var longPressFired = false;
+
+  function startEdit(td) {
+    if (editingCell) return;
+    editingCell = td;
+    origValue = td.textContent.trim();
+    var w = td.offsetWidth;
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.value = origValue;
+    td.style.width = w + 'px';
+    td.style.maxWidth = w + 'px';
+    input.style.cssText = 'width:100%;min-width:0;box-sizing:border-box;font:inherit;' +
+      'border:1px dashed #ccc;outline:none;padding:2px 4px;background:#fff;' +
+      'text-align:center;margin:0;';
+    td.textContent = '';
+    td.appendChild(input);
+    input.select();
+    input.focus();
+
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        finishEdit(input);
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelEdit();
+      }
+    });
+    input.addEventListener('blur', function() {
+      setTimeout(function() {
+        if (editingCell && !document.getElementById('cqe-overlay')) {
+          finishEdit(input);
+        }
+      }, 150);
+    });
+  }
+
+  function finishEdit(input) {
+    var newValue = input.value.trim();
+    if (newValue === origValue || !newValue) {
+      cancelEdit();
+      return;
+    }
+    showOverlay(newValue);
+  }
+
+  function cancelEdit() {
+    if (!editingCell) return;
+    editingCell.style.width = '';
+    editingCell.style.maxWidth = '';
+    editingCell.textContent = origValue;
+    editingCell = null;
+    origValue = '';
+  }
+
+  function showOverlay(newValue) {
+    var ov = document.createElement('div');
+    ov.id = 'cqe-overlay';
+    ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;' +
+      'background:rgba(0,0,0,0.3);display:flex;align-items:center;' +
+      'justify-content:center;z-index:10000;';
+
+    var popup = document.createElement('div');
+    popup.style.cssText = 'background:#fff;padding:20px 30px;border-radius:8px;' +
+      'box-shadow:0 4px 20px rgba(0,0,0,0.3);text-align:center;max-width:90vw;';
+    popup.innerHTML = '<div style="margin-bottom:15px;font-size:16px">' +
+      'Change <b>' + esc(origValue) + '</b> to <b>' + esc(newValue) + '</b>?</div>';
+
+    var accept = document.createElement('button');
+    accept.textContent = 'Accept';
+    accept.style.cssText = 'margin-right:10px;padding:6px 16px;cursor:pointer;';
+    accept.onclick = function() { ov.remove(); saveChord(newValue); };
+
+    var discard = document.createElement('button');
+    discard.textContent = 'Discard';
+    discard.style.cssText = 'padding:6px 16px;cursor:pointer;';
+    discard.onclick = function() { ov.remove(); cancelEdit(); };
+
+    popup.appendChild(accept);
+    popup.appendChild(discard);
+    ov.appendChild(popup);
+    document.body.appendChild(ov);
+    accept.focus();
+  }
+
+  function saveChord(newValue) {
+    var tune = editingCell.getAttribute('data-tune');
+    var cidx = parseInt(editingCell.getAttribute('data-cidx'), 10);
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/ajax/chord/save');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onload = function() {
+      try {
+        var resp = JSON.parse(xhr.responseText);
+        if (resp.ok) {
+          editingCell.style.width = '';
+          editingCell.style.maxWidth = '';
+          editingCell.textContent = resp.value;
+          editingCell = null;
+          origValue = '';
+          return;
+        }
+      } catch(e) {}
+      alert('Failed to save chord change');
+      cancelEdit();
+    };
+    xhr.onerror = function() {
+      alert('Failed to save chord change');
+      cancelEdit();
+    };
+    xhr.send(JSON.stringify({tune: tune, cidx: cidx, value: newValue}));
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Double-click
+  document.addEventListener('dblclick', function(e) {
+    var td = e.target.closest('td[data-tune]');
+    if (td) { e.preventDefault(); startEdit(td); }
+  });
+
+  // Long-press (touch)
+  document.addEventListener('touchstart', function(e) {
+    var td = e.target.closest('td[data-tune]');
+    if (!td) return;
+    longPressFired = false;
+    longPressTimer = setTimeout(function() {
+      longPressFired = true;
+      startEdit(td);
+    }, 500);
+  }, {passive: true});
+  document.addEventListener('touchend', function(e) {
+    clearTimeout(longPressTimer);
+    if (longPressFired) { e.preventDefault(); }
+  });
+  document.addEventListener('touchmove', function() {
+    clearTimeout(longPressTimer);
+  }, {passive: true});
+})();
+</script>"""
+
+def ChordsToHTML(chords, tclass='chords', tune_name=None):
 
     # Separate header/footer text (lines without |) from chart lines
     header_text = ''
@@ -16817,6 +17068,7 @@ def ChordsToHTML(chords, tclass='chords'):
     part_class = 'even'
     max_line_len = 0
     target_columns = GetNumColumns(chords)
+    chord_idx = 0
     for i, part in enumerate(chords):
         row = []
         for i, measure in enumerate(part):
@@ -16832,7 +17084,11 @@ def ChordsToHTML(chords, tclass='chords'):
                     hclass = 'first'
                 elif len(row) == target_columns:
                     hclass = 'last-chord'
-                row.append(CTD(measure, hclass=hclass))
+                extra = {}
+                if tune_name:
+                    extra = dict(data_tune=tune_name, data_cidx=str(chord_idx))
+                chord_idx += 1
+                row.append(CTD(measure, hclass=hclass, **extra))
             if len(row) == target_columns +1 and (i + 1 >= len(part) or part[i+1] != ':|'):
                 row.append(CTD('', hclass='last'))
                 max_line_len = max(max_line_len, len(row))
