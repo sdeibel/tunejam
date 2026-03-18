@@ -11211,9 +11211,11 @@ margin-top:5px;
 }
 .view-chords-wrap table.chords {
 margin-top:15px;
+font-size:min(6.5vw, 32px);
 }
 .view-chords-wrap div.chord-group {
 margin-top:15px;
+font-size:min(6.5vw, 32px);
 }
 }
 
