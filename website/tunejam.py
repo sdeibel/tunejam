@@ -17018,10 +17018,27 @@ def _ChordQuickEditJS():
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // Double-click / double-tap to edit
+  // Double-click (desktop)
   document.addEventListener('dblclick', function(e) {
     var td = e.target.closest('td[data-tune]');
     if (td) { e.preventDefault(); startEdit(td); }
+  });
+
+  // Double-tap (touch) — custom detector since Safari uses dbltap for zoom
+  var lastTapTime = 0;
+  var lastTapTd = null;
+  document.addEventListener('touchend', function(e) {
+    var td = e.target.closest('td[data-tune]');
+    if (!td) { lastTapTd = null; return; }
+    var now = Date.now();
+    if (td === lastTapTd && now - lastTapTime < 400) {
+      e.preventDefault();
+      lastTapTd = null;
+      startEdit(td);
+    } else {
+      lastTapTd = td;
+      lastTapTime = now;
+    }
   });
 })();
 </script>"""
