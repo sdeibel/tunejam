@@ -17049,10 +17049,12 @@ def _ChordQuickEditJS():
       var hint = document.createElement('div');
       hint.id = 'cqe-hold-hint';
       hint.textContent = 'Release to edit';
-      hint.style.cssText = 'position:fixed;z-index:10000;pointer-events:none;' +
+      var rect = td.getBoundingClientRect();
+      hint.style.cssText = 'position:absolute;z-index:10000;pointer-events:none;' +
         'background:#333;color:#fff;padding:8px 14px;border-radius:4px;' +
         'font-size:14px;white-space:nowrap;' +
-        'left:' + longPressStartX + 'px;top:' + (longPressStartY - 60) + 'px;' +
+        'left:' + (rect.left + rect.width / 2 + window.scrollX) + 'px;' +
+        'top:' + (rect.top + window.scrollY) + 'px;' +
         'transform:translate(-50%,-100%)';
       document.body.appendChild(hint);
     }, 500);
