@@ -17052,8 +17052,8 @@ def _ChordQuickEditJS():
       hint.style.cssText = 'position:fixed;z-index:10000;pointer-events:none;' +
         'background:#333;color:#fff;padding:8px 14px;border-radius:4px;' +
         'font-size:14px;white-space:nowrap;' +
-        'left:' + longPressStartX + 'px;top:' + (longPressStartY - 80) + 'px;' +
-        'transform:translateX(-50%)';
+        'left:' + longPressStartX + 'px;top:' + (longPressStartY - 60) + 'px;' +
+        'transform:translate(-50%,-100%)';
       document.body.appendChild(hint);
     }, 500);
   }, {passive: true});
