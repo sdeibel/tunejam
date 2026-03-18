@@ -1,10 +1,9 @@
 * Website Phase Three
   ** Coding Tasks Near Term
-    ** Could allow press and hold or double click on chord measures also on view pages
-       to edit, for people that have the permission to do make those changes
     ** Better approach might be to mirror someone else's browsing of site
     ** Try to improve notes/chord generation from AI
     ** A way to also write out full tune draft from recording + edit full tune notes
+    ** Could add a way to transpose a tune to play in a different key
   ** Content
     ** Complete the partial listings and add missing recordings and sheet music
     ** Fix listings with screwy notes writeup (1/4 notes instead of 1/8 and such)
