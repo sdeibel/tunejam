@@ -17029,7 +17029,7 @@ def _ChordQuickEditJS():
     if (td) { e.preventDefault(); startEdit(td); }
   });
 
-  // Long-press (touch) — show edit UI from timer, focus on touchend
+  // Long-press (touch) — highlight cell on hold, edit on finger lift
   // (iOS only allows input.focus() from direct user gesture handlers)
   document.addEventListener('touchstart', function(e) {
     var td = e.target.closest('td[data-tune]');
@@ -17041,21 +17041,17 @@ def _ChordQuickEditJS():
     longPressStartY = touch.clientY;
     longPressTimer = setTimeout(function() {
       longPressFired = true;
-      startEdit(td);
+      td.style.outline = '2px solid #4A90D9';
+      td.style.background = '#e8f0fe';
     }, 500);
   }, {passive: true});
   document.addEventListener('touchend', function(e) {
     clearTimeout(longPressTimer);
     if (longPressFired && longPressTd) {
       e.preventDefault();
-      // Re-focus from user gesture so iOS shows keyboard and selects text
-      if (editingCell) {
-        var inp = editingCell.querySelector('input');
-        if (inp) {
-          inp.focus();
-          inp.setSelectionRange(0, inp.value.length);
-        }
-      }
+      longPressTd.style.outline = '';
+      longPressTd.style.background = '';
+      startEdit(longPressTd);
     }
     longPressTd = null;
   });
@@ -17066,11 +17062,19 @@ def _ChordQuickEditJS():
     var dy = touch.clientY - longPressStartY;
     if (dx * dx + dy * dy > 100) {
       clearTimeout(longPressTimer);
+      if (longPressFired) {
+        longPressTd.style.outline = '';
+        longPressTd.style.background = '';
+      }
       longPressTd = null;
     }
   }, {passive: true});
   document.addEventListener('touchcancel', function() {
     clearTimeout(longPressTimer);
+    if (longPressTd && longPressFired) {
+      longPressTd.style.outline = '';
+      longPressTd.style.background = '';
+    }
     longPressTd = null;
   });
 })();
