@@ -16879,11 +16879,6 @@ def _ChordQuickEditJS():
 
   var editingCell = null;
   var origValue = '';
-  var longPressTimer = null;
-  var longPressFired = false;
-  var longPressTd = null;
-  var longPressStartX = 0;
-  var longPressStartY = 0;
   var outsideTouchHandler = null;
 
   function startEdit(td) {
@@ -17023,63 +17018,10 @@ def _ChordQuickEditJS():
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // Double-click
+  // Double-click / double-tap to edit
   document.addEventListener('dblclick', function(e) {
     var td = e.target.closest('td[data-tune]');
     if (td) { e.preventDefault(); startEdit(td); }
-  });
-
-  function removeLongPressHint() {
-    var el = document.getElementById('cqe-hold-hint');
-    if (el) el.remove();
-  }
-
-  // Long-press (touch) — show hint above finger on hold, edit on finger lift
-  document.addEventListener('touchstart', function(e) {
-    var td = e.target.closest('td[data-tune]');
-    if (!td) return;
-    longPressFired = false;
-    longPressTd = td;
-    var touch = e.touches[0];
-    longPressStartX = touch.clientX;
-    longPressStartY = touch.clientY;
-    longPressTimer = setTimeout(function() {
-      longPressFired = true;
-      var hint = document.createElement('div');
-      hint.id = 'cqe-hold-hint';
-      hint.textContent = 'Release to edit';
-      hint.style.cssText = 'position:fixed;z-index:10000;pointer-events:none;' +
-        'background:#333;color:#fff;padding:6px 12px;border-radius:4px;' +
-        'font-size:14px;white-space:nowrap;' +
-        'left:' + longPressStartX + 'px;top:' + (longPressStartY - 50) + 'px;' +
-        'transform:translateX(-50%)';
-      document.body.appendChild(hint);
-    }, 500);
-  }, {passive: true});
-  document.addEventListener('touchend', function(e) {
-    clearTimeout(longPressTimer);
-    removeLongPressHint();
-    if (longPressFired && longPressTd) {
-      e.preventDefault();
-      startEdit(longPressTd);
-    }
-    longPressTd = null;
-  });
-  document.addEventListener('touchmove', function(e) {
-    if (!longPressTd) return;
-    var touch = e.touches[0];
-    var dx = touch.clientX - longPressStartX;
-    var dy = touch.clientY - longPressStartY;
-    if (dx * dx + dy * dy > 100) {
-      clearTimeout(longPressTimer);
-      removeLongPressHint();
-      longPressTd = null;
-    }
-  }, {passive: true});
-  document.addEventListener('touchcancel', function() {
-    clearTimeout(longPressTimer);
-    removeLongPressHint();
-    longPressTd = null;
   });
 })();
 </script>"""
