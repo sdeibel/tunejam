@@ -17029,7 +17029,8 @@ def _ChordQuickEditJS():
     if (td) { e.preventDefault(); startEdit(td); }
   });
 
-  // Long-press (touch) — start edit on touchend so iOS allows input.focus()
+  // Long-press (touch) — show edit UI from timer, focus on touchend
+  // (iOS only allows input.focus() from direct user gesture handlers)
   document.addEventListener('touchstart', function(e) {
     var td = e.target.closest('td[data-tune]');
     if (!td) return;
@@ -17040,13 +17041,21 @@ def _ChordQuickEditJS():
     longPressStartY = touch.clientY;
     longPressTimer = setTimeout(function() {
       longPressFired = true;
+      startEdit(td);
     }, 500);
   }, {passive: true});
   document.addEventListener('touchend', function(e) {
     clearTimeout(longPressTimer);
     if (longPressFired && longPressTd) {
       e.preventDefault();
-      startEdit(longPressTd);
+      // Re-focus from user gesture so iOS shows keyboard and selects text
+      if (editingCell) {
+        var inp = editingCell.querySelector('input');
+        if (inp) {
+          inp.focus();
+          inp.setSelectionRange(0, inp.value.length);
+        }
+      }
     }
     longPressTd = null;
   });
