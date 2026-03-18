@@ -11924,31 +11924,12 @@ display:none !important;
 }
 """
 
-_kCSSDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'css')
-
-def _WriteCSSFiles():
-  """Write static CSS files to website/css/ for direct serving by Apache."""
-  if not os.path.isdir(_kCSSDir):
-    os.makedirs(_kCSSDir)
-  for name, content in [('screen.css', _kBaseCSS),
-                         ('print.css', _kBaseCSS + _kPrintCSS)]:
-    path = os.path.join(_kCSSDir, name)
-    with open(path, 'w') as f:
-      f.write(content)
-
-# Only regenerate CSS on dev; production serves the committed files directly
-if sys.platform == 'darwin':
-  _WriteCSSFiles()
-
 @app.route('/css/<media>')
 def css(media):
   # Support both /css/screen and /css/screen.css
   if media.endswith('.css'):
     media = media[:-4]
-  css_file = os.path.join(_kCSSDir, media + '.css')
-  if os.path.isfile(css_file):
-    resp = make_response(send_file(css_file, mimetype='text/css'))
-  elif media == 'print':
+  if media == 'print':
     resp = Response(_kBaseCSS + _kPrintCSS, mimetype='text/css')
   else:
     resp = Response(_kBaseCSS, mimetype='text/css')
