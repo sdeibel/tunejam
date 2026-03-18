@@ -16881,6 +16881,7 @@ def _ChordQuickEditJS():
   var origValue = '';
   var longPressTimer = null;
   var longPressFired = false;
+  var longPressTd = null;
   var outsideTouchHandler = null;
 
   function startEdit(td) {
@@ -17026,22 +17027,27 @@ def _ChordQuickEditJS():
     if (td) { e.preventDefault(); startEdit(td); }
   });
 
-  // Long-press (touch)
+  // Long-press (touch) — start edit on touchend so iOS allows input.focus()
   document.addEventListener('touchstart', function(e) {
     var td = e.target.closest('td[data-tune]');
     if (!td) return;
     longPressFired = false;
+    longPressTd = td;
     longPressTimer = setTimeout(function() {
       longPressFired = true;
-      startEdit(td);
     }, 500);
   }, {passive: true});
   document.addEventListener('touchend', function(e) {
     clearTimeout(longPressTimer);
-    if (longPressFired) { e.preventDefault(); }
+    if (longPressFired && longPressTd) {
+      e.preventDefault();
+      startEdit(longPressTd);
+      longPressTd = null;
+    }
   });
   document.addEventListener('touchmove', function() {
     clearTimeout(longPressTimer);
+    longPressTd = null;
   }, {passive: true});
 })();
 </script>"""
