@@ -16869,9 +16869,9 @@ def _ChordQuickEditJS():
   if (window._cqeInit) return;
   window._cqeInit = true;
 
-  // Prevent iOS context menu and double-tap-to-zoom on editable chord cells
+  // Prevent context menu on editable chord cells (iOS long-press, etc.)
   var style = document.createElement('style');
-  style.textContent = 'td[data-tune]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}';
+  style.textContent = 'td[data-tune]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}';
   document.head.appendChild(style);
   document.addEventListener('contextmenu', function(e) {
     if (e.target.closest && e.target.closest('td[data-tune]')) e.preventDefault();
@@ -17024,21 +17024,63 @@ def _ChordQuickEditJS():
     if (td) { e.preventDefault(); startEdit(td); }
   });
 
-  // Double-tap (touch) — custom detector since Safari uses dbltap for zoom
-  var lastTapTime = 0;
-  var lastTapTd = null;
-  document.addEventListener('touchend', function(e) {
+  // Long-press (touch) — show hint above finger, edit on release
+  var longPressTimer = null;
+  var longPressFired = false;
+  var longPressTd = null;
+  var longPressStartX = 0;
+  var longPressStartY = 0;
+
+  function removeLongPressHint() {
+    var el = document.getElementById('cqe-hold-hint');
+    if (el) el.remove();
+  }
+
+  document.addEventListener('touchstart', function(e) {
     var td = e.target.closest('td[data-tune]');
-    if (!td) { lastTapTd = null; return; }
-    var now = Date.now();
-    if (td === lastTapTd && now - lastTapTime < 400) {
+    if (!td) return;
+    longPressFired = false;
+    longPressTd = td;
+    var touch = e.touches[0];
+    longPressStartX = touch.clientX;
+    longPressStartY = touch.clientY;
+    longPressTimer = setTimeout(function() {
+      longPressFired = true;
+      var hint = document.createElement('div');
+      hint.id = 'cqe-hold-hint';
+      hint.textContent = 'Release to edit';
+      hint.style.cssText = 'position:fixed;z-index:10000;pointer-events:none;' +
+        'background:#333;color:#fff;padding:8px 14px;border-radius:4px;' +
+        'font-size:14px;white-space:nowrap;' +
+        'left:' + longPressStartX + 'px;top:' + (longPressStartY - 80) + 'px;' +
+        'transform:translateX(-50%)';
+      document.body.appendChild(hint);
+    }, 500);
+  }, {passive: true});
+  document.addEventListener('touchend', function(e) {
+    clearTimeout(longPressTimer);
+    removeLongPressHint();
+    if (longPressFired && longPressTd) {
       e.preventDefault();
-      lastTapTd = null;
-      startEdit(td);
-    } else {
-      lastTapTd = td;
-      lastTapTime = now;
+      startEdit(longPressTd);
     }
+    longPressTd = null;
+  });
+  document.addEventListener('touchmove', function(e) {
+    if (!longPressTd) return;
+    var touch = e.touches[0];
+    var dx = touch.clientX - longPressStartX;
+    var dy = touch.clientY - longPressStartY;
+    if (dx * dx + dy * dy > 100) {
+      clearTimeout(longPressTimer);
+      removeLongPressHint();
+      longPressTd = null;
+    }
+  }, {passive: true});
+  document.addEventListener('touchcancel', function() {
+    clearTimeout(longPressTimer);
+    removeLongPressHint();
+    longPressTd = null;
   });
 })();
 </script>"""
