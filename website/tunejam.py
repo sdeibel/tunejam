@@ -10251,8 +10251,8 @@ table.chords {
 position:relative;
 top:0in;
 right:0in;
-font-size:26px;
-font-size:min(3vw, 26px);
+font-size:28px;
+font-size:min(3.3vw, 28px);
 border:0px;  /* For Chrome and Safari */
 border-left:2px solid #000;
 border-right:2px solid #000;
