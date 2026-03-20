@@ -2336,6 +2336,13 @@ def _process_history(form, original_wrapped=None):
   new_unwrapped = ' '.join(new_text.split())
   if original_wrapped:
     orig_unwrapped = ' '.join(original_wrapped.split())
+    # Ensure both sides are the same type for comparison (Python 2
+    # unicode vs bytes comparison silently fails on non-ASCII content)
+    if isinstance(orig_unwrapped, str) and isinstance(new_unwrapped, unicode):
+      try:
+        orig_unwrapped = orig_unwrapped.decode('utf-8')
+      except UnicodeDecodeError:
+        pass
     if new_unwrapped == orig_unwrapped:
       # No content change — preserve original wrapping
       return original_wrapped

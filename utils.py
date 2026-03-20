@@ -332,9 +332,22 @@ class CTune:
             for c_line in self.chords.rstrip('\n').split('\n'):
                 lines.append(c_line + '\n')
 
-        f = open(fullpath, 'w')
-        f.writelines(lines)
+        # Encode any unicode strings to UTF-8 bytes before writing
+        # (Flask form data in Python 2 returns unicode, which can't be
+        # written directly to a byte-mode file if it contains non-ASCII)
+        encoded = []
+        for line in lines:
+            if isinstance(line, unicode):
+                line = line.encode('utf-8')
+            encoded.append(line)
+
+        # Write to a temp file first, then rename, to avoid truncating
+        # the original if an error occurs during the write
+        tmp = fullpath + '.tmp'
+        f = open(tmp, 'w')
+        f.writelines(encoded)
         f.close()
+        os.rename(tmp, fullpath)
 
     def InvalidateCaches(self):
         """Remove cached files for this tune to force regeneration."""
