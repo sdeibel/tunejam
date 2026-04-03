@@ -64,7 +64,7 @@ pydantic_core==2.41.5
 pyparsing==3.3.2
 python-dateutil==2.9.0.post0
 PyYAML==6.0.3
-requests==2.32.5
+requests==2.33.0
 resampy==0.4.2
 retrying==1.4.2
 scikit-learn==1.8.0
