@@ -1,7 +1,7 @@
 annotated-types==0.7.0
 anthropic==0.84.0
 antlr4-python3-runtime==4.9.3
-anyio==4.12.1
+anyio==4.14.2
 attrs==25.4.0
 audioread==3.1.0
 basic-pitch==0.4.0
