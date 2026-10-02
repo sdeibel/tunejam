@@ -10137,6 +10137,14 @@ right:186px;
 right:calc(10px + 4 * (clamp(18px, 3.1vw, 34px) + 10px));
 top:2px;
 }
+span.tune-type-five-icons {
+font-size:14px;
+font-size:max(70%, 14px);
+position:absolute;
+right:230px;
+right:calc(10px + 5 * (clamp(18px, 3.1vw, 34px) + 10px));
+top:2px;
+}
 h2 {
 padding-top:0.7em;
 padding-bottom:0.5em;
@@ -10220,7 +10228,7 @@ height:20px;
 a.ap-link-playing img {
 filter:hue-rotate(90deg) saturate(2) brightness(0.8);
 }
-img.action-icon-1 {
+img.action-icon-1, span.action-icon-1 {
 position:absolute;
 right:10px;
 top:5px;
@@ -10229,7 +10237,7 @@ width:clamp(18px, 3.1vw, 34px);
 height:34px;
 height:clamp(18px, 3.1vw, 34px);
 }
-img.action-icon-2 {
+img.action-icon-2, span.action-icon-2 {
 position:absolute;
 right:54px;
 right:calc(10px + clamp(18px, 3.1vw, 34px) + 10px);
@@ -10239,7 +10247,7 @@ width:clamp(18px, 3.1vw, 34px);
 height:34px;
 height:clamp(18px, 3.1vw, 34px);
 }
-img.action-icon-3 {
+img.action-icon-3, span.action-icon-3 {
 position:absolute;
 right:98px;
 right:calc(10px + 2 * (clamp(18px, 3.1vw, 34px) + 10px));
@@ -10249,7 +10257,7 @@ width:clamp(18px, 3.1vw, 34px);
 height:34px;
 height:clamp(18px, 3.1vw, 34px);
 }
-img.action-icon-4 {
+img.action-icon-4, span.action-icon-4 {
 position:absolute;
 right:142px;
 right:calc(10px + 3 * (clamp(18px, 3.1vw, 34px) + 10px));
@@ -10258,6 +10266,93 @@ width:34px;
 width:clamp(18px, 3.1vw, 34px);
 height:34px;
 height:clamp(18px, 3.1vw, 34px);
+}
+img.action-icon-5, span.action-icon-5 {
+position:absolute;
+right:186px;
+right:calc(10px + 4 * (clamp(18px, 3.1vw, 34px) + 10px));
+top:5px;
+width:34px;
+width:clamp(18px, 3.1vw, 34px);
+height:34px;
+height:clamp(18px, 3.1vw, 34px);
+}
+span.tune-info-icon {
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:50%;
+background:#3a6a3a;
+color:#ffffff;
+font-family:Georgia,"Times New Roman",serif;
+font-style:italic;
+font-weight:bold;
+font-size:clamp(11px, 2vw, 18px);
+line-height:1;
+cursor:pointer;
+box-sizing:border-box;
+user-select:none;
+-webkit-user-select:none;
+}
+span.tune-info-icon:hover {
+background:#4a7a4a;
+}
+.tune-info-overlay {
+position:fixed;
+top:0; left:0; right:0; bottom:0;
+background:rgba(0,0,0,0.5);
+z-index:2000;
+display:flex;
+align-items:center;
+justify-content:center;
+padding:16px;
+box-sizing:border-box;
+}
+.tune-info-popup {
+background:#ffffff;
+border-radius:8px;
+max-width:560px;
+width:100%;
+max-height:80vh;
+overflow:auto;
+padding:24px 28px 20px;
+box-shadow:0 4px 20px rgba(0,0,0,0.3);
+position:relative;
+box-sizing:border-box;
+}
+.tune-info-popup h2 {
+margin:0 0 12px 0;
+padding:0;
+color:#004400;
+font-size:1.25em;
+}
+.tune-info-close {
+position:absolute;
+top:8px; right:12px;
+background:none;
+border:none;
+font-size:24px;
+cursor:pointer;
+color:#666;
+padding:0;
+line-height:1;
+}
+.tune-info-close:hover {
+color:#333;
+}
+.tune-info-field {
+margin:0 0 4px 0;
+color:#333;
+}
+.tune-info-history {
+margin:10px 0;
+line-height:1.45;
+color:#222;
+}
+.tune-info-ref {
+font-size:95%;
+margin-top:0.4em;
+word-break:break-all;
 }
 img.notes {
 position:relative;
@@ -15979,6 +16074,9 @@ margin-top:0px;
   if set_spec:
     return_url = request.full_path
 
+  # Compact set pages hide author/origin/history; offer an (i) popup instead
+  show_info_popup = not metadata
+
   for i, tune in enumerate(tunes):
     if i > 0:
       parts.append(CDiv(hclass='tune-break'))
@@ -16000,13 +16098,16 @@ margin-top:0px;
     parts.extend(CreateTuneHTML(tune, pagetype, metadata,
                                 suppress_add_note=bool(set_spec),
                                 set_tune_notes=set_tune_notes,
-                                edit_url=edit_url))
+                                edit_url=edit_url,
+                                info_popup=show_info_popup))
   parts.append(CDiv(hclass='tune-break'))
 
   if set_spec:
     parts.append(_SetTuneNotesJS())
   if any_editable:
     parts.append(_ChordQuickEditJS())
+  if show_info_popup:
+    parts.append(_TuneInfoPopupJS())
 
   return parts
 
@@ -16630,7 +16731,124 @@ def _RenderSetTuneNotesSection(set_spec, tune_name, event_sid, event_obj):
   parts.append('</div>')
   return '\n'.join(parts)
 
-def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_delete=False, suppress_add_note=False, set_tune_notes='', show_play=False, edit_url=None):
+def _EscapeHTML(text):
+  """Escape text for HTML text/attribute content."""
+  if not text:
+    return ''
+  if isinstance(text, unicode):
+    text = text.encode('utf-8')
+  return (text.replace('&', '&amp;').replace('<', '&lt;')
+              .replace('>', '&gt;').replace('"', '&quot;'))
+
+def _TuneInfoPopupBody(obj):
+  """Build HTML for author/origin/history/refs shown in the set-page info popup.
+
+  Returns '' when there is nothing to show (caller should omit the icon).
+  """
+  parts = []
+  if obj.author:
+    parts.append('<div class="tune-info-field"><i>Author: %s</i></div>'
+                 % _EscapeHTML(obj.author))
+  if obj.origin:
+    parts.append('<div class="tune-info-field"><i>Origin: %s</i></div>'
+                 % _EscapeHTML(obj.origin))
+  if obj.history:
+    hist = ' '.join(_EscapeHTML(obj.history).split())
+    parts.append('<p class="tune-info-history">%s</p>' % hist)
+  if obj.url:
+    for url in obj.url.split('\n'):
+      url = url.strip()
+      if not url:
+        continue
+      esc = _EscapeHTML(url)
+      parts.append(
+        '<div class="tune-info-ref">Ref: '
+        '<a href="%s" target="_blank" rel="noopener">%s</a></div>' % (esc, esc))
+  if obj.ref:
+    for ref in obj.ref.split('\n'):
+      ref = ref.strip()
+      if not ref:
+        continue
+      parts.append('<div class="tune-info-ref">Ref: %s</div>'
+                   % _EscapeHTML(ref))
+  return ''.join(parts)
+
+def _TuneInfoOverlayHTML(tune_name, body):
+  """Wrap popup body in a dismissible overlay."""
+  oid = 'tune-info-overlay-%s' % _EscapeHTML(tune_name)
+  title = 'Tune Information'
+  return (
+    '<div id="%s" class="tune-info-overlay" style="display:none" '
+    'role="dialog" aria-label="%s">'
+    '<div class="tune-info-popup">'
+    '<button type="button" class="tune-info-close" '
+    'aria-label="Close">&times;</button>'
+    '<h2>%s</h2>'
+    '%s'
+    '</div>'
+    '</div>'
+  ) % (oid, title, title, body)
+
+def _TuneInfoIconHTML(tune_name, icon_pos):
+  """Return the (i) action icon that toggles the info overlay."""
+  oid = 'tune-info-overlay-%s' % _EscapeHTML(tune_name)
+  return (
+    '<span class="action-icon-%d tune-info-icon" role="button" '
+    'tabindex="0" title="Tune information" '
+    'aria-label="Tune information" data-tune-info="%s">i</span>'
+  ) % (icon_pos, oid)
+
+def _TuneInfoPopupJS():
+  """Vanilla JS: toggle info overlay on (i) click; close on outside or Escape."""
+  return r'''<script>
+(function() {
+  function closeAllTuneInfo() {
+    var overlays = document.querySelectorAll('.tune-info-overlay');
+    for (var i = 0; i < overlays.length; i++) {
+      overlays[i].style.display = 'none';
+    }
+  }
+  function findInfoIcon(el) {
+    while (el && el !== document) {
+      if (el.classList && el.classList.contains('tune-info-icon')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  document.addEventListener('click', function(e) {
+    var icon = findInfoIcon(e.target);
+    if (icon) {
+      e.preventDefault();
+      e.stopPropagation();
+      var id = icon.getAttribute('data-tune-info');
+      var overlay = document.getElementById(id);
+      if (!overlay) return;
+      var wasOpen = overlay.style.display !== 'none';
+      closeAllTuneInfo();
+      if (!wasOpen) overlay.style.display = 'flex';
+      return;
+    }
+    if (e.target.classList && e.target.classList.contains('tune-info-overlay')) {
+      closeAllTuneInfo();
+      return;
+    }
+    if (e.target.classList && e.target.classList.contains('tune-info-close')) {
+      closeAllTuneInfo();
+    }
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' || e.keyCode === 27) {
+      closeAllTuneInfo();
+    }
+    if ((e.key === 'Enter' || e.keyCode === 13) && findInfoIcon(e.target)) {
+      e.target.click();
+    }
+  });
+})();
+</script>'''
+
+
+def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_delete=False, suppress_add_note=False, set_tune_notes='', show_play=False, edit_url=None, info_popup=False):
 
   obj = utils.CTune(name)
   try:
@@ -16641,20 +16859,32 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
 
   key_str = obj.GetKeyString()
 
-  action_icons = obj.GetActionIcons()
+  action_icons = list(obj.GetActionIcons())
+  info_icon = ''
+  info_overlay = ''
+  if info_popup and not metadata:
+    info_body = _TuneInfoPopupBody(obj)
+    if info_body:
+      info_icon = _TuneInfoIconHTML(name, len(action_icons) + 1)
+      info_overlay = _TuneInfoOverlayHTML(name, info_body)
+      action_icons.append(info_icon)
+
   if obj.klass:
-    if len(action_icons) == 1:
+    n_icons = len(action_icons)
+    if n_icons <= 1:
       klass_type = 'tune-type'
-    elif len(action_icons) == 2:
+    elif n_icons == 2:
       klass_type = 'tune-type-two-icons'
-    elif len(action_icons) == 3:
+    elif n_icons == 3:
       klass_type = 'tune-type-three-icons'
-    else:
+    elif n_icons == 4:
       klass_type = 'tune-type-four-icons'
+    else:
+      klass_type = 'tune-type-five-icons'
     klass = CText(', '.join([utils.kSectionClasses[k] for k in obj.klass.split(',')]), italic=True, hclass=klass_type)
   else:
     klass = ''
-    
+
   import re as _re
   has_notes = bool(obj.raw_notes and _re.search(r'[a-gA-Gz]', obj.raw_notes))
 
@@ -16712,12 +16942,12 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
     tclass = 'long-tune-title'
   else:
     tclass = 'tune-title'
-    
+
   if obj.author and metadata:
     author = CDiv([CText('Author: {}'.format(obj.author), italic=True)])
   else:
     author = ''
-    
+
   if obj.structure:
     structure = CDiv([CText('Structure: {}'.format(obj.structure), italic=True)])
   else:
@@ -16727,12 +16957,12 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
     origin = CDiv([CText('Origin: {}'.format(obj.origin), italic=True)])
   else:
     origin = ''
-    
+
   if obj.history and metadata:
     history = CParagraph(obj.history)
   else:
     history = ''
-    
+
   if obj.url and metadata:
     urls = []
     url_list = obj.url.split('\n')
@@ -16743,7 +16973,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
     urls = CDiv(''.join([str(u) for u in urls]), style='font-size:95%; padding-top:0.5em')
   else:
     urls = ''
-    
+
   if obj.ref and metadata:
     refs = []
     ref_list = obj.ref.split('\n')
@@ -16754,7 +16984,7 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
     refs = CDiv(''.join([str(r) for r in refs]), style='font-size:95%; padding-top:0.5em')
   else:
     refs = ''
-    
+
   # Action row: Add Note on left, Edit/Delete on right
   can_make_public = can_edit
   logged_in = IsLoggedIn()
@@ -16780,11 +17010,12 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
   else:
     edit_link = ''
 
+  heading_bits = [title + ' - ' + key_str, klass] + action_icons
+  if edit_link:
+    heading_bits.append(edit_link)
+
   tune = CDiv([
-    CH([
-      title + ' - ' + key_str,
-      klass,
-    ] + obj.GetActionIcons() + ([edit_link] if edit_link else []), 1, hclass=tclass),
+    CH(heading_bits, 1, hclass=tclass),
     set_tune_notes,
     structure,
     author,
@@ -16798,6 +17029,8 @@ def CreateTuneHTML(name, pagetype='both', metadata=False, can_edit=False, can_de
   ], hclass='tune')
 
   result = [tune]
+  if info_overlay:
+    result.append(info_overlay)
   if notes_section:
     result.append(notes_section)
   if editable_tune:
