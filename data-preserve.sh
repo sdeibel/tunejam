@@ -2,12 +2,12 @@
 #
 # Backup/restore ignored runtime files in the sibling data/ repo.
 # Sourced by deploy.sh and data-pull.sh so a data pull that drops these
-# from the git tree does not wipe live secrets and stamp files on disk.
+# from the git tree does not wipe stamp files and logs on disk.
 #
 # Keep this list aligned with the runtime entries in data/.gitignore.
+# config/email.conf is tracked in the data repo and is not listed here.
 
 DATA_PRESERVE_FILES="
-config/email.conf
 config/notifications.log
 config/digest-last-check.txt
 config/notifications-last-read.txt
@@ -39,11 +39,10 @@ data_preserve_backup() {
 }
 
 # Restore backed-up files into DATA_DIR when missing after a pull/reset.
-# Falls back to the last git revision that still had email.conf if needed.
 data_preserve_restore() {
   local data_dir="$1"
   local bak="$2"
-  local rel src dest del_commit
+  local rel src dest
 
   if [ ! -d "$data_dir" ]; then
     return 0
@@ -60,18 +59,5 @@ data_preserve_restore() {
       fi
     done
     rm -rf "$bak"
-  fi
-
-  # Last-resort recovery for the SMTP secret if backup was empty/missing.
-  if [ ! -f "$data_dir/config/email.conf" ] && [ -d "$data_dir/.git" ]; then
-    del_commit="$(git -C "$data_dir" log -1 --diff-filter=D --format=%H -- config/email.conf 2>/dev/null || true)"
-    if [ -n "$del_commit" ]; then
-      mkdir -p "$data_dir/config"
-      if git -C "$data_dir" show "${del_commit}^:config/email.conf" > "$data_dir/config/email.conf" 2>/dev/null; then
-        echo "Restored config/email.conf from git history (${del_commit}^)"
-      else
-        rm -f "$data_dir/config/email.conf"
-      fi
-    fi
   fi
 }
