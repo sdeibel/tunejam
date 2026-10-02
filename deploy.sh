@@ -17,6 +17,9 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# shellcheck source=data-preserve.sh
+. "$SCRIPT_DIR/data-preserve.sh"
+
 # ── Git pull ──────────────────────────────────────────────────
 
 if [ "$TEST_MODE" = true ]; then
@@ -38,10 +41,12 @@ echo ""
 DATA_DIR="$(dirname "$SCRIPT_DIR")/data"
 if [ -d "$DATA_DIR/.git" ]; then
   if [ "$TEST_MODE" = true ]; then
-    echo "# Would run: git -C $DATA_DIR pull"
+    echo "# Would backup ignored runtime files, git -C $DATA_DIR pull, then restore"
   else
     echo "Pulling data repo changes..."
+    DATA_BAK="$(data_preserve_backup "$DATA_DIR")"
     git -C "$DATA_DIR" pull || echo "Warning: data repo pull failed"
+    data_preserve_restore "$DATA_DIR" "$DATA_BAK"
   fi
   echo ""
 fi
