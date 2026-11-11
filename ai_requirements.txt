@@ -22,7 +22,7 @@ dora_search==0.1.12
 einops==0.8.2
 filelock==4.2.1
 fonttools==4.61.1
-fsspec==2026.2.0
+fsspec==2026.6.0
 h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
